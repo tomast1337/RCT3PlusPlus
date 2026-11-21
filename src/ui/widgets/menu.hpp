@@ -9,6 +9,9 @@
 // highlight over the enabled rows, Home and End go to the first and last, and Enter or Space chooses. Left
 // and Right are kept for a menu bar to move to the next menu (take_sideways()).
 //
+// A menu taller than the desktop goes on in columns side by side, as many rows to each as the desktop has room
+// for.
+//
 // The opener asks with take_choice(), in its update, which row was chosen; the menu is gone after the
 // update in which it closed.
 #pragma once
@@ -113,6 +116,8 @@ namespace rct3::ui::widgets
 
         Point at_;
         f32 min_width_ = 0;
+        usize per_column_ = 0; ///< Rows in each column; 0 for one column of them all
+        f32 column_width_ = 0; ///< Of each column, without the padding
         std::optional<usize> highlighted_;
         std::optional<usize> choice_;
         i32 sideways_ = 0;

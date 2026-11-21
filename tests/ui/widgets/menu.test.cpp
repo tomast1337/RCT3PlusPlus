@@ -117,3 +117,21 @@ TEST_CASE("a press elsewhere or escape closes a menu")
         CHECK(f.desktop.root().children().size() == 1);
     }
 }
+
+TEST_CASE("a menu taller than the desktop goes on in a column beside")
+{
+    Desktop desktop;
+    std::vector<MenuItem> many(30);
+    for (MenuItem& m : many)
+        m.text = u"Row";
+    Menu& menu = desktop.root().add<Menu>("menu", style(), std::move(many));
+    desktop.layout({ 0, 0, 400, 400 });
+    desktop.update({ { 390, 390 }, false, true });
+    desktop.layout({ 0, 0, 400, 400 });
+    CHECK(menu.rect().height() == 400); // Twenty rows of 20
+    CHECK(menu.rect().width() == 200);
+    CHECK(menu.row_rect(19).y0 == menu.rect().y0 + 380);
+    CHECK(menu.row_rect(20).y0 == menu.rect().y0);
+    CHECK(menu.row_rect(20).x0 == menu.rect().x0 + 100);
+    CHECK(menu.row_at({ menu.rect().x0 + 150, menu.rect().y0 + 5 }) == 20);
+}

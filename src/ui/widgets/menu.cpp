@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <utility>
 
 namespace rct3::ui::widgets
 {
@@ -30,19 +31,29 @@ namespace rct3::ui::widgets
 
     f32 Menu::content_height() const
     {
-        f32 h = style.padding.y0 + style.padding.y1;
-        for (const MenuItem& item : items)
-            h += item.separator ? style.separator_height : style.row_height;
-        return h;
+        f32 h = 0;
+        f32 column = 0;
+        for (usize i = 0; i < items.size(); ++i)
+        {
+            if (per_column_ > 0 && i % per_column_ == 0)
+                column = 0;
+            column += items[i].separator ? style.separator_height : style.row_height;
+            h = std::max(h, column);
+        }
+        return h + style.padding.y0 + style.padding.y1;
     }
 
     Rect Menu::row_rect(usize index) const
     {
+        const usize first = per_column_ > 0 ? index / per_column_ * per_column_ : 0;
         f32 y = rect().y0 + style.padding.y0;
-        for (usize i = 0; i < index && i < items.size(); ++i)
+        for (usize i = first; i < index && i < items.size(); ++i)
             y += items[i].separator ? style.separator_height : style.row_height;
         const f32 h = index < items.size() && items[index].separator ? style.separator_height : style.row_height;
-        return { rect().x0 + style.padding.x0, y, rect().x1 - style.padding.x1, y + h };
+        if (per_column_ == 0)
+            return { rect().x0 + style.padding.x0, y, rect().x1 - style.padding.x1, y + h };
+        const f32 x = rect().x0 + style.padding.x0 + static_cast<f32>(index / per_column_) * column_width_;
+        return { x, y, x + column_width_, y + h };
     }
 
     std::optional<usize> Menu::row_at(Point p) const
@@ -159,6 +170,13 @@ namespace rct3::ui::widgets
             const f32 inner = style.tick_room + text + (shortcut > 0 ? style.shortcut_gap + shortcut : 0) + style.text_end_room;
             width = std::max(width, std::ceil(inner + style.padding.x0 + style.padding.x1));
         }
+        // Too tall for the desktop, the rows go on in the next column.
+        const f32 room = parent() != nullptr ? parent()->rect().height() - style.padding.y0 - style.padding.y1 : 0;
+        const auto fits = static_cast<usize>(std::max(room / style.row_height, 1.0f));
+        per_column_ = room > 0 && std::cmp_greater(items.size(), fits) ? fits : 0;
+        column_width_ = width - style.padding.x0 - style.padding.x1;
+        if (per_column_ > 0)
+            width = style.padding.x0 + style.padding.x1 + static_cast<f32>((items.size() + per_column_ - 1) / per_column_) * column_width_;
         // Keep the top-left corner where it was put; layout keeps the menu on the desktop.
         const Rect& o = placement.offsets;
         placement = top_left(o.x0, o.y0, width, content_height());

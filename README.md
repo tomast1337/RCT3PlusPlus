@@ -16,7 +16,8 @@ Status: in development, not yet complete.
 ## Getting started
 
 How to build rct3++, point it at your game install, configure it and run its test scripts is in
-[CONTRIBUTING.md](CONTRIBUTING.md#building-and-running).
+[CONTRIBUTING.md](CONTRIBUTING.md#building-and-running). It builds on Linux, and on 64-bit Windows through
+MSYS2: [docs/windows.md](docs/windows.md).
 
 ## Original work
 

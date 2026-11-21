@@ -1,4 +1,4 @@
-# OVL Archive Format
+# OVL archive format
 
 The game keeps most of its content (textures, models, rides, scenery, interface skins, text) in OVL
 archives. This page describes the container: how an archive is laid out and how its parts point at each
@@ -217,4 +217,4 @@ Its unique file would start its blocks at address 26, the common file's data siz
 ## Other descriptions
 
 Other projects have documented this format before us, among them the RCT3 Importer's archive dumper and
-the [OpenRCT3](https://github.com/open-rct3/open-rct3) project. Where they disagree with this page, the game's files decide.
+the open-rct3 project. Where they disagree with this page, the game's files decide.

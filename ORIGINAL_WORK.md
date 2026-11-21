@@ -38,7 +38,7 @@ one says which.
   with example values only where they are needed to be unambiguous.
 - Original code that reads and writes those layouts.
 - Test data built in code from invented values shaped like the format (see `tests/ovl/header.test.cpp`).
-- Type tags and other names that are part of a file format and that a parser must recognize.
+- Type tags and other names that are part of a file format and that a parser must recognise.
 
 If you could only produce something character for character by looking at a game file, it is a copy.
 

@@ -424,8 +424,9 @@ namespace rct3::simulation
                         return std::nullopt;
                     };
                     // Worn out, sick, or with something to eat or drink in hand.
-                    if (mood.energy.value < kTuning.facilities.tired.value || mood.nausea.value >= kTuning.needs.want.value || munching(r, g))
-                        if (const auto free = seat(); free && random::chance(dice.state, kTuning.facilities.sit_chance.value))
+                    const bool worn_out = mood.energy.value < kTuning.facilities.tired.value;
+                    if (worn_out || mood.nausea.value >= kTuning.needs.want.value || munching(r, g))
+                        if (const auto free = seat(); free && (worn_out || random::chance(dice.state, kTuning.facilities.sit_chance.value)))
                         {
                             r.emplace<Linger>(g, Linger { .at = PathItemKind::Bench, .left = kTuning.facilities.sit, .bench = free->first, .seat = free->second });
                             continue;

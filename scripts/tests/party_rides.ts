@@ -4,7 +4,8 @@
 //
 //   - two or more of a party ride on one load together;
 //   - two of a party in a queue stand side by side across the line;
-//   - those of a party staying off a ride wait together beside its exit, off the exit's own tile, and think so.
+//   - those of a party staying off a ride wait together beside its exit, off the exit's own tile, and think so;
+//   - parties crowding round one ride spread over the tiles beside it, none standing in another's place.
 //
 // Started on a saved park that has guests of its own (the viewer's `--park PATH`, and `-- --saved` for the
 // script), it runs there instead.
@@ -77,11 +78,17 @@ const ring = () => {
 await park.advanceUntil(() => ring() !== undefined, 600, "a party waiting beside a ride's exit, off it");
 const waiters = must(ring(), "a party waiting");
 // Riders just off step out over the exit's tile on their way to the others, so a few are on one at any time.
-const waiting = people.list().filter((p) => p.state === "waiting");
+const waiting = people.list().filter((p) => p.state === "waiting") as Guest[];
 const onExits = waiting.filter((p) => onExit(p as Guest)).length;
 log("waiting", waiting.length, "on exit tiles", onExits);
 log("party", waiters[0].party, "waits", waiters.length, "beside an exit");
 expect(onExits <= waiting.length / 10, "hardly any of those waiting on an exit's tile");
+// Where parties crowd round a busy ride, two on one tile stand each in a ring of its own, not in one another.
+const piled = waiting.filter((p, i) =>
+    waiting.some((q, j) => j < i && Math.hypot(p.col - q.col, p.row - q.row) < 0.02),
+);
+log("waiting guests standing right where another does", piled.length);
+expect(piled.length <= waiting.length / 20, "hardly any of those waiting stand in another's place");
 const thinking = people.list().filter((p) => !p.staff && p.thoughts.includes(kWaitingForFriends)).length;
 log("guests thinking they wait for their friends", thinking);
 expect(thinking > 0, "a waiting guest thinks so");

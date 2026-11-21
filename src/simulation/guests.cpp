@@ -321,13 +321,13 @@ namespace rct3::simulation
             return glm::clamp(was + glm::clamp(want - was, -most, most), -kLaneReach, kLaneReach);
         }
 
-        /// The lane of the `place`th of `of` standing together in a ring on a tile: the more of them, the wider
-        /// the ring, so neighbours keep apart.
-        glm::vec2 ring_lane(usize place, usize of)
+        /// The lane of the `place`th of `of` standing together in a ring on a tile, the ring turned by `turn`: the
+        /// more of them, the wider the ring, so neighbours keep apart.
+        glm::vec2 ring_lane(usize place, usize of, units::Radians turn = { })
         {
             const f32 n = static_cast<f32>(std::max<usize>(of, 1));
             const f32 radius = std::clamp(kTuning.walking.ring_gap.value * n / (2 * glm::pi<f32>()), kTuning.walking.huddle_radius.value, kLaneReach);
-            const f32 angle = 2 * glm::pi<f32>() * static_cast<f32>(place) / n;
+            const f32 angle = 2 * glm::pi<f32>() * static_cast<f32>(place) / n + turn.value;
             return radius * glm::vec2(std::sin(angle), std::cos(angle));
         }
 
@@ -836,7 +836,13 @@ namespace rct3::simulation
                         if (stride.route.empty() && errand.kind == ErrandKind::Waiting)
                         {
                             const auto [place, of] = place_in_party(r, movers[i]);
-                            stride.lane_to = ring_lane(place, of);
+                            // Each party's ring turned its own way, so two parties a crowd leaves on one tile do
+                            // not stand in each other's places. The golden angle keeps parties one after another
+                            // far apart in turn.
+                            constexpr units::Radians kGoldenAngle { 2.39996f };
+                            const auto* waits_with = r.try_get<Member>(movers[i]);
+                            const f32 turn = waits_with != nullptr ? std::fmod(static_cast<f32>(entt::to_entity(waits_with->party)) * kGoldenAngle.value, 2 * glm::pi<f32>()) : 0.0f;
+                            stride.lane_to = ring_lane(place, of, { turn });
                             ringed = true;
                         }
                         // The last step to a stall: up to its counter.

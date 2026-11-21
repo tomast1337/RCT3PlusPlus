@@ -178,6 +178,30 @@ namespace rct3::scene::park
         /// How riders sit in a car, as the game's motions name it.
         const i32 kRideMotion = rct3::park::person::motion_number("ridecar").value_or(rct3::park::person::motion::kIdle);
 
+        /// Each shown person's level of detail as seen from `eye`, or not drawn when too far or gone home.
+        rct3::park::object::ObjectLevels person_levels(const ParkScene& scene, const glm::vec3& eye)
+        {
+            rct3::park::object::ObjectLevels levels(scene.shown_people.size(), rct3::park::object::kNotDrawn);
+            for (usize i = 0; i < levels.size(); ++i)
+            {
+                if (const ShownPerson& p = scene.shown_people[i]; scene.simulate && p.guest != entt::null && scene.sim.registry.all_of<simulation::Left>(p.guest))
+                    continue; // Gone home
+                const f32 distance = glm::distance(eye, standing_at(scene, scene.shown_people[i]));
+                // Scaled as objects' levels are: detail for the finer ones, draw distance for the last.
+                const rct3::park::object::LevelScale scale = scene.level_scales[static_cast<usize>(rct3::park::DetailKind::People)];
+                const f32 last = kPersonDistances.back() * scale.distance;
+                for (usize k = 0; k < kPersonDistances.size(); ++k)
+                {
+                    if (distance <= (k + 1 < kPersonDistances.size() ? std::min(kPersonDistances[k] * scale.detail, last) : last))
+                    {
+                        levels[i] = static_cast<i8>(k);
+                        break;
+                    }
+                }
+            }
+            return levels;
+        }
+
         /// Places the people near enough to see that stand still, or those that move and may be in `view`, as
         /// they are at `clock`, at `levels`. With `simulate`, the simulated guests count as moving and stand
         /// where the simulation has them. The still ones read only what is set when the park loads besides the
@@ -1043,6 +1067,33 @@ namespace rct3::scene::park
         });
     }
 
+    rct3::park::object::ObjectMesh photo_people(const ParkScene& scene, const glm::vec3& eye, const glm::mat4& view)
+    {
+        if (!scene.person_models)
+            return { };
+        const rct3::park::object::ObjectLevels levels = person_levels(scene, eye);
+        std::vector<rct3::park::person::PlacedPerson> placed = place_people(scene, levels, 0, false, view, scene.simulate);
+        std::ranges::move(place_people(scene, levels, scene.people_clock, true, view, scene.simulate), std::back_inserter(placed));
+        // Riders sit as the cars seat them, without the reactions the riders' own build gives them.
+        for (usize i = 0; i < scene.shown_people.size(); ++i)
+        {
+            const ShownPerson& shown = scene.shown_people[i];
+            if (!scene.simulate || shown.guest == entt::null || levels[i] == rct3::park::object::kNotDrawn)
+                continue;
+            const auto seat = seat_place(scene, shown.guest);
+            if (!seat || !maybe_in_view(view, glm::vec3((*seat)[3])))
+                continue;
+            rct3::park::person::PlacedPerson pose = dressed(shown);
+            pose.level = static_cast<usize>(levels[i]);
+            pose.time = shown.saved_time + scene.park_clock * shown.speed;
+            pose.world = *seat;
+            pose.motion = kRideMotion;
+            placed.push_back(pose);
+        }
+        rct3::park::person::PersonRuns runs;
+        return rct3::park::person::person_mesh(*scene.person_models, placed, runs);
+    }
+
     /// Builds the people meshes again as often as they need, all beside the frame: the moving ones as soon as
     /// the last are done, the riders a few times a second, the still ones when a person's level of detail
     /// changes. The still ones' levels are only taken on with them, so the moving ones keep to the same levels.
@@ -1245,24 +1296,7 @@ namespace rct3::scene::park
                     shown.paces = paces->second;
                 }
             }
-            rct3::park::object::ObjectLevels levels(scene.shown_people.size(), rct3::park::object::kNotDrawn);
-            for (usize i = 0; i < levels.size(); ++i)
-            {
-                if (const ShownPerson& p = scene.shown_people[i]; scene.simulate && p.guest != entt::null && scene.sim.registry.all_of<simulation::Left>(p.guest))
-                    continue; // Gone home
-                const f32 distance = glm::distance(eye, standing_at(scene, scene.shown_people[i]));
-                // Scaled as objects' levels are: detail for the finer ones, draw distance for the last.
-                const rct3::park::object::LevelScale scale = scene.level_scales[static_cast<usize>(rct3::park::DetailKind::People)];
-                const f32 last = kPersonDistances.back() * scale.distance;
-                for (usize k = 0; k < kPersonDistances.size(); ++k)
-                {
-                    if (distance <= (k + 1 < kPersonDistances.size() ? std::min(kPersonDistances[k] * scale.detail, last) : last))
-                    {
-                        levels[i] = static_cast<i8>(k);
-                        break;
-                    }
-                }
-            }
+            rct3::park::object::ObjectLevels levels = person_levels(scene, eye);
             if (levels != scene.people_levels)
             {
                 scene.people_build = std::async(std::launch::async, [&scene, levels = std::move(levels), view, simulate = scene.simulate] {

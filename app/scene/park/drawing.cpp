@@ -113,6 +113,7 @@ namespace rct3::scene::park
             bool terrain = true;
             bool scenery = true;
             bool people = true;
+            bool guests = true; ///< Of the people, the park's guests and staff; a photo draws its own
             bool water = true;
             bool see_through = true;   ///< Blended parts, such as glass
             bool shaded_water = false; ///< With the water shader, seen from `eye`
@@ -265,7 +266,7 @@ namespace rct3::scene::park
                         }
                     }
                 });
-            if (scene.show_people && parts.people && moving)
+            if (scene.show_people && parts.people && parts.guests && moving)
                 profiling::section("People", [&] {
                     draw_transient(device, scene, scene.frame_uploads, scene.still_people, scene.people_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
                     draw_transient(device, scene, scene.frame_uploads, scene.moving_people, scene.people_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
@@ -608,7 +609,14 @@ namespace rct3::scene::park
             into.target = scene.photo_target;
             into.clear_color = scene.horizon;
             device.begin_pass(into);
-            draw_world(device, scene, rct3::park::view_projection(shot.camera, static_cast<f32>(kPhotoWidth) / kPhotoHeight), scene.light, { .eye = rct3::park::eye(shot.camera) });
+            const glm::mat4 transform = rct3::park::view_projection(shot.camera, static_cast<f32>(kPhotoWidth) / kPhotoHeight);
+            const glm::vec3 eye = rct3::park::eye(shot.camera);
+            draw_world(device, scene, transform, scene.light, { .guests = false, .eye = eye });
+            if (scene.show_people)
+            {
+                const rct3::park::object::ObjectMesh people = photo_people(scene, eye, transform);
+                draw_transient(device, scene, std::nullopt, people, scene.people_textures, transform, scene.light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
+            }
             device.end_pass();
             if (device.read_screen(scene.photo_target))
                 scene.photo_reading = shot.name;

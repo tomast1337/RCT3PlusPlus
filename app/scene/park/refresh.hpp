@@ -49,6 +49,10 @@ namespace rct3::scene::park
     /// photographed, as `options` allow, the photos named after the ride in `strings`.
     void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, units::Seconds elapsed, const config::game::GameOptions& options, const ui::StringTable& strings);
 
+    /// The people a photo taken from `eye` in `view` shows, each at the detail the photo's own distance asks:
+    /// those the park draws near the player's view may be far from it.
+    [[nodiscard]] rct3::park::object::ObjectMesh photo_people(const ParkScene& scene, const glm::vec3& eye, const glm::mat4& view);
+
     /// Builds the people meshes again as often as they need, all beside the frame: the moving ones as soon as
     /// the last are done, the riders a few times a second, the still ones when a person's level of detail
     /// changes. The still ones' levels are only taken on with them, so the moving ones keep to the same levels.

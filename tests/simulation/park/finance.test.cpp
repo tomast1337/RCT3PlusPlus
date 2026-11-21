@@ -6,6 +6,7 @@
 #include "simulation/day_clock.hpp"
 #include "simulation/park/state.hpp"
 #include "simulation/sandbox.hpp"
+#include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 
 #include <algorithm>
@@ -298,4 +299,37 @@ TEST_CASE("a park whose money never runs out pays no interest or running costs")
     CHECK(book(park, money, kept, weekly_interest(units::Money { 1'000'000 }, 6), LedgerLine::LoanInterest, Charge::Always));
     CHECK(book(park, money, kept, units::Money { 500 }, LedgerLine::RideRunningCosts, Charge::Always));
     CHECK(money.ledger.empty());
+}
+
+TEST_CASE("an attraction's takings an hour follow what it takes, and fall away once it stops")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 2, 0 });
+    auto& r = park.world().registry;
+    const auto shop = park.shop("Burgers", Product::Food, { 1, 0 }, 100);
+    auto& a = r.get<Attraction>(shop);
+    a.income = { };
+    a.customers = 0;
+    // A customer a second at 1.00, for twice the time it is smoothed over.
+    const auto steps_per_second = static_cast<i32>(std::lround(1 / kTickSeconds));
+    const auto seconds = static_cast<i32>(2 * kTakingsSmoothing.value);
+    for (i32 i = 0; i < seconds * steps_per_second; ++i)
+    {
+        if (i % steps_per_second == 0)
+        {
+            a.income.value += 100;
+            ++a.customers;
+        }
+        step_charges(park.world());
+    }
+    const auto& rate = r.get<TakingsRate>(shop);
+    CHECK(rate.customers == doctest::Approx(units::kHour.value).epsilon(0.02));
+    CHECK(rate.income == doctest::Approx(100 * units::kHour.value).epsilon(0.02));
+    // Its takings reset count afresh, and nothing taken for a while lets the rate fall.
+    a.income = { };
+    a.customers = 0;
+    for (i32 i = 0; i < static_cast<i32>(kTakingsSmoothing.value) * steps_per_second; ++i)
+        step_charges(park.world());
+    CHECK(rate.customers < 0.4f * units::kHour.value);
+    CHECK(rate.customers > 0);
 }

@@ -183,10 +183,23 @@ namespace rct3::simulation::park
 
     void step_charges(SimWorld& world)
     {
-        constexpr f32 kSecondsPerWeek = kSecondsPerHour * save::model::GameClock::kUnitsPerWeek / kCalendarUnitsPerHour;
         entt::registry& r = world.registry;
+        for (const auto [e, a] : r.view<const Attraction>().each())
+        {
+            TakingsRate& rate = r.get_or_emplace<TakingsRate>(e);
+            // Taken since last time; counted afresh when the attraction's takings were reset.
+            const i64 income = a.income >= rate.income_seen ? (a.income - rate.income_seen).value : a.income.value;
+            const u32 customers = a.customers >= rate.customers_seen ? a.customers - rate.customers_seen : a.customers;
+            rate.measured.value += kTickSeconds;
+            const f32 over = std::min(rate.measured.value, kTakingsSmoothing.value);
+            const f32 kept = 1 - kTickSeconds / over;
+            rate.income = rate.income * kept + static_cast<f32>(income) * units::kHour.value / over;
+            rate.customers = rate.customers * kept + static_cast<f32>(customers) * units::kHour.value / over;
+            rate.income_seen = a.income;
+            rate.customers_seen = a.customers;
+        }
         auto& charges = r.ctx().emplace<Charges>();
-        for (charges.week.value += kTickSeconds; charges.week.value >= kSecondsPerWeek; charges.week.value -= kSecondsPerWeek)
+        for (charges.week.value += kTickSeconds; charges.week.value >= kWeekSeconds.value; charges.week.value -= kWeekSeconds.value)
         {
             charges.interest += weekly_interest(charges.loan, charges.rate);
             // One broken down is shut to guests but still open to the player, and goes on costing.

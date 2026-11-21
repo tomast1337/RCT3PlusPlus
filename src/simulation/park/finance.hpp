@@ -8,6 +8,7 @@
 #include "core/types.hpp"
 #include "save/model/park.hpp"
 #include "save/model/rides.hpp"
+#include "simulation/day_clock.hpp"
 #include "simulation/park/ledger_line.hpp"
 #include "simulation/park/state.hpp"
 
@@ -84,10 +85,17 @@ namespace rct3::simulation::park
     /// larger for a `tracked` ride's track than for a flat ride.
     [[nodiscard]] units::Money running_cost(units::Money build_cost, bool tracked);
 
+    /// A week of the park's calendar in game time.
+    inline constexpr units::Seconds kWeekSeconds { kSecondsPerHour * save::model::GameClock::kUnitsPerWeek / kCalendarUnitsPerHour };
+    /// How long an attraction's takings an hour are smoothed over. Chosen by eye: two weeks, so a price change shows
+    /// within a few minutes while one guest more or less hardly moves it.
+    inline constexpr units::Seconds kTakingsSmoothing { 2 * kWeekSeconds.value };
+
     /// As each week ends, charges the loan's interest and each open attraction's running cost to Charges in the
     /// registry's context, for whoever shows the park to take from its cash, broken down or not. Stalls and pools
     /// carry none.
     /// shortcut: the week runs from when the park was opened, as the payroll's does.
+    /// Each step also measures every attraction's takings an hour (TakingsRate).
     void step_charges(SimWorld& world);
 
 } // namespace rct3::simulation::park

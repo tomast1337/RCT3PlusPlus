@@ -280,6 +280,12 @@ namespace rct3::scene::park
                         f.flow->riding += aboard.size();
             }
         }
+        // What it has taken while the park runs, and how fast.
+        if (f.common != nullptr && scene.simulate)
+            for (const auto [e, a, rate] : scene.sim.registry.view<const simulation::Attraction, const simulation::TakingsRate>().each())
+                if (a.saved != 0 && a.saved == f.common->id)
+                    f.takings = ui::screens::info::Takings { .income = a.income, .customers = a.customers, .income_per_hour = units::Money { std::llround(rate.income) }, .customers_per_hour = rate.customers };
+        f.now = scene.park.time;
         // While its fence button is down, the looks its fence and doors may take, each theme's named after it.
         if (f.ride != nullptr && scene.ride_styles_shown && f.station.value_or(false) && !f.pool_ride && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
         {

@@ -2,6 +2,7 @@
 #include "ui/screens/info/attraction.hpp"
 
 #include "core/types.hpp"
+#include "simulation/park/finance.hpp"
 #include "simulation/tuning.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
@@ -102,6 +103,13 @@ namespace rct3::ui::screens::info
         constexpr f32 kModePageWidth = 680;
         constexpr f32 kSpeedWidth = 100;
         constexpr std::string_view kSoldName = "%NAME%";
+        constexpr std::string_view kPerHour = "AttractionNumberArea_PerHour"; ///< Its '#' stands for the amount
+        /// An attraction's age in years, the last two with a '#' for the number.
+        constexpr std::string_view kZeroYears = "ZeroYearsAgo";
+        constexpr std::string_view kOneYear = "OneYearAgo";
+        constexpr std::string_view kManyYears = "ManyYearsAgo";
+        /// Running costs are charged a week at a time and shown an hour.
+        constexpr f64 kWeeksPerHour = units::kHour.value / simulation::park::kWeekSeconds.value;
 
         using units::kGravity;
         constexpr f32 kKmhPerMs = 3.6f;
@@ -223,6 +231,14 @@ namespace rct3::ui::screens::info
             return words;
         }
 
+        /// `text` with `mark` in it replaced by `with`.
+        std::u16string filled(std::u16string text, std::u16string_view mark, std::u16string_view with)
+        {
+            if (const auto at = text.find(mark); at != std::u16string::npos)
+                text.replace(at, mark.size(), with);
+            return text;
+        }
+
         /// The pots of the attraction's colours, when it has any.
         void paints(InfoPage& page, const AttractionFacts& f, const StringTable& strings)
         {
@@ -251,18 +267,28 @@ namespace rct3::ui::screens::info
             return c;
         }
 
+        /// `value` an hour, in the game's words for it.
+        std::u16string per_hour(const StringTable& strings, std::u16string value)
+        {
+            const std::u16string words = text(strings, kPerHour);
+            return words.empty() ? value : filled(words, u"#", value);
+        }
+
         void finances(InfoPage& page, const AttractionFacts& f, const StringTable& strings, const InfoUnits& units)
         {
-            // The projections are the game's own reckoning per hour, which the save does not keep.
-            // Income, cost and profit, then the total apart under them.
-            add(page, strings, "AttractionFinancesDialogLabel_Income", missing());
-            add(page, strings, "AttractionFinancesDialogLabel_RunningCost", money_text(units.currency, f.common->running_cost));
-            add(page, strings, "AttractionFinancesDialogLabel_Profit", missing());
+            const save::model::AttractionCommon& a = *f.common;
+            // Projected an hour: what it takes at the rate the running park measures, less its running cost, which
+            // is charged a week at a time. Income, cost and profit, then the total apart under them.
+            const auto hourly = [&](units::Money m) { return per_hour(strings, money_text(units.currency, m)); };
+            const units::Money running { std::llround(static_cast<f64>(a.running_cost.value) * kWeeksPerHour) };
+            add(page, strings, "AttractionFinancesDialogLabel_Income", f.takings ? hourly(f.takings->income_per_hour) : missing());
+            const bool ride = f.ride != nullptr && f.ride->kind != save::model::RideKind::Special;
+            add(page, strings, ride ? "AttractionFinancesDialogLabel_ProjectedRunningCost" : "AttractionFinancesDialogLabel_RunningCost", hourly(running));
+            add(page, strings, "AttractionFinancesDialogLabel_Profit", f.takings ? hourly(f.takings->income_per_hour - running) : missing());
             page.lines.push_back({ });
-            add(page, strings, "AttractionFinancesDialogLabel_TotalProfit", money_text(units.currency, f.common->total_profit));
+            add(page, strings, "AttractionFinancesDialogLabel_TotalProfit", money_text(units.currency, a.total_profit + (f.takings ? f.takings->income : units::Money { })));
             if (f.ride == nullptr)
                 return;
-            const bool ride = f.ride->kind != save::model::RideKind::Special;
             page.controls.push_back(price(control_id(AttractionControl::Price), "AttractionFinancesDialogLabel_AdmissionPrice", text(strings, "AttractionFinancesDialogLabel_AdmissionPrice"), f.ride->ticket_price.value, ride ? kMostRidePrice : kMostPrice));
             // The price over the sums, as the player sets it first.
             page.controls_after = 0;
@@ -289,14 +315,22 @@ namespace rct3::ui::screens::info
         void customers(InfoPage& page, const AttractionFacts& f, const StringTable& strings)
         {
             const save::model::AttractionCommon& a = *f.common;
-            // Customers an hour and the age are reckoned by the game from its clock; neither is saved. A running
-            // park measures the first.
+            // Customers an hour: a running ride's as its trains or goes leave, else as the park measures it taking
+            // them. A park not running shows none.
             const bool measured = f.flow && f.flow->per_hour > 0;
-            add_half(page, strings, "AttractionCustomersDialogLabel_Customers", measured ? count(std::lround(f.flow->per_hour)) : missing());
+            const std::optional<f32> rate = measured ? std::optional(f.flow->per_hour) : f.takings ? std::optional(f.takings->customers_per_hour) : std::nullopt;
+            // A whole line: the rate in words is too wide for half of one.
+            add(page, strings, "AttractionCustomersDialogLabel_Customers", rate ? per_hour(strings, count(std::lround(*rate))) : missing());
             add_half(page, strings, "AttractionCustomersDialogLabel_Popularity", percent(a.popularity * kPercent));
             add_half(page, strings, "AttractionCustomersDialogLabel_Satisfaction", percent(a.satisfaction * kPercent));
-            add_half(page, strings, "AttractionCustomersDialogLabel_TotalCustomers", count(a.total_guests));
-            add_half(page, strings, "AttractionCustomersDialogLabel_AgeYears", missing());
+            add_half(page, strings, "AttractionCustomersDialogLabel_TotalCustomers", count(a.total_guests + (f.takings ? f.takings->customers : 0)));
+            std::u16string age = missing();
+            if (f.now)
+            {
+                const auto years = static_cast<i64>(std::max(0.0f, std::floor((*f.now - a.build_time.value) / save::model::GameClock::kUnitsPerYear)));
+                age = years == 0 ? text(strings, kZeroYears) : filled(text(strings, years == 1 ? kOneYear : kManyYears), u"#", count(years));
+            }
+            add_half(page, strings, "AttractionCustomersDialogLabel_AgeYears", std::move(age));
             if (f.ride && !f.ride->stations.empty())
             {
                 f32 longest = 0;
@@ -307,7 +341,8 @@ namespace rct3::ui::screens::info
                 if (f.flow)
                     longest = measured ? static_cast<f32>(f.flow->queued) * units::kHour.value / f.flow->per_hour : 0;
                 add_half(page, strings, "AttractionCustomersDialogLabel_QueueTime", unknown ? missing() : duration(longest));
-                add_half(page, strings, "AttractionCustomersDialogLabel_FavouriteRide", missing());
+                // The guests who like it best of all rides, as a saved park counts them.
+                add_half(page, strings, "AttractionCustomersDialogLabel_FavouriteRide", count(std::ranges::count(f.guests, a.id, [](const save::model::Guest& g) { return g.favourite_ride.id; })));
             }
             if (f.stall == nullptr)
                 return;
@@ -685,14 +720,6 @@ namespace rct3::ui::screens::info
         std::u16string symbol_name(std::string_view symbol)
         {
             return symbol.empty() ? missing() : strings::to_utf16(symbol.substr(0, symbol.find(':')));
-        }
-
-        /// `text` with `mark` in it replaced by `with`.
-        std::u16string filled(std::u16string text, std::u16string_view mark, std::u16string_view with)
-        {
-            if (const auto at = text.find(mark); at != std::u16string::npos)
-                text.replace(at, mark.size(), with);
-            return text;
         }
 
         void items(InfoPage& page, const AttractionFacts& f, const StringTable& strings, const InfoUnits& units)

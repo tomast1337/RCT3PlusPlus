@@ -133,6 +133,15 @@ namespace rct3::ui::screens::info
         usize riding = 0; ///< On it now
     };
 
+    /// What a running attraction has taken since the park was loaded, and how fast it takes it an hour.
+    struct Takings
+    {
+        units::Money income { };
+        i64 customers = 0;
+        units::Money income_per_hour { };
+        f32 customers_per_hour = 0;
+    };
+
     /// How many trains and cars a tracked ride may be given.
     struct TrainLimits
     {
@@ -162,7 +171,10 @@ namespace rct3::ui::screens::info
         std::vector<usize> colours { };
         /// While the park runs; the pages show these over what the save kept.
         std::optional<RideFlow> flow { };
-        /// The park's guests, to tell how many the ride suits.
+        std::optional<Takings> takings { };
+        /// The park's calendar now, as GameClock::time, to tell its age by.
+        std::optional<f32> now { };
+        /// The park's guests, to tell how many the ride suits and how many like it best.
         std::span<const save::model::Guest> guests { };
         /// Of a ride, whether signs stand over its queues.
         std::optional<bool> queue_signs { };

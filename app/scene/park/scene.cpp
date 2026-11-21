@@ -1626,17 +1626,20 @@ namespace rct3::scene::park
                     judge_themes(scene);
                 // The animals the park came with, given their species' care once the build lists say it; those kept
                 // in our save have theirs. shortcut: each animal's appetite and sociability are drawn afresh rather
-                // than read from the original park; read them if players see animals change on loading.
+                // than read from the original park; read them if players see animals change on loading. Every
+                // meat-eater, kept in our save or not, learns its prey from its species.
                 if (!scene.animals_cared && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
                 {
                     auto& r = scene.sim.registry;
                     for (const auto [e, animal] : r.view<const simulation::Animal>().each())
                     {
                         auto& care = r.get_or_emplace<simulation::AnimalCare>(e);
-                        if (!care.house.empty() || care.space != 0)
-                            continue;
                         const auto item = std::ranges::find_if(scene.build.items.get(), [&](const rct3::park::BuildItem& i) { return i.kind == rct3::park::BuildKind::Animal && i.symbol == animal.species; });
-                        if (item != scene.build.items.get().end())
+                        if (item == scene.build.items.get().end())
+                            continue;
+                        if (!item->prey.empty())
+                            r.emplace_or_replace<simulation::Hunter>(e, simulation::Hunter { .prey = item->prey });
+                        if (care.house.empty() && care.space == 0)
                             care = simulation::care_for(item->care, item->needs, scene.looks);
                     }
                     scene.animals_cared = true;

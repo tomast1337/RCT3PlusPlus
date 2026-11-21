@@ -174,6 +174,8 @@ namespace rct3::scene
             };
             const entt::entity added = simulation::add_animal(scene.sim, animal, at);
             scene.sim.registry.emplace<simulation::AnimalCare>(added, simulation::care_for(item.care, item.needs, scene.looks));
+            if (!item.prey.empty())
+                scene.sim.registry.emplace<simulation::Hunter>(added, simulation::Hunter { .prey = item.prey });
             park::float_money(scene, at, -item.price);
             if (enclosure)
             {

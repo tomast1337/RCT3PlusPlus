@@ -1211,8 +1211,8 @@ declare namespace structures {
 declare namespace animals {
     /** The park's animals, each with a number of its own, its species, its name, the enclosure they live in (-1 for
      *  none), whether grown, male and bought rescued, whether they are in a crate, still lowered by the helicopter,
-     *  or out of every enclosure, their health from 0 to 1, the point of the map they stand on, in tiles, and the
-     *  height of the ground under them. */
+     *  or out of every enclosure, their health and hunger from 0 to 1, the animal a predator is running after (-1
+     *  for none), the point of the map they stand on, in tiles, and the height of the ground under them. */
     function list(): {
         id: number;
         species: string;
@@ -1225,6 +1225,8 @@ declare namespace animals {
         flying: boolean;
         escaped: boolean;
         health: number;
+        hunger: number;
+        hunting: number;
         at: { col: Tiles; row: Tiles };
         height: WorldUnits;
     }[];
@@ -1274,4 +1276,6 @@ declare namespace animals {
     /** The dung lying about, each piece with the enclosure it lies in (-1 for none), its size from 0 to 2, and the
      *  point of the map it lies on, in tiles. */
     function dung(): { enclosure: number; size: number; col: Tiles; row: Tiles }[];
+    /** The bodies of animals predators killed, each with its species and the point of the map it lies on, in tiles. */
+    function carcasses(): { species: string; col: Tiles; row: Tiles }[];
 }

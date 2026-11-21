@@ -89,7 +89,8 @@ jobs:
       - name: Test
         run: ./nob test ${{ matrix.cache == 'sanitize' && '--sanitize --no-tools' || '' }}
 
-  # shortcut: no compiler cache, so every run compiles everything; upgrade (ccache from MSYS2) if the wait hurts.
+  # ccache as on Linux: copies of ccache.exe named clang++.exe and clang.exe come first on the path (a copy, as
+  # MSYS2 symlinks are not real ones for Windows programs), and ccache then runs the next ones, Clang's.
   windows:
     name: build and test (Windows)
     needs: format
@@ -113,6 +114,7 @@ jobs:
             mingw-w64-clang-x86_64-libc++
             mingw-w64-clang-x86_64-lld
             mingw-w64-clang-x86_64-vulkan-loader
+            mingw-w64-clang-x86_64-ccache
             unzip
 
       # Into the MSYS2 tree: its shell does not take over the runner's PATH, so GITHUB_PATH would not reach it.
@@ -121,6 +123,19 @@ jobs:
           curl -fsSL -o slang.zip https://github.com/shader-slang/slang/releases/download/v2026.18.2/slang-2026.18.2-windows-x86_64.zip
           mkdir -p /opt/slang && unzip -q slang.zip -d /opt/slang
           rm slang.zip
+
+      - name: Install ccache
+        run: |
+          mkdir -p /opt/ccache
+          cp /clang64/bin/ccache.exe /opt/ccache/clang++.exe
+          cp /clang64/bin/ccache.exe /opt/ccache/clang.exe
+
+      - name: Restore the compiler cache
+        uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-windows-${{ github.sha }}
+          restore-keys: ccache-windows-
 
       - name: Compiler version
         run: clang++ -v --version
@@ -134,12 +149,16 @@ jobs:
         run: Install-WindowsFeature Server-Media-Foundation
 
       - name: Test
-        run: ./nob test
+        run: |
+          export PATH="/opt/ccache:$PATH" CCACHE_DIR="$PWD/.ccache" CCACHE_MAXSIZE=400M
+          ccache --zero-stats
+          ./nob test
 
       - name: Build the viewer
         run: |
-          export PATH="/opt/slang/bin:$PATH"
+          export PATH="/opt/ccache:/opt/slang/bin:$PATH" CCACHE_DIR="$PWD/.ccache" CCACHE_MAXSIZE=400M
           ./nob app
+          ccache --show-stats
 
   # Formatting first: it takes a minute, and the build jobs wait for it, so a formatting slip fails fast instead
   # of after a full build. The tool versions are pinned (clang-format from PyPI, Prettier in nob.cpp) so the result

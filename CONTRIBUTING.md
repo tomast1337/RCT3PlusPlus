@@ -34,8 +34,8 @@ build/debug/sound-play --null --tone 440                       # same path witho
 ```
 
 `./nob` rebuilds itself when `nob.cpp` or `nob.hpp` change. `CXX` selects the compiler (default `clang++`; nob passes Clang flags), `CC` the C compiler for vendored C code.
-`build/compile_commands.json` is written for clangd. Needs Clang 23+ with GCC 16+'s libstdc++ (`std::optional<T&>`); GCC itself is not used as a compiler. POSIX,
-or Windows with MSYS2 UCRT64: see [Windows](docs/windows.md).
+`build/compile_commands.json` is written for clangd. Needs Clang 23+ with GCC 16+'s libstdc++ (`std::optional<T&>`); GCC itself is not used as a compiler. Linux,
+or Windows with MSYS2 CLANG64 (Clang 23+ with libc++): see [Windows](docs/windows.md).
 
 Audio (`src/audio/`) uses the vendored [miniaudio](third_party/miniaudio/) and is linked into the tests and
 the tools that use it only. It needs no audio package and no device to build or test: on Linux miniaudio

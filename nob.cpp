@@ -101,14 +101,24 @@ namespace
         return jobs;
     }
 
+    // What sets Windows apart for the paths nob builds: programs end in .exe (the linker adds it to the name it is
+    // given), and PATH is split by semicolons, as its folders hold a drive's colon.
+#ifdef _WIN32
+    constexpr std::string_view kExe = ".exe";
+    constexpr char kPathSeparator = ';';
+#else
+    constexpr std::string_view kExe = "";
+    constexpr char kPathSeparator = ':';
+#endif
+
     // Whether `program` is on PATH.
     bool on_path(std::string_view program)
     {
         const char* path = std::getenv("PATH");
-        for (const auto dir : std::views::split(std::string_view(path ? path : ""), ':'))
+        for (const auto dir : std::views::split(std::string_view(path ? path : ""), kPathSeparator))
         {
             std::error_code error;
-            if (fs::exists(fs::path(std::string_view(dir)) / program, error))
+            if (fs::exists(fs::path(std::string_view(dir)) / std::format("{}{}", program, kExe), error))
                 return true;
         }
         return false;
@@ -234,6 +244,41 @@ namespace
         return procs.wait_all() && ok;
     }
 
+#ifdef _WIN32
+    // An object that makes UTF-8 the code page of the program it is linked into (Windows 10 1903 and later), from
+    // an application manifest windres compiles. std::filesystem takes narrow text as UTF-8 on Windows, while
+    // main's arguments, getenv and fopen use the code page; with the two alike, a path outside ASCII (a user
+    // folder with an accent in its name) goes between them unchanged.
+    std::optional<fs::path> utf8_code_page_object(const Config& cfg)
+    {
+        const fs::path object = cfg.obj_dir() / "utf8_code_page.o";
+        if (fs::exists(object))
+            return object;
+        const fs::path gen_dir = cfg.out_dir() / "gen";
+        if (!mkdir_p(gen_dir) || !mkdir_p(cfg.obj_dir()))
+            return std::nullopt;
+        const fs::path manifest = gen_dir / "utf8_code_page.manifest";
+        const fs::path script = gen_dir / "utf8_code_page.rc";
+        std::ofstream(manifest) << R"(<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <assemblyIdentity type="win32" name="rct3pp" version="1.0.0.0"/>
+  <application>
+    <windowsSettings>
+      <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
+    </windowsSettings>
+  </application>
+</assembly>
+)";
+        // Resource 1 of type 24: the manifest Windows reads when it starts a program.
+        std::ofstream(script) << std::format("1 24 \"{}\"\n", fs::absolute(manifest).generic_string());
+        Cmd cmd;
+        cmd << "windres" << "-i" << script.string() << "-O" << "coff" << "-o" << object.string();
+        if (!run(cmd))
+            return std::nullopt;
+        return object;
+    }
+#endif
+
     // Links `objects` into `output`. The object list is remembered next to the output so that removing a
     // source file (which leaves every remaining object older than the binary) still triggers a relink.
     bool link(const Config& cfg, const fs::path& output, const std::vector<fs::path>& objects)
@@ -251,7 +296,7 @@ namespace
         if (std::ifstream in(list_file); in)
             previous.assign(std::istreambuf_iterator<char>(in), { });
 
-        if (previous == list && !needs_rebuild(output, objects))
+        if (previous == list && !needs_rebuild(std::format("{}{}", output.string(), kExe), objects))
             return true;
 
         Cmd cmd;
@@ -259,8 +304,16 @@ namespace
         cmd << "-o" << output.string();
         for (const auto& o : objects)
             cmd << o.string();
+#ifdef _WIN32
+        const std::optional<fs::path> code_page = utf8_code_page_object(cfg);
+        if (!code_page)
+            return false;
+        cmd << code_page->string();
+#endif
         cmd.append(cfg.link_flags); // After the objects: an import or static library only serves what comes before it
-        cmd << "-lstdc++exp";       // std::stacktrace; a static library, so after the objects
+#ifndef _WIN32
+        cmd << "-lstdc++exp"; // std::stacktrace; a static library, so after the objects
+#endif
         if (!run(cmd))
             return false;
 
@@ -393,8 +446,8 @@ namespace
         return output;
     }
 
-    // find_files without the other platform's files (see the top of this file). Every source list goes through it.
-    std::vector<fs::path> find_sources(const fs::path& dir, std::string_view ext)
+    // Whether `source` is another platform's file (see the top of this file).
+    bool other_platforms_source(const fs::path& source)
     {
 #if defined(_WIN32)
         constexpr std::array<std::string_view, 2> kOtherPlatforms = { "_ffmpeg", "_linux" };
@@ -403,12 +456,16 @@ namespace
 #else
         constexpr std::array<std::string_view, 2> kOtherPlatforms = { "_windows", "_linux" };
 #endif
+        const std::string name = source.filename().string();
+        const std::string_view stem = std::string_view(name).substr(0, name.find('.'));
+        return std::ranges::any_of(kOtherPlatforms, [&](std::string_view other) { return stem.ends_with(other); });
+    }
+
+    // find_files without the other platforms' files. Every source list goes through it.
+    std::vector<fs::path> find_sources(const fs::path& dir, std::string_view ext)
+    {
         auto out = find_files(dir, ext);
-        std::erase_if(out, [&](const fs::path& p) {
-            const std::string name = p.filename().string();
-            const std::string_view stem = std::string_view(name).substr(0, name.find('.'));
-            return std::ranges::any_of(kOtherPlatforms, [&](std::string_view other) { return stem.ends_with(other); });
-        });
+        std::erase_if(out, other_platforms_source);
         return out;
     }
 
@@ -996,6 +1053,9 @@ namespace
                 files.insert(files.end(), found.begin(), found.end());
             }
         }
+        // A file named on the command line may be another platform's (CI passes what a pull request changed); it
+        // is not in the compile database, so clang-tidy could not read it.
+        std::erase_if(files, other_platforms_source);
         if (!fs::exists(kBuildDir / "compile_commands.json"))
         {
             log(Level::Error, "no {}: run ./nob build first", (kBuildDir / "compile_commands.json").string());
@@ -1039,10 +1099,8 @@ namespace
 #ifdef _WIN32
         // shortcut: x86-64 only; upgrade when another architecture is built.
         constexpr std::string_view kPlatform = "windows-x86_64";
-        constexpr std::string_view kExe = ".exe";
 #else
         constexpr std::string_view kPlatform = "linux-x86_64";
-        constexpr std::string_view kExe = "";
 #endif
         const std::string version = build_version();
         const fs::path packages = kBuildDir / "package";

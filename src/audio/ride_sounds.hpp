@@ -17,6 +17,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace rct3::audio
 {
@@ -98,5 +99,10 @@ namespace rct3::audio
     [[nodiscard]] usize tune_of(std::string_view file, std::span<const std::u16string> tunes);
     /// The file a ride keeps for tune `tune` of `tunes`, from 1; empty for 0, none.
     [[nodiscard]] std::string tune_file(usize tune, std::span<const std::u16string> tunes);
+
+    /// Puts `tunes` (the music folder's tunes by name) in the order a ride's window lists them: style by style, as
+    /// `styles` gives them (the music folder's list of lines `\\File.wma*Style*y`, `#` starting a comment), then by
+    /// name, those it gives no style last. Returns what the window shows for each: "Style - Name", or the name alone.
+    [[nodiscard]] std::vector<std::u16string> order_by_style(std::vector<std::u16string>& tunes, std::string_view styles);
 
 } // namespace rct3::audio

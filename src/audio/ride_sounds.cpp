@@ -9,6 +9,9 @@
 #include <array>
 #include <cmath>
 #include <format>
+#include <map>
+#include <ranges>
+#include <tuple>
 #include <utility>
 
 namespace rct3::audio
@@ -101,6 +104,36 @@ namespace rct3::audio
     std::string tune_file(usize tune, std::span<const std::u16string> tunes)
     {
         return tune == 0 || tune > tunes.size() ? std::string { } : std::format("{}{}", strings::to_utf8(tunes[tune - 1]), kTuneExtension);
+    }
+
+    std::vector<std::u16string> order_by_style(std::vector<std::u16string>& tunes, std::string_view styles)
+    {
+        std::map<std::string, std::string, strings::LessIgnoringCase> style_of;
+        for (const auto part : std::views::split(styles, '\n'))
+        {
+            std::string_view line(part.begin(), part.end());
+            if (line.starts_with('#'))
+                continue;
+            const usize star = line.find('*');
+            const usize end = star == std::string_view::npos ? star : line.find('*', star + 1);
+            if (end == std::string_view::npos || end == star + 1)
+                continue;
+            const std::string_view file = line.substr(0, star);
+            style_of.emplace(file.substr(file.find_last_of("/\\") == std::string_view::npos ? 0 : file.find_last_of("/\\") + 1), line.substr(star + 1, end - star - 1));
+        }
+        const auto style = [&](const std::u16string& tune) {
+            const auto found = style_of.find(tune_file(1, std::span(&tune, 1)));
+            return found == style_of.end() ? std::string { } : found->second;
+        };
+        std::ranges::sort(tunes, [&](const std::u16string& a, const std::u16string& b) {
+            const std::string sa = style(a);
+            const std::string sb = style(b);
+            return std::tuple(sa.empty(), sa, a) < std::tuple(sb.empty(), sb, b);
+        });
+        std::vector<std::u16string> shown;
+        for (const std::u16string& tune : tunes)
+            shown.push_back(style(tune).empty() ? tune : strings::to_utf16(style(tune)) + u" - " + tune);
+        return shown;
     }
 
     RunningMix running_mix(f32 speed, RunningLoops loops)

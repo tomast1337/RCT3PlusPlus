@@ -228,7 +228,7 @@ namespace rct3::scene::park
             f.common = &f.ride->base;
             f.queue_signs = !scene.led_signs.hidden.contains(f.ride->base.id);
             f.seats = flat_view(scene, ref.ride(), FlatEye::Seat, 0) || flat_view(scene, ref.ride(), FlatEye::Fixed, 0);
-            f.music = scene.tunes;
+            f.music = scene.tune_labels;
             f.tune = audio::tune_of(f.ride->music, scene.tunes);
             f.low_friction = scene.low_friction.contains(f.ride->base.id);
             if (const auto series = scene.graph_series.find(f.ride->base.id); series != scene.graph_series.end())

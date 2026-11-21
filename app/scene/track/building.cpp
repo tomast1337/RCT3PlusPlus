@@ -1069,7 +1069,7 @@ namespace rct3::scene::track
                 p.controls.push_back(std::move(name));
                 ui::screens::info::InfoControl music { .id = ui::screens::info::control_id(ui::screens::info::AttractionControl::Music), .name = "AttractionViewDialogMusicToolTip", .kind = ui::screens::info::InfoControlKind::Choice, .value = static_cast<i32>(b.design_tune), .beside = true, .width = ui::screens::info::kNameWidth, .help = std::u16string(assets.strings->get("AttractionViewDialogMusicToolTip")) };
                 music.items.emplace_back(assets.strings->get("AttractionViewDialogNoMusic"));
-                music.items.insert(music.items.end(), scene.tunes.begin(), scene.tunes.end());
+                music.items.insert(music.items.end(), scene.tune_labels.begin(), scene.tune_labels.end());
                 p.controls.push_back(std::move(music));
                 p.controls.push_back({ .name = "status", .kind = ui::screens::info::InfoControlKind::Words });
                 return p;

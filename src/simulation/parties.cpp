@@ -70,8 +70,7 @@ namespace rct3::simulation
             ++rides;
         }
         const f64 tilt = std::pow(1 + kTuning.parties.pull, rides > 0 ? wild / static_cast<f32>(rides) : 0.0f);
-        // shortcut: no campaign aims at a kind of party, as advertising campaigns are not simulated yet (the
-        // finances work, #98); when they are, one aimed at families or at teens multiplies those weights here.
+        // Marketing campaigns draw more parties of every kind alike (step_gates): none aims at families or teens.
         for (usize k = 0; k < kPartyKinds; ++k)
         {
             const auto kind = static_cast<PartyKind>(k);

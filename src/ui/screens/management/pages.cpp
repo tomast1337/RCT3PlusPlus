@@ -316,14 +316,66 @@ namespace rct3::ui::screens::management
             month_ticks(page, strings, f.state);
         }
 
-        void park_campaigns(ManagementPage& page, const StringTable& strings)
+        /// `n` weeks in words: the number and the word for so many.
+        std::u16string weeks_text(const StringTable& strings, i32 n)
         {
-            page.lines.push_back({ text(strings, "Campaign_Active"), std::u16string(kDash), false, "Campaign_Active" });
-            page.lines.push_back({ text(strings, "Campaign_Availiable"), std::u16string(kDash), false, "Campaign_Availiable" });
-            page.note = text(strings, kNotRead);
-            page.buttons.push_back(stub("Campaign_ParkVouchers", { }, text(strings, "Campaign_Park_Vouchers")));
-            page.buttons.push_back(stub("Campaign_Advertising", { }, text(strings, "Campaign_Park_Advertise")));
-            page.buttons.push_back(stub("Campaign_AttractionVouchers", { }, text(strings, "Campaign_Attraction_Vouchers")));
+            constexpr std::array<std::string_view, 5> kWords = { "ZeroWeeks", "OneWeeks", "TwoWeeks", "ThreeWeeks", "FourWeeks" };
+            return whole(n) + u" " + text(strings, n >= 0 && static_cast<usize>(n) < kWords.size() ? kWords[static_cast<usize>(n)] : "ManyWeeks");
+        }
+
+        constexpr std::array<std::string_view, save::model::kCampaignKinds> kCampaignIcons = { "Campaign_ParkVouchers", "Campaign_Advertising", "Campaign_AttractionVouchers" };
+        constexpr std::array<std::string_view, save::model::kCampaignKinds> kCampaignTitles = { "Campaign_Dialog_ParkVouchers_Title", "Campaign_Dialog_Advertising_Title", "Campaign_Dialog_AttractionVouchers_Title" };
+        /// The tab's words across the page, which report nothing.
+        constexpr i32 kCampaignWords = 100;
+
+        void park_campaigns(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const info::InfoUnits& units)
+        {
+            using save::model::CampaignKind;
+            const std::span<const save::model::Campaign> running = f.park != nullptr ? std::span(f.park->campaigns) : std::span<const save::model::Campaign> { };
+            const f32 now = f.state != nullptr ? f.state->time : 0;
+            page.lines.push_back({ text(strings, "Campaign_Active"), { }, false, "Campaign_Active" });
+            for (const save::model::Campaign& c : running)
+            {
+                std::u16string name = text(strings, simulation::park::campaign_name_key(c.kind));
+                if (c.attraction && f.rides != nullptr)
+                    if (const auto ride = std::ranges::find(f.rides->rides, *c.attraction, [](const save::model::Ride& r) { return r.base.id; }); ride != f.rides->rides.end())
+                        name += u": " + info::attraction_name(ride->base, strings);
+                page.lines.push_back({ std::move(name), u"(" + weeks_text(strings, simulation::park::campaign_weeks_left(c, now)) + text(strings, "Campaign_Remaining"), false, std::string(simulation::park::campaign_name_key(c.kind)) });
+            }
+            if (running.empty())
+                page.lines.push_back({ text(strings, "Campaign_NoActive"), { }, false, "Campaign_NoActive" });
+            i32 words = kCampaignWords;
+            const auto say = [&](std::string_view key, std::u16string line) { page.controls.push_back({ .id = words++, .name = std::string(key), .kind = info::InfoControlKind::Words, .label = std::move(line) }); };
+            say("Campaign_Availiable", text(strings, "Campaign_Availiable"));
+            const std::optional<CampaignKind> kind = campaign_kind_shown(f);
+            if (!kind)
+            {
+                say("Campaign_NoAvailiable", text(strings, "Campaign_NoAvailiable"));
+                return;
+            }
+            const usize k = std::to_underlying(*kind);
+            say(kCampaignTitles[k], text(strings, kCampaignTitles[k]));
+            // The ride attraction vouchers are for, among the park's rides.
+            if (*kind == CampaignKind::AttractionVouchers)
+            {
+                const usize rides = f.rides != nullptr ? f.rides->rides.size() : 0;
+                const usize ride = std::min(f.campaign.ride, rides > 0 ? rides - 1 : 0);
+                page.controls.push_back({ .id = kCampaignRideControl, .name = "Campaign_Select_Attraction", .label = text(strings, "TT_AttractionListDialogIconRides"), .value = static_cast<i32>(ride), .maximum = static_cast<i32>(rides > 0 ? rides - 1 : 0), .shown = rides > 0 ? info::attraction_name(f.rides->rides[ride].base, strings) : text(strings, "Campaign_Select_Attraction"), .enabled = rides > 0 });
+            }
+            // Television is the only medium the game offers.
+            std::u16string medium = text(strings, "Campaign_Select_Publication");
+            std::erase_if(medium, [](char16_t c) { return c == u'<' || c == u'>'; });
+            page.controls.push_back({ .id = kCampaignMediumControl, .name = "Campaign_Select_Publication", .label = std::move(medium), .shown = text(strings, "Campaign_Publication_TV") });
+            page.controls.push_back({ .id = kCampaignWeeksControl, .name = "Campaign_Duration", .label = text(strings, "Campaign_Duration"), .value = f.campaign.weeks, .minimum = simulation::park::kFewestCampaignWeeks, .maximum = simulation::park::kMostCampaignWeeks, .shown = weeks_text(strings, f.campaign.weeks) });
+            const units::Money week = simulation::park::campaign_week_cost(*kind);
+            say("Campaign_Week_Cost", text(strings, "Campaign_Week_Cost") + money(units, week));
+            say("Campaign_Total_Cost", text(strings, "Campaign_Total_Cost") + money(units, { week.value * f.campaign.weeks }));
+            for (usize i = 0; i < save::model::kCampaignKinds; ++i)
+            {
+                const auto other = static_cast<CampaignKind>(i);
+                page.buttons.push_back({ std::string(kCampaignIcons[i]), { }, text(strings, simulation::park::campaign_name_key(other)), !std::ranges::contains(running, other, &save::model::Campaign::kind) });
+            }
+            page.buttons.push_back({ { }, text(strings, "Campaign_Start"), text(strings, kCampaignTitles[k]), campaign_order(f).has_value(), { }, "Campaign_Start" });
         }
 
         void park_awards(ManagementPage& page, const ManagementFacts& f, const StringTable& strings)
@@ -1190,6 +1242,31 @@ namespace rct3::ui::screens::management
         return csv;
     }
 
+    std::optional<save::model::CampaignKind> campaign_kind_shown(const ManagementFacts& facts)
+    {
+        const std::span<const save::model::Campaign> running = facts.park != nullptr ? std::span(facts.park->campaigns) : std::span<const save::model::Campaign> { };
+        const auto free = [&](save::model::CampaignKind kind) { return !std::ranges::contains(running, kind, &save::model::Campaign::kind); };
+        if (free(facts.campaign.kind))
+            return facts.campaign.kind;
+        for (usize i = 0; i < save::model::kCampaignKinds; ++i)
+            if (free(static_cast<save::model::CampaignKind>(i)))
+                return static_cast<save::model::CampaignKind>(i);
+        return std::nullopt;
+    }
+
+    std::optional<simulation::park::CampaignOrder> campaign_order(const ManagementFacts& facts)
+    {
+        const std::optional<save::model::CampaignKind> kind = campaign_kind_shown(facts);
+        if (!kind || facts.park == nullptr)
+            return std::nullopt;
+        simulation::park::CampaignOrder order { .kind = *kind, .weeks = facts.campaign.weeks };
+        if (*kind == save::model::CampaignKind::AttractionVouchers && facts.rides != nullptr && !facts.rides->rides.empty())
+            order.attraction = facts.rides->rides[std::min(facts.campaign.ride, facts.rides->rides.size() - 1)].base.id;
+        if (!simulation::park::may_start_campaign(facts.park->campaigns, order))
+            return std::nullopt;
+        return order;
+    }
+
     ManagementPage management_page(ManagementTopic topic, usize tab, const ManagementFacts& facts, const StringTable& strings, const info::InfoUnits& units)
     {
         ManagementPage page;
@@ -1200,8 +1277,8 @@ namespace rct3::ui::screens::management
                     park_view(page, facts, strings, units);
                 else if (tab == 1)
                     park_graphs(page, facts, strings, units);
-                else if (tab == 2)
-                    park_campaigns(page, strings);
+                else if (tab == kCampaignsTab)
+                    park_campaigns(page, facts, strings, units);
                 else if (tab == kAwardsTab)
                     park_awards(page, facts, strings);
                 else

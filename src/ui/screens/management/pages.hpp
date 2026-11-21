@@ -12,6 +12,7 @@
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
 #include "simulation/objectives.hpp"
+#include "simulation/park/campaigns.hpp"
 #include "simulation/park/state.hpp"
 #include "simulation/research.hpp"
 #include "ui/screens/info/attraction.hpp"
@@ -81,6 +82,15 @@ namespace rct3::ui::screens::management
         i64 customers = 0;
     };
 
+    /// The campaign the player is setting up on the park window's campaigns tab: its kind, its weeks, and for
+    /// attraction vouchers the ride's place in the park's rides.
+    struct CampaignSetup
+    {
+        save::model::CampaignKind kind = save::model::CampaignKind::ParkVouchers;
+        i32 weeks = 4; ///< Chosen by eye: a month
+        usize ride = 0;
+    };
+
     /// What the pages are written from. Any of it may be missing; its values then show as dashes.
     struct ManagementFacts
     {
@@ -106,7 +116,25 @@ namespace rct3::ui::screens::management
         /// What the attraction with saved id `id` (save::model::AttractionCommon::id) has taken since the park was
         /// opened; nothing when not given.
         std::function<AttractionTakings(u64)> takings { };
+        CampaignSetup campaign { };
     };
+
+    /// The park operations window's tab of marketing campaigns: those running, and one set up to start.
+    inline constexpr usize kCampaignsTab = 2;
+    /// Its controls: the ride attraction vouchers are for, the medium and the weeks.
+    inline constexpr i32 kCampaignRideControl = 0;
+    inline constexpr i32 kCampaignMediumControl = 1;
+    inline constexpr i32 kCampaignWeeksControl = 2;
+    /// Its buttons: one picking each kind of campaign to set up, by save::model::CampaignKind, then the one
+    /// starting it.
+    inline constexpr usize kStartCampaignButton = save::model::kCampaignKinds;
+
+    /// The kind the campaigns tab sets up: the one picked (CampaignSetup::kind), or when one of it runs already,
+    /// the first kind that does not; none when every kind runs.
+    [[nodiscard]] std::optional<save::model::CampaignKind> campaign_kind_shown(const ManagementFacts& facts);
+
+    /// The campaign the campaigns tab would start, when it may start (simulation::park::may_start_campaign).
+    [[nodiscard]] std::optional<simulation::park::CampaignOrder> campaign_order(const ManagementFacts& facts);
 
     /// The park operations window's tab of the awards won and fines received.
     inline constexpr usize kAwardsTab = 3;

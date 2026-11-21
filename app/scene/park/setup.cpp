@@ -69,6 +69,7 @@
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/import_people.hpp"
+#include "simulation/park/campaigns.hpp"
 #include "simulation/ride_walks.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/swimming.hpp"
@@ -1788,11 +1789,13 @@ namespace rct3::scene::park
                 g.children_in_park = p.children_in_park;
                 g.guest_intake = p.guest_intake;
                 g.publicity_level = p.publicity_level;
+                scene.park_model.campaigns = saved->campaigns;
                 // The simulation counts its totals again from nought.
                 scene.week_began = { .intake = -p.week_intake, .income = -p.week_income, .cash = p.week_cash };
             }
             else
                 scene.week_began.cash = scene.park.cash.value_or(units::Money { }).value;
+            scene.park.publicity = simulation::park::own_publicity(scene.park_model.park.publicity_level, scene.park_model.campaigns);
             // Research goes on from where the save left it, with what it has invented since the original park.
             scene.research = saved && saved->research ? *saved->research : simulation::start_research(scene.park_model.research);
             for (save::model::AssetRequirement& e : scene.park_model.content.entries)

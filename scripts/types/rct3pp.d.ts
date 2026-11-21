@@ -29,6 +29,9 @@ type Seconds = number & { readonly __unit?: "Seconds" };
 /** Frames drawn. */
 type Frames = number & { readonly __unit?: "Frames" };
 
+/** A kind of marketing campaign: coupons for free entry, advertising, or coupons for free rides on one ride. */
+type CampaignKind = "parkVouchers" | "advertising" | "attractionVouchers";
+
 /** Waits `count` frames (1 when left out). */
 declare function frames(count?: Frames): Promise<void>;
 /** Waits frame by frame until `check` returns true; throws, naming `what`, after `limit` frames (300). */
@@ -217,8 +220,33 @@ declare namespace park {
     function loan(): Money;
     /** Sets the cash, in hundredths of the currency, of a park with money. */
     function setCash(hundredths: Money): void;
+    /** Sets what guests pay to come into the park, in hundredths of the currency. */
+    function setEntranceFee(hundredths: Money): void;
     /** The building and research lines of the newest month's ledger, in hundredths: spending above zero, refunds below. */
-    function ledger(): { landPurchase: Money; landscaping: Money; rideConstruction: Money; research: Money };
+    function ledger(): {
+        landPurchase: Money;
+        landscaping: Money;
+        rideConstruction: Money;
+        research: Money;
+        marketing: Money;
+    };
+    /** The marketing campaigns running: each one's kind, the ride attraction vouchers are for (its index in
+     *  rides.list()), when it started and ends (calendar time, as park.date()) and the weeks left of it. */
+    function campaigns(): {
+        kind: CampaignKind;
+        ride: RideIndex | null;
+        start: number;
+        end: number;
+        weeksLeft: number;
+    }[];
+    /** Starts a marketing campaign of `kind` for `weeks`, paying its first week; attraction vouchers name the ride
+     *  (its index in rides.list()). False when refused: one of its kind runs, or the park cannot pay all its weeks. */
+    function startCampaign(kind: CampaignKind, weeks: number, ride?: RideIndex): boolean;
+    /** Guests let in at the gates since the park was opened. */
+    function admitted(): number;
+    /** Coupons from marketing campaigns: how many guests in the park hold one for free entry and for a free ride,
+     *  and how many have been used of each since the park was opened. */
+    function coupons(): { held: number; heldForRides: number; usedForEntry: number; usedForRides: number };
     /** Research: the monthly budget and what is counted towards the current item (hundredths), the current item and
      *  those invented since the original park, by symbol, with the calendar time each was invented (as park.date()),
      *  the item research is focused on, the cheapest few of each area that may come next, how many items are left

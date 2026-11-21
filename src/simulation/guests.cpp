@@ -55,17 +55,29 @@ namespace rct3::simulation
             return std::pair { spawns[found->target], std::move(found->walk) };
         }
 
-        /// Each of `party` pays the entrance fee, the party making up what one is short of. False, with nothing
-        /// paid, when together they cannot pay for all of them: they are turned away, and no longer counted in.
+        /// Each of `party` pays the entrance fee, the party making up what one is short of, but for those with a
+        /// coupon for free entry, who give it up. False, with nothing paid, when together they cannot pay for all of
+        /// them: they are turned away, and no longer counted in.
         bool pay_entry(entt::registry& r, std::span<const entt::entity> party)
         {
             const units::Money fee = r.ctx().contains<Draw>() ? r.ctx().get<Draw>().entrance_fee : units::Money { };
             if (fee.value <= 0)
                 return true;
-            if (std::ranges::fold_left(party, i64 { 0 }, [&](i64 sum, entt::entity m) { return sum + r.get<Wallet>(m).cash.value; }) >= fee.value * static_cast<i64>(party.size()))
+            const auto free = [&](entt::entity m) {
+                const auto* coupon = r.try_get<Coupon>(m);
+                return coupon != nullptr && !coupon->ride;
+            };
+            const auto paying = std::ranges::count_if(party, [&](entt::entity m) { return !free(m); });
+            if (std::ranges::fold_left(party, i64 { 0 }, [&](i64 sum, entt::entity m) { return sum + r.get<Wallet>(m).cash.value; }) >= fee.value * static_cast<i64>(paying))
             {
                 for (const entt::entity m : party)
-                    pay(r, m, fee, &Wallet::spent_entry, park::LedgerLine::ParkEntranceTickets);
+                    if (free(m))
+                    {
+                        r.remove<Coupon>(m);
+                        ++r.ctx().emplace<CouponsUsed>().entries;
+                    }
+                    else
+                        pay(r, m, fee, &Wallet::spent_entry, park::LedgerLine::ParkEntranceTickets);
                 return true;
             }
             for (const entt::entity m : party)
@@ -1507,7 +1519,7 @@ namespace rct3::simulation
             // A bigger park draws more till it is full: enough to fill its room in a day's opening, never fewer
             // than a small one's. Once full only the few of a small park still come.
             const f64 fill = guests < ideal ? std::max(1.0, ideal / (kTuning.arrivals.fill.value * kTuning.arrivals.rate.value)) : 1.0;
-            arrivals *= fill * drawn(*draw, guests, ideal, fair_entrance_fee(world));
+            arrivals *= fill * drawn(*draw, guests, ideal, fair_entrance_fee(world)) * (1 + draw->advertised);
         }
         // The park draws its parties as a whole, however many gates it has; each heads for the open gate
         // nearest the spawn point it appears at.
@@ -1539,6 +1551,18 @@ namespace rct3::simulation
             const entt::entity gate = open[walk ? walk->target : random::below(dice, open.size())];
             const NodeId entry = r.get<ParkGate>(gate).node;
             const std::vector<entt::entity> party = admit_party(world, dice, walk ? from : entry);
+            // A party a campaign drew may come with its coupons, one each.
+            // shortcut: those with a ride's coupon choose rides as anyone does, so some never use it; send them to
+            // it first if players notice coupons going unused.
+            if (const auto* draw = r.ctx().find<Draw>(); draw != nullptr && draw->advertised > 0)
+            {
+                const f64 drawn_by = random::unit(dice) * (1 + draw->advertised) - 1; // Below nought: the park's own
+                const bool entry_coupon = drawn_by >= 0 && drawn_by < draw->entry_coupons;
+                const bool ride_coupon = draw->coupon_ride && drawn_by >= draw->entry_coupons && drawn_by < draw->entry_coupons + draw->ride_coupons;
+                if (entry_coupon || ride_coupon)
+                    for (const entt::entity m : party)
+                        r.emplace_or_replace<Coupon>(m, Coupon { .ride = ride_coupon ? draw->coupon_ride : std::nullopt });
+            }
             if (walk)
             {
                 for (const entt::entity m : party)

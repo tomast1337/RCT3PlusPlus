@@ -28,6 +28,7 @@
 #include "simulation/guests.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/objectives.hpp"
+#include "simulation/park/campaigns.hpp"
 #include "simulation/park/messages.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/ride_walks.hpp"
@@ -57,6 +58,7 @@
 #include <cstdint>
 #include <format>
 #include <future>
+#include <limits>
 #include <map>
 #include <span>
 #include <sstream>
@@ -70,6 +72,8 @@ namespace rct3::scene
     {
         /// Each day mode's name, in simulation::DayMode's order.
         constexpr std::array kDayModes { "hours", "day", "night" };
+        /// Marketing campaigns' kinds by save::model::CampaignKind.
+        constexpr std::array kCampaignKinds { "parkVouchers", "advertising", "attractionVouchers" };
         /// Each path item kind's name, in PathItemKind's order.
         constexpr std::array kPathItemKinds { "bin", "bench", "sign", "sight", "photo spot", "fountain", "water cannon", "speaker", "passport post" };
         using scripting::Json;
@@ -396,7 +400,44 @@ namespace rct3::scene
                 throw std::runtime_error("no park is open");
             const auto& ledger = park_->park_model.finance.ledger;
             const save::model::LedgerPeriod l = ledger.empty() ? save::model::LedgerPeriod { } : ledger.front();
-            return { { "landPurchase", l.land_purchase }, { "landscaping", l.landscaping }, { "rideConstruction", l.ride_construction }, { "research", l.research } };
+            return { { "landPurchase", l.land_purchase }, { "landscaping", l.landscaping }, { "rideConstruction", l.ride_construction }, { "research", l.research }, { "marketing", l.marketing } };
+        });
+        engine_.define("park.campaigns", [this](const Json&) -> Json {
+            const park::ParkScene& scene = park_of(park_);
+            Json out = Json::array();
+            for (const save::model::Campaign& c : scene.park_model.campaigns)
+            {
+                const auto ride = c.attraction ? std::ranges::find(scene.rides.rides, *c.attraction, [](const save::model::Ride& r) { return r.base.id; }) : scene.rides.rides.end();
+                out.push_back({ { "kind", kCampaignKinds[std::to_underlying(c.kind)] }, { "ride", ride != scene.rides.rides.end() ? Json(ride - scene.rides.rides.begin()) : Json(nullptr) }, { "start", c.start }, { "end", c.end }, { "weeksLeft", simulation::park::campaign_weeks_left(c, scene.park.time) } });
+            }
+            return out;
+        });
+        engine_.define("park.startCampaign", [this](const Json& a) -> Json {
+            park::ParkScene& scene = park_of(park_);
+            const auto kind = !a.empty() && a[0].is_string() ? std::ranges::find(kCampaignKinds, a[0].get<std::string>()) : kCampaignKinds.end();
+            if (kind == kCampaignKinds.end() || a.size() < 2 || a.size() > 3 || !a[1].is_number_integer() || (a.size() == 3 && !a[2].is_number_integer()))
+                throw std::invalid_argument("park.startCampaign takes a kind (\"parkVouchers\", \"advertising\" or \"attractionVouchers\"), weeks, and for attraction vouchers a ride's index");
+            simulation::park::CampaignOrder order { .kind = static_cast<save::model::CampaignKind>(kind - kCampaignKinds.begin()), .weeks = a[1].get<i32>() };
+            if (a.size() == 3)
+            {
+                const auto ride = a[2].get<i64>();
+                if (ride < 0 || static_cast<usize>(ride) >= scene.rides.rides.size())
+                    throw std::invalid_argument("park.startCampaign: no ride with that index");
+                order.attraction = scene.rides.rides[static_cast<usize>(ride)].base.id;
+            }
+            return Json(simulation::park::start_campaign(scene.park, scene.park_model.finance, scene.ledger_month, scene.park_model.campaigns, order));
+        });
+        engine_.define("park.admitted", [this](const Json&) -> Json {
+            const auto* turnstile = park_of(park_).sim.registry.ctx().find<simulation::Turnstile>();
+            return Json(turnstile != nullptr ? std::ranges::fold_left(turnstile->in, u32 { 0 }, std::plus { }) : 0);
+        });
+        engine_.define("park.coupons", [this](const Json&) -> Json {
+            const entt::registry& r = park_of(park_).sim.registry;
+            const auto* used = r.ctx().find<simulation::CouponsUsed>();
+            usize entry = 0, rides = 0;
+            for (const auto [e, coupon] : r.view<const simulation::Coupon>(entt::exclude<simulation::Left>).each())
+                ++(coupon.ride ? rides : entry);
+            return { { "held", entry }, { "heldForRides", rides }, { "usedForEntry", used != nullptr ? used->entries : 0 }, { "usedForRides", used != nullptr ? used->rides : 0 } };
         });
         engine_.define("park.research", [this](const Json&) -> Json {
             const park::ParkScene& scene = park_of(park_);
@@ -461,6 +502,12 @@ namespace rct3::scene
             if (a.size() != 1 || !a[0].is_number_integer())
                 throw std::invalid_argument("park.setCash takes hundredths of the currency");
             park_->park.cash = units::Money { a[0].get<i64>() };
+            return Json(nullptr);
+        });
+        engine_.define("park.setEntranceFee", [this](const Json& a) -> Json {
+            if (a.size() != 1 || !a[0].is_number_integer() || a[0].get<i64>() < 0 || a[0].get<i64>() > std::numeric_limits<i32>::max())
+                throw std::invalid_argument("park.setEntranceFee takes hundredths of the currency");
+            park_of(park_).park_model.finance.entrance_fee = a[0].get<i32>();
             return Json(nullptr);
         });
         engine_.define("park.setTime", [this](const Json& a) -> Json {

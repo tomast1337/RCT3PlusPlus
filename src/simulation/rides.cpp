@@ -840,7 +840,15 @@ namespace rct3::simulation
                         // An inspector rides free, telling the player when they queued for ages; a swimmer rides a pool
                         // slide free, on the complex's ticket.
                         const bool inspector = r.all_of<Staff>(guest);
-                        const units::Money price = r.all_of<Swimmer>(guest) ? units::Money { } : attraction.price;
+                        // One with a coupon for this ride rides free, giving it up.
+                        const auto* coupon = r.try_get<Coupon>(guest);
+                        const bool free = coupon != nullptr && coupon->ride == attraction.saved && attraction.open;
+                        if (free)
+                        {
+                            r.remove<Coupon>(guest);
+                            ++r.ctx().emplace<CouponsUsed>().rides;
+                        }
+                        const units::Money price = free || r.all_of<Swimmer>(guest) ? units::Money { } : attraction.price;
                         if (!attraction.open || (!inspector && !pay(r, guest, price, &Wallet::spent_rides, park::LedgerLine::RideTickets)))
                         {
                             if (attraction.open)

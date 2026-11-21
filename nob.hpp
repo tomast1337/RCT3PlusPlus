@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // nob.hpp: a tiny build helper, C++ flavoured take on the "no build" idea (build scripts written in the
-// project's own language, bootstrapped with a single compiler invocation). POSIX, and Windows with MSYS2 UCRT64.
+// project's own language, bootstrapped with a single compiler invocation). POSIX, and Windows with MSYS2 CLANG64.
 #pragma once
 
 #include <algorithm>
@@ -289,7 +289,11 @@ namespace nob
     /// Call first thing in main(). Needs to be started via a path (`./nob`), since it uses argv[0].
     inline void go_rebuild_urself(char** argv, const fs::path& source, std::span<const fs::path> extra_deps = { })
     {
-        const fs::path self = argv[0];
+        fs::path self = argv[0];
+#ifdef _WIN32
+        if (self.extension() != ".exe")
+            self += ".exe"; // A shell starts it as ./nob
+#endif
 
         std::vector<fs::path> deps { source };
         deps.insert(deps.end(), extra_deps.begin(), extra_deps.end());

@@ -210,6 +210,23 @@ TEST_CASE("a park where a cheat was used still says so once saved and loaded")
     CHECK(cheated->cheats_used);
 }
 
+TEST_CASE("a saved park keeps its running campaigns")
+{
+    parkfile::SavedPark park = small_park();
+    const auto none = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE(none);
+    CHECK(none->campaigns.empty());
+    park.campaigns = { { .kind = save::model::CampaignKind::AttractionVouchers, .attraction = 41, .start = 900, .end = 1260 }, { .kind = save::model::CampaignKind::Advertising, .start = 990, .end = 1080 } };
+    const auto running = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE(running);
+    REQUIRE(running->campaigns.size() == 2);
+    CHECK(running->campaigns[0].kind == save::model::CampaignKind::AttractionVouchers);
+    CHECK(running->campaigns[0].attraction == std::optional<u64>(41));
+    CHECK(running->campaigns[0].end == doctest::Approx(1260));
+    CHECK(running->campaigns[1].kind == save::model::CampaignKind::Advertising);
+    CHECK_FALSE(running->campaigns[1].attraction.has_value());
+}
+
 TEST_CASE("a cut or changed saved park is refused")
 {
     auto bytes = parkfile::write_saved_park(small_park());

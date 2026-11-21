@@ -33,6 +33,7 @@ namespace rct3::save::model
             constexpr std::string_view kGroupMixClass = "GuestDemographics";
             constexpr std::string_view kObjectiveClass = "Objective";
             constexpr std::string_view kChallengeClass = "Challenge";
+            constexpr std::string_view kCampaignClass = "Campaign";
             constexpr std::string_view kResearchCategoryClass = "ResearchCategoryInstance";
             constexpr std::string_view kSimpleResearchClass = "SimpleResearch";
             constexpr std::string_view kMessageConsoleClass = "MessageConsole";
@@ -199,6 +200,13 @@ namespace rct3::save::model
             constexpr std::string_view kChallengeOfferDaysFrom = "StartTimerDefaultInDays1";
             constexpr std::string_view kChallengeOfferDaysTo = "StartTimerDefaultInDays2";
             constexpr std::string_view kChallengePostponedFor = "PostponedTimer";
+            // Campaign attributes; the attraction is the target of the voucher item the campaign hands out.
+            constexpr std::string_view kCampaignKind = "CampType";
+            constexpr std::string_view kCampaignMedium = "PubType";
+            constexpr std::string_view kCampaignVoucher = "CarriedItem";
+            constexpr std::string_view kVoucherTarget = "VoucherTarget";
+            constexpr std::string_view kCampaignStart = "StartDate";
+            constexpr std::string_view kCampaignEnd = "EndDate";
 
             // Research attributes
             constexpr std::string_view kCategoryName = "CategoryName";
@@ -659,6 +667,24 @@ namespace rct3::save::model
                 });
         }
 
+        void load_campaign_object(const SaveFile& file, const DecodedObject& o, const ObjectIndex& index, std::vector<Campaign>& campaigns)
+        {
+            using namespace names;
+            const i32 kind = i32_of(o.find(kCampaignKind), -1);
+            if (kind < 0 || static_cast<usize>(kind) >= kCampaignKinds)
+                return;
+            Campaign c {
+                .kind = static_cast<CampaignKind>(kind),
+                .medium = i32_of(o.find(kCampaignMedium), 0),
+                .start = float_of(o.find(kCampaignStart), 0.0f),
+                .end = float_of(o.find(kCampaignEnd), 0.0f),
+            };
+            if (const std::optional<u64> voucher = ref_of(o.find(kCampaignVoucher), index))
+                if (const auto item = decode_object(file, *index.find(*voucher)))
+                    c.attraction = ref_of(item->find(kVoucherTarget), index);
+            campaigns.push_back(c);
+        }
+
         void load_category_object(const DecodedObject& o, ResearchState& r)
         {
             using namespace names;
@@ -744,6 +770,7 @@ namespace rct3::save::model
             Objective,
             Condition,
             Challenge,
+            Campaign,
             Category,
             SimpleResearch,
             Console,
@@ -770,6 +797,8 @@ namespace rct3::save::model
                 return Role::Objective;
             if (n == kChallengeClass)
                 return Role::Challenge;
+            if (n == kCampaignClass)
+                return Role::Campaign;
             if (n == kResearchCategoryClass)
                 return Role::Category;
             if (n == kSimpleResearchClass)
@@ -1172,6 +1201,9 @@ namespace rct3::save::model
                     break;
                 case Role::Challenge:
                     load_challenge_object(*decoded, m.objectives);
+                    break;
+                case Role::Campaign:
+                    load_campaign_object(file, *decoded, index, m.campaigns);
                     break;
                 case Role::Category:
                     load_category_object(*decoded, m.research);

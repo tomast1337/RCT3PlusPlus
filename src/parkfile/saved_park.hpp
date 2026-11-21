@@ -45,6 +45,8 @@
 //   "QUEU" v1  std::vector<SavedQueue>: who waits in each ride's queues, in order, and how long they have. Only when
 //              anyone does; without it, the guests standing in a queue join it in the order they stand.
 //   "CHTS" v1  bool, true: a cheat was used in the park. Only when one was.
+//   "CAMP" v1  std::vector<save::model::Campaign>: the marketing campaigns running. Only when any are; without it,
+//              none run.
 //
 // The rest of the simulation (a mechanic on the way to a ride, a pool's rides) starts again from the original park.
 #pragma once
@@ -308,6 +310,7 @@ namespace rct3::parkfile
         std::vector<SavedQueue> queues;                                ///< The queues anyone waits in
         std::vector<SavedRun> runs;                                    ///< Of the rides kept mid-cycle
         bool cheats_used = false;
+        std::vector<save::model::Campaign> campaigns; ///< Those running
     };
 
     /// A guest's wallet as their saved page keeps it, each sum held to the page's range.

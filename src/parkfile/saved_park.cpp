@@ -581,7 +581,7 @@ namespace rct3::parkfile
     {
         Writer w;
         const bool shows = park.shows && !park.shows->empty();
-        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.research ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.animals ? 1 : 0) + (park.day_mode ? 1 : 0) + (park.pools ? 1 : 0) + (park.flower_beds.empty() ? 0 : 1) + (park.litter ? 1 : 0) + (park.queues.empty() ? 0 : 1) + (park.runs.empty() ? 0 : 1) + (park.cheats_used ? 1 : 0));
+        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.research ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.animals ? 1 : 0) + (park.day_mode ? 1 : 0) + (park.pools ? 1 : 0) + (park.flower_beds.empty() ? 0 : 1) + (park.litter ? 1 : 0) + (park.queues.empty() ? 0 : 1) + (park.runs.empty() ? 0 : 1) + (park.cheats_used ? 1 : 0) + (park.campaigns.empty() ? 0 : 1));
         each_chunk(park, [&](std::string_view tag, const auto& value) { put_chunk(w, tag, 1, value); });
         if (park.people)
             put_chunk(w, "PEOP", 7, *park.people);
@@ -613,6 +613,8 @@ namespace rct3::parkfile
             put_chunk(w, "RUNS", 1, park.runs);
         if (park.cheats_used)
             put_chunk(w, "CHTS", 1, park.cheats_used);
+        if (!park.campaigns.empty())
+            put_chunk(w, "CAMP", 1, park.campaigns);
         return w.take();
     }
 
@@ -724,6 +726,12 @@ namespace rct3::parkfile
                 if (park.cheats_used || version != 1)
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 return get_chunk(tag, body, park.cheats_used);
+            }
+            if (tag == "CAMP")
+            {
+                if (!park.campaigns.empty() || version != 1)
+                    return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
+                return get_chunk(tag, body, park.campaigns);
             }
             each_chunk(park, [&](std::string_view name, auto& value) {
                 if (name != tag)

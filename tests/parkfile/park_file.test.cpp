@@ -212,3 +212,71 @@ TEST_CASE("a ride mid-breakdown and a staff member's patrol are read back as wri
     CHECK(parkfile::write_park_file(*read) == bytes);
 }
 
+TEST_CASE("a park read back keeps each storage's order, the destroyed entities and the park-wide values")
+{
+    SimWorld world;
+    auto& r = world.registry;
+    std::vector<entt::entity> made;
+    for (i32 i = 0; i < 6; ++i)
+        made.push_back(r.create());
+    // Needs added out of entity order, one taken away to move the last into its place, and two entities destroyed,
+    // the later one to be handed out first.
+    for (const usize i : { 4, 1, 5, 0, 3 })
+        r.emplace<simulation::Needs>(made[i], simulation::Needs { .hunger = { static_cast<f32>(i) } });
+    r.remove<simulation::Needs>(made[1]);
+    r.destroy(made[2]);
+    r.destroy(made[1]);
+    r.ctx().emplace<simulation::Turnstile>().in[1] = 7;
+    world.paths.link({ .from = simulation::NodeId { 3 }, .to = simulation::NodeId { 8 }, .length = 2.5f, .toll = { 150 }, .owner = 4 });
+
+    auto read = parkfile::read_park_file(parkfile::write_park_file(world));
+    REQUIRE_MESSAGE(read, read.error());
+    const auto order = [](const entt::registry& reg) {
+        const entt::sparse_set& needs = *reg.storage<simulation::Needs>();
+        return std::vector<entt::entity>(needs.begin(), needs.end());
+    };
+    CHECK(order(read->registry) == order(r));
+    CHECK(read->registry.ctx().get<simulation::Turnstile>().in[1] == 7);
+    REQUIRE(read->paths.link_between(simulation::NodeId { 3 }, simulation::NodeId { 8 }));
+    CHECK(read->paths.link_between(simulation::NodeId { 3 }, simulation::NodeId { 8 })->toll.value == 150);
+    CHECK(simulation::fingerprint(*read) == simulation::fingerprint(world));
+    // The same entities come next, recycled and then new.
+    for (i32 i = 0; i < 3; ++i)
+        CHECK(read->registry.create() == r.create());
+}
+
+TEST_CASE("a park saved mid-run and read back goes on as the run never saved")
+{
+    // A small park with something to do, as the fingerprint test has it, read back from its file a few times along
+    // the way.
+    const auto run = [](std::span<const u32> legs) {
+        simulation::Sandbox park(random::Seed { 3 });
+        park.path({ 0, 0 }, { 9, 0 }).path({ 0, 1 }, { 0, 9 }).path({ 1, 9 }, { 9, 9 }).path({ 9, 1 }, { 9, 8 });
+        park.shop("Food", simulation::Product::Food, { 9, 0 }, 150);
+        park.shop("Drinks", simulation::Product::Drink, { 0, 9 }, 100);
+        park.flat_ride("Ride", { 9, 9 }, 200);
+        park.item(simulation::PathItemKind::Bin, { 4, 0 });
+        park.staff(simulation::StaffRole::Handyman, { 0, 5 });
+        park.litter({ 5, 9 }, 3);
+        for (i32 i = 0; i < 6; ++i)
+        {
+            const entt::entity leader = park.guest({ i % 10, 0 }, { .thirst = 0.6f, .hunger = 0.5f });
+            park.world().registry.emplace<simulation::ParkMap>(leader);
+            park.party({ leader, park.guest({ i % 10, 0 }), park.guest({ i % 10, 0 }) });
+        }
+        for (usize i = 0; i < legs.size(); ++i)
+        {
+            if (i > 0)
+            {
+                CHECK(simulation::untagged_components(park.world().registry).empty());
+                const auto read = parkfile::read_park_file(parkfile::write_park_file(park.world()), park.world());
+                REQUIRE_MESSAGE(read, read.error());
+            }
+            park.run(legs[i]);
+        }
+        return simulation::fingerprint(park.world());
+    };
+    const u64 unbroken = run(std::array { 2400U });
+    CHECK(run(std::array { 240U, 960U, 1200U }) == unbroken);
+    CHECK(run(std::array { 1U, 2399U }) == unbroken);
+}

@@ -149,7 +149,25 @@ namespace rct3::parkfile
         {
             const auto* dice = r.try_get<Dice>(e);
             SavedWorker& w = out.staff.emplace_back(
-                SavedWorker { .look = look(e, model.staff.size()), .entity = entt::to_integral(e), .dice = dice != nullptr ? std::optional(dice->state) : std::nullopt, .role = staff.role, .wage = staff.wage.value, .wage_level = staff.wage_level, .training = staff.training, .warnings = staff.warnings, .happiness = staff.happiness.value, .laziness = staff.laziness.value, .position = pose.position, .heading = pose.heading.value, .mended = staff.mended, .think = { staff.think.value }, .miserable = staff.miserable, .job = staff.job, .busy = staff.busy, .job_length = staff.job_length, .load = staff.load });
+                SavedWorker { .look = look(e, model.staff.size()),
+                              .entity = entt::to_integral(e),
+                              .dice = dice != nullptr ? std::optional(dice->state) : std::nullopt,
+                              .role = staff.role,
+                              .wage = staff.wage.value,
+                              .wage_level = staff.wage_level,
+                              .training = staff.training,
+                              .warnings = staff.warnings,
+                              .happiness = staff.happiness.value,
+                              .laziness = staff.laziness.value,
+                              .position = pose.position,
+                              .heading = pose.heading.value,
+                              .mended = staff.mended,
+                              .think = { staff.think.value },
+                              .miserable = staff.miserable,
+                              .job = staff.job,
+                              .busy = staff.busy,
+                              .job_length = staff.job_length,
+                              .load = staff.load });
             // Only a mechanic at work on a ride keeps it; one on the way is sent again.
             if (staff.ride != entt::null && staff.busy.value > 0)
                 if (const auto* ride = r.try_get<Attraction>(staff.ride))
@@ -631,7 +649,8 @@ namespace rct3::parkfile
     {
         Writer w;
         const bool shows = park.shows && !park.shows->empty();
-        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.research ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.animals ? 1 : 0) + (park.day_mode ? 1 : 0) + (park.pools ? 1 : 0) + (park.flower_beds.empty() ? 0 : 1) + (park.litter ? 1 : 0) + (park.queues.empty() ? 0 : 1) + (park.runs.empty() ? 0 : 1) + (park.cheats_used ? 1 : 0) + (park.campaigns.empty() ? 0 : 1) + (park.simulation ? 1 : 0));
+        write_header(
+            w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.research ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.animals ? 1 : 0) + (park.day_mode ? 1 : 0) + (park.pools ? 1 : 0) + (park.flower_beds.empty() ? 0 : 1) + (park.litter ? 1 : 0) + (park.queues.empty() ? 0 : 1) + (park.runs.empty() ? 0 : 1) + (park.cheats_used ? 1 : 0) + (park.campaigns.empty() ? 0 : 1) + (park.simulation ? 1 : 0));
         each_chunk(park, [&](std::string_view tag, const auto& value) { put_chunk(w, tag, 1, value); });
         if (park.people)
             put_chunk(w, "PEOP", 8, *park.people);

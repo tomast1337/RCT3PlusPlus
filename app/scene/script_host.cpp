@@ -404,14 +404,7 @@ namespace rct3::scene
             const park::ParkScene& scene = park_of(park_);
             const simulation::park::ParkState& p = scene.park;
             // As text: script numbers keep only 53 bits.
-            return Json { { "tick", scene.sim.tick },
-                          { "simulation", std::format("{:016x}", simulation::fingerprint(scene.sim)) },
-                          { "time", std::format("{:08x}", std::bit_cast<u32>(p.time)) },
-                          { "day", std::format("{:08x}", std::bit_cast<u32>(scene.day_clock.time)) },
-                          { "cash", p.cash ? Json(p.cash->value) : Json() },
-                          { "rating", p.rating ? Json(*p.rating) : Json() },
-                          { "guests", p.guests },
-                          { "weather", std::to_underlying(p.weather) } };
+            return Json { { "tick", scene.sim.tick }, { "simulation", std::format("{:016x}", simulation::fingerprint(scene.sim)) }, { "time", std::format("{:08x}", std::bit_cast<u32>(p.time)) }, { "day", std::format("{:08x}", std::bit_cast<u32>(scene.day_clock.time)) }, { "cash", p.cash ? Json(p.cash->value) : Json() }, { "rating", p.rating ? Json(*p.rating) : Json() }, { "guests", p.guests }, { "weather", std::to_underlying(p.weather) } };
         });
         engine_.define("park.ledger", [this](const Json&) -> Json {
             if (park_ == nullptr)

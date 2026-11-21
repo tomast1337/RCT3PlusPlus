@@ -9,6 +9,7 @@
 #include "simulation/systems.hpp"
 
 #include <array>
+#include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <string_view>
 
@@ -19,6 +20,8 @@ namespace rct3::scene
     {
         /// Seconds one animal's motion runs ahead of the one before, so they do not move as one.
         constexpr f32 kMotionSpread = 0.37f;
+        /// Of a walk's pace, beyond which an animal is running; over 1 so rounding never makes a walk a run.
+        constexpr f32 kRunningOver = 1.1f;
         /// How high the helicopter starts lowering a crate from, and how far above the crate it hangs.
         constexpr units::Distance kDropHeight { 30 };
         constexpr units::Distance kRopeLength { 12 };
@@ -40,8 +43,8 @@ namespace rct3::scene
                 logging::logger("park").warning("animal pictures: {}", uploaded.error());
         }
 
-        /// The body `animal` is drawn with, by age and sex.
-        ovl::animal::AnimalAge age_of(const simulation::Animal& animal)
+        /// The body `animal` (an Animal, or the Carcass of one) is drawn with, by age and sex.
+        template<typename AnimalOrBody> ovl::animal::AnimalAge age_of(const AnimalOrBody& animal)
         {
             using enum ovl::animal::AnimalAge;
             if (animal.adult)
@@ -54,8 +57,12 @@ namespace rct3::scene
         {
             using simulation::AnimalJob;
             const bool moving = pose.position != pose.was;
+            // A predator after its prey, and the prey, go faster than any animal walks.
+            const bool running = glm::distance(pose.position, pose.was) > simulation::kAnimalRates.animal_pace.value * simulation::kTickSeconds * kRunningOver;
             ovl::animal::AnimalMotion motion = ovl::animal::AnimalMotion::Stand;
-            if (moving)
+            if (running && rct3::park::motion_seconds(body, ovl::animal::AnimalMotion::Run) > 0)
+                motion = ovl::animal::AnimalMotion::Run;
+            else if (moving)
                 motion = ovl::animal::AnimalMotion::Walk;
             else if (animal.job == AnimalJob::Feeding)
                 motion = animal.hunger.value >= animal.thirst.value ? ovl::animal::AnimalMotion::EatLoop : ovl::animal::AnimalMotion::DrinkLoop;
@@ -158,6 +165,18 @@ namespace rct3::scene
             drawn.crates = scene.models.contains(rct3::park::object::model_key(crate)) ? rct3::park::moving_meshes(shapes, scene.models, scene.grid) : rct3::park::MovingMeshes { };
             drawn.crated = std::move(crated);
             drawn.flown = std::move(flown);
+        }
+        // The bodies of killed animals, on their side.
+        // shortcut: a body is its species' standing pose rolled over; draw it lying as the game does once its
+        // motions for that are read.
+        for (const auto [c, carcass, pose] : r.view<const simulation::Carcass, const simulation::Pose>().each())
+        {
+            const auto body = drawn.library ? drawn.library->body(carcass.species, age_of(carcass)) : std::nullopt;
+            if (!body)
+                continue;
+            const f32 half_wide = (body->high.x - body->low.x) / 2;
+            const glm::mat4 upright = glm::rotate(glm::translate(glm::mat4(1.0f), pose.position + glm::vec3(0.0f, half_wide, 0.0f)), pose.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
+            drawn.placed.push_back({ .body = &*body, .motion = ovl::animal::AnimalMotion::Stand, .time = { }, .world = glm::rotate(upright, glm::half_pi<f32>(), glm::vec3(0.0f, 0.0f, 1.0f)) });
         }
         crate_places.insert(crate_places.end(), helicopter_places.begin(), helicopter_places.end());
         rct3::park::move_meshes(drawn.crates, crate_places);

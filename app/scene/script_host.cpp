@@ -1534,7 +1534,23 @@ namespace rct3::scene
             for (const auto [e, animal, pose] : park.sim.registry.view<const simulation::Animal, const simulation::Pose>().each())
             {
                 const Json tile { { "col", g.tile_size_x > 0 ? (pose.position.x - g.origin_x) / g.tile_size_x : 0 }, { "row", g.tile_size_z > 0 ? (pose.position.z - g.origin_z) / g.tile_size_z : 0 } };
-                out.push_back({ { "id", entt::to_integral(e) }, { "species", animal.species }, { "name", animal.name }, { "enclosure", animal.enclosure.value_or(-1) }, { "adult", animal.adult }, { "male", animal.male }, { "rescued", animal.rescued }, { "crated", animal.job == simulation::AnimalJob::Crated }, { "flying", animal.flying.value > 0 }, { "escaped", animal.escaped }, { "health", animal.health.value }, { "at", tile }, { "height", pose.position.y } });
+                const auto* hunter = park.sim.registry.try_get<simulation::Hunter>(e);
+                out.push_back(
+                    { { "id", entt::to_integral(e) },
+                      { "species", animal.species },
+                      { "name", animal.name },
+                      { "enclosure", animal.enclosure.value_or(-1) },
+                      { "adult", animal.adult },
+                      { "male", animal.male },
+                      { "rescued", animal.rescued },
+                      { "crated", animal.job == simulation::AnimalJob::Crated },
+                      { "flying", animal.flying.value > 0 },
+                      { "escaped", animal.escaped },
+                      { "health", animal.health.value },
+                      { "hunger", animal.hunger.value },
+                      { "hunting", hunter != nullptr && hunter->quarry != entt::null ? static_cast<i64>(entt::to_integral(hunter->quarry)) : -1 },
+                      { "at", tile },
+                      { "height", pose.position.y } });
             }
             return out;
         });
@@ -1595,6 +1611,14 @@ namespace rct3::scene
             Json out = Json::array();
             for (const auto [e, dung, pose] : park.sim.registry.view<const simulation::Dung, const simulation::Pose>().each())
                 out.push_back({ { "enclosure", dung.enclosure.value_or(-1) }, { "size", dung.size }, { "col", g.tile_size_x > 0 ? (pose.position.x - g.origin_x) / g.tile_size_x : 0 }, { "row", g.tile_size_z > 0 ? (pose.position.z - g.origin_z) / g.tile_size_z : 0 } });
+            return out;
+        });
+        engine_.define("animals.carcasses", [this](const Json&) {
+            const park::ParkScene& park = park_of(park_);
+            const save::model::TerrainGrid& g = park.grid;
+            Json out = Json::array();
+            for (const auto [e, carcass, pose] : park.sim.registry.view<const simulation::Carcass, const simulation::Pose>().each())
+                out.push_back({ { "species", carcass.species }, { "col", g.tile_size_x > 0 ? (pose.position.x - g.origin_x) / g.tile_size_x : 0 }, { "row", g.tile_size_z > 0 ? (pose.position.z - g.origin_z) / g.tile_size_z : 0 } });
             return out;
         });
         engine_.define("rides.shown", [this](const Json&) -> Json {

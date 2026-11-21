@@ -29,6 +29,8 @@ namespace rct3::simulation
         std::vector<bool> guarded { };                                       ///< By tile: guards keep vandals off it
         std::vector<NodeId> ring { }, next { };
         std::vector<entt::entity> speakers { }; ///< The park's loudspeakers, in entity order
+        std::vector<NodeId> free_benches { };   ///< Tiles with a whole bench that has a seat free, in entity order
+        std::vector<entt::entity> sat_on { };   ///< The bench each sitter sits on, sorted
         /// A person walking the paths, in the grid cell they stand in, for keeping people apart.
         struct Body
         {

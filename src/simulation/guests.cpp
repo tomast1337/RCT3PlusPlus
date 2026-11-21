@@ -32,7 +32,6 @@
 #include <ranges>
 #include <span>
 #include <tuple>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -764,16 +763,17 @@ namespace rct3::simulation
                 shades.push_back(NodeId { k });
         }
         // Tiles with a whole bench that has a seat free, where worn-out guests go to sit.
-        std::vector<NodeId> free_benches;
-        {
-            std::unordered_map<entt::entity, usize> sitting;
-            for (const auto [g, linger] : r.view<const Linger>().each())
-                if (linger.at == PathItemKind::Bench)
-                    ++sitting[linger.bench];
-            for (const auto [e, item] : r.view<const PathItem>().each())
-                if (const auto taken = sitting.find(e); item.kind == PathItemKind::Bench && !item.broken && (taken == sitting.end() || taken->second < item.seats))
-                    free_benches.push_back(item.node);
-        }
+        std::vector<NodeId>& free_benches = world.buffers.free_benches;
+        std::vector<entt::entity>& sat_on = world.buffers.sat_on;
+        free_benches.clear();
+        sat_on.clear();
+        for (const auto [g, linger] : r.view<const Linger>().each())
+            if (linger.at == PathItemKind::Bench)
+                sat_on.push_back(linger.bench);
+        std::ranges::sort(sat_on);
+        for (const auto [e, item] : r.view<const PathItem>().each())
+            if (item.kind == PathItemKind::Bench && !item.broken && std::ranges::equal_range(sat_on, e).size() < item.seats)
+                free_benches.push_back(item.node);
         const auto movers_view = r.view<Errand, Stride, Pose, Dice, const Needs, const Mood, const Wallet>();
         const auto movers = sorted(movers_view);
         std::vector<entt::entity> arrived(movers.size(), entt::null);

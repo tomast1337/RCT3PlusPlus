@@ -7,17 +7,21 @@
 //   floats                           IEEE 754, little-endian
 //   std::string                      u32 byte length, then UTF-8
 //   std::vector                      u32 count, then each element
-//   std::array and glm vectors       each element
+//   std::array, glm vectors and      each element; a std::vector<bool> a byte each
+//   quaternions
+//   std::bitset                      its bits, eight to a byte, the first lowest
 //   std::optional                    u8 1 then the value, or u8 0; a member kept_as_minus_one.hpp names: the
 //                                    value, or -1 for none, as the bare type it holds
 //   std::variant                     u8 index of the alternative held, then its value (std::monostate: none)
-//   a struct                         each member in the order declared; a unit (units/units.hpp) as its number
+//   a struct                         each member in the order declared; a unit (units/units.hpp) or an id
+//                                    (core/id.hpp) as its number
 //
 // A chunk written this way starts with a u64 hash of its type's layout (the kinds above, nested), so a reader
 // whose models have changed since the file was written refuses the chunk rather than misread it.
 // Internal to src/parkfile.
 #pragma once
 
+#include "core/id.hpp"
 #include "core/minus_one.hpp"
 #include "core/types.hpp"
 #include "parkfile/kept_as_minus_one.hpp"
@@ -25,6 +29,7 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <bitset>
 #include <concepts>
 #include <cstddef>
 #include <cstdint>
@@ -33,6 +38,7 @@
 #include <format>
 #include <functional>
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <optional>
 #include <span>
 #include <string>
@@ -240,6 +246,26 @@ namespace rct3::parkfile::detail
     {
     };
 
+    template<typename T> struct IsBitset : std::false_type
+    {
+    };
+    template<usize N> struct IsBitset<std::bitset<N>> : std::true_type
+    {
+    };
+    template<typename T> struct IsQuat : std::false_type
+    {
+    };
+    template<typename T, glm::qualifier Q> struct IsQuat<glm::qua<T, Q>> : std::true_type
+    {
+    };
+
+    template<typename T> struct IsId : std::false_type
+    {
+    };
+    template<typename Tag, typename T> struct IsId<core::Id<Tag, T>> : std::true_type
+    {
+    };
+
     template<typename T> struct IsVariant : std::false_type
     {
     };
@@ -312,8 +338,16 @@ namespace rct3::parkfile::detail
             layout<typename T::value_type>(out);
             out += ')';
         }
-        else if constexpr (requires { T::kUnit; })
-            layout<decltype(T::value)>(out); // A unit is written as its bare number, so wrapping one changes nothing
+        else if constexpr (IsBitset<T>::value)
+            out += std::format("B{}", T { }.size());
+        else if constexpr (IsQuat<T>::value)
+        {
+            out += "q(";
+            layout<typename T::value_type>(out);
+            out += ')';
+        }
+        else if constexpr (requires { T::kUnit; } || IsId<T>::value)
+            layout<decltype(T::value)>(out); // A unit or an id is written as its bare number, so wrapping one changes nothing
         else if constexpr (std::same_as<T, std::monostate>)
             out += 'n';
         else if constexpr (IsVariant<T>::value)
@@ -380,6 +414,23 @@ namespace rct3::parkfile::detail
             for (glm::length_t i = 0; i < T::length(); ++i)
                 put(w, value[i]);
         }
+        else if constexpr (IsBitset<T>::value)
+        {
+            for (usize i = 0; i < value.size(); i += 8)
+            {
+                u8 byte = 0;
+                for (usize b = 0; b < 8 && i + b < value.size(); ++b)
+                    byte |= static_cast<u8>(value[i + b] ? 1U << b : 0U);
+                w.number(byte);
+            }
+        }
+        else if constexpr (IsQuat<T>::value)
+        {
+            for (glm::length_t i = 0; i < 4; ++i)
+                put(w, value[i]);
+        }
+        else if constexpr (IsId<T>::value)
+            put(w, value.value);
         else if constexpr (std::same_as<T, std::monostate>)
             return;
         else if constexpr (IsVariant<T>::value)
@@ -417,18 +468,29 @@ namespace rct3::parkfile::detail
                 return;
             }
             value.resize(count);
-            for (auto& item : value)
+            if constexpr (std::same_as<T, std::vector<bool>>)
             {
-                get(r, item);
-                if (!r.ok())
-                    return;
+                for (usize i = 0; i < count; ++i)
+                    value[i] = r.number<u8>() != 0;
             }
+            else
+                for (auto& item : value)
+                {
+                    get(r, item);
+                    if (!r.ok())
+                        return;
+                }
         }
         else if constexpr (IsOptional<T>::value)
         {
             value.reset();
             if (r.number<u8>() != 0)
-                get(r, value.emplace());
+            {
+                // Built by hand, not by emplace(): a struct nested in another may not count as default-constructible.
+                typename T::value_type held { };
+                get(r, held);
+                value = std::move(held);
+            }
         }
         else if constexpr (IsArray<T>::value)
         {
@@ -440,6 +502,22 @@ namespace rct3::parkfile::detail
             for (glm::length_t i = 0; i < T::length(); ++i)
                 get(r, value[i]);
         }
+        else if constexpr (IsBitset<T>::value)
+        {
+            for (usize i = 0; i < value.size(); i += 8)
+            {
+                const auto byte = r.number<u8>();
+                for (usize b = 0; b < 8 && i + b < value.size(); ++b)
+                    value[i + b] = (byte >> b & 1U) != 0;
+            }
+        }
+        else if constexpr (IsQuat<T>::value)
+        {
+            for (glm::length_t i = 0; i < 4; ++i)
+                get(r, value[i]);
+        }
+        else if constexpr (IsId<T>::value)
+            get(r, value.value);
         else if constexpr (std::same_as<T, std::monostate>)
             return;
         else if constexpr (IsVariant<T>::value)

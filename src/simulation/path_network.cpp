@@ -248,6 +248,15 @@ namespace rct3::simulation
         links_.emplace(link.from, link);
     }
 
+    std::vector<PathLink> PathNetwork::links() const
+    {
+        std::vector<PathLink> out;
+        out.reserve(links_.size());
+        for (const auto& [_, link] : links_)
+            out.push_back(link);
+        return out;
+    }
+
     std::optional<const PathLink&> PathNetwork::link_between(NodeId from, NodeId to) const
     {
         const auto [first, last] = links_.equal_range(from);

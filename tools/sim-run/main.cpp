@@ -2,13 +2,15 @@
 //
 // sim-run: run the simulation headless on an original save and report what happened.
 //
-//   sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--hash TICKS] [--awards] [--car-places] [--left-out]
+//   sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--hash TICKS] [--reload-at TICK]... [--awards] [--car-places] [--left-out]
 //
 // Brings over the save's paths, stalls, rides and guests, runs N seconds of park time (default 600) and prints
 // what each shop and ride took and how the guests are doing, with how long the run took. --threads N steps it on N
 // threads, the main one among them (1, the default, on the main thread alone). --profile adds the
 // time each phase of a step took, as the profiler's table. --hash prints a fingerprint of the world every TICKS
-// ticks (0: only at the end) and when the run ends, to compare runs that should go the same way. --awards (with --game) adds how many rides and stalls
+// ticks (0: only at the end) and when the run ends, to compare runs that should go the same way. --reload-at TICK
+// (as often as wanted) writes the world to a park file at that tick and reads it back in its place, as saving and
+// loading does, so the run on from there can be held to one never reloaded. --awards (with --game) adds how many rides and stalls
 // carry each theme, as the theme awards count them. --car-places (with --game) stands each car the save keeps at
 // its saved wheel distances on our track, prints how far that is from where the save has it, by track piece, with
 // each piece's length against the park's, and stops without running. Flat rides take their timing from their
@@ -30,6 +32,7 @@
 #include "park/track/course.hpp"
 #include "park/track/pieces.hpp"
 #include "park/track/rules.hpp"
+#include "parkfile/park_file.hpp"
 #include "particles/display.hpp"
 #include "profiling/profiler.hpp"
 #include "save/left_out.hpp"
@@ -42,6 +45,7 @@
 #include "save/value.hpp"
 #include "simulation/awards.hpp"
 #include "simulation/coaster.hpp"
+#include "simulation/component_tags.hpp"
 #include "simulation/components.hpp"
 #include "simulation/fingerprint.hpp"
 #include "simulation/guests.hpp"
@@ -132,6 +136,7 @@ int main(int argc, char** argv)
     bool patrol = false;                             // Give each handyman and mechanic a patrol: the tiles round where they start
     bool profile = false;                            // Print the time each phase of a step took
     std::optional<u32> hash_every;                   // Print the world's fingerprint this often in ticks, 0 only at the end
+    std::vector<u64> reload_at;                      // Ticks to write the world to a park file and read it back at
     bool awards = false;                             // Print what the theme awards count
     std::optional<std::vector<CarPlace>> car_places; // With --car-places: each saved car stood by our track, then stop
     bool left_out = false;                           // Print what loading the park left behind, then stop
@@ -153,6 +158,8 @@ int main(int argc, char** argv)
             profile = true;
         else if (std::strcmp(argv[i], "--hash") == 0 && i + 1 < argc)
             hash_every = static_cast<u32>(std::strtoul(argv[++i], nullptr, 10));
+        else if (std::strcmp(argv[i], "--reload-at") == 0 && i + 1 < argc)
+            reload_at.push_back(std::strtoull(argv[++i], nullptr, 10));
         else if (std::strcmp(argv[i], "--awards") == 0)
             awards = true;
         else if (std::strcmp(argv[i], "--car-places") == 0)
@@ -166,7 +173,7 @@ int main(int argc, char** argv)
     }
     if (!path || (car_places && !game))
     {
-        out.error("usage: sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--hash TICKS] [--awards] [--car-places] [--left-out]");
+        out.error("usage: sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--hash TICKS] [--reload-at TICK]... [--awards] [--car-places] [--left-out]");
         return 2;
     }
     std::ifstream in(path, std::ios::binary);
@@ -682,6 +689,18 @@ int main(int argc, char** argv)
         profiling::capture_frame();
         if (hash_every > 0u && world.tick % *hash_every == 0)
             out.info("hash tick {:d}: {:016x}", world.tick, simulation::fingerprint(world));
+        if (std::ranges::contains(reload_at, world.tick))
+        {
+            for (const std::string_view lost : simulation::untagged_components(world.registry))
+                out.warning("reload at tick {:d}: {} is not kept", world.tick, lost);
+            const auto bytes = parkfile::write_park_file(world);
+            if (const auto read = parkfile::read_park_file(bytes, world); !read)
+            {
+                out.error("reload at tick {:d}: {}", world.tick, read.error());
+                return 1;
+            }
+            out.info("reloaded at tick {:d} from {:d} bytes", world.tick, bytes.size());
+        }
         for (const auto [e, item] : world.registry.view<const simulation::PathItem>().each())
         {
             const auto* bin = world.registry.try_get<simulation::Bin>(e);

@@ -48,10 +48,14 @@
 //   "CHTS" v1  bool, true: a cheat was used in the park. Only when one was.
 //   "CAMP" v1  std::vector<save::model::Campaign>: the marketing campaigns running. Only when any are; without it,
 //              none run.
-//   "SIMS" v1  SavedSimulation: the run's seed, tick and gameplay rolls, and the dice of the attractions, the gates
-//              and the fences. Saves made before it lack it; their run starts afresh from the seed it is opened with.
+//   "SIMS" v2  SavedSimulation: the run's seed, tick and gameplay rolls, the dice of the attractions, the gates and
+//              the fences, and what the park's books and calendar had taken in of the run. Saves made before it lack it,
+//              and v1 is skipped; their run starts afresh from the seed it is opened with.
+//   "SNAP" v1  the simulated park whole, as a park file (park_file.hpp): every entity with its components in their
+//              order, the park-wide values and the run, put in place of the park the chunks above make again, so a
+//              load goes on exactly as the run saved would have. Saves made before it lack it; their run is put
+//              together from the chunks above.
 //
-// The rest of the simulation (a mechanic on the way to a ride, a pool's rides) starts again from the original park.
 #pragma once
 
 #include "core/types.hpp"
@@ -317,6 +321,18 @@ namespace rct3::parkfile
         std::vector<SavedDice> attractions { }; ///< By the attraction's saved id (simulation::Attraction::saved)
         std::vector<SavedDice> gates { };       ///< By the gate's path node
         std::optional<random::RandomState> fences { };
+        // What the park's own books and calendar had taken in of the run so far, so a load does not count it again.
+        i64 wages_seen = 0;                     ///< Of the staff's pay (simulation::Payroll), what came out of the cash
+        simulation::Supplies supplies_seen { }; ///< Of what supplies cost, what came out of the cash
+        simulation::Receipts receipts_seen { }; ///< Of what guests paid, what went into the cash
+        u32 vandalism_seen = 0;                 ///< Breaks the park was charged for
+        u32 vandalism_warnings_seen = 0;        ///< Warnings posted as messages
+        std::optional<i32> awards_month { };    ///< The calendar month the awards were last looked at in
+        std::optional<i64> goals_day { };       ///< The calendar day the goals were last checked on
+        std::optional<f32> research_time { };   ///< The calendar's time research was last moved on to
+        bool themes_judged = false;             ///< The attractions' fit with their scenery judged since the park opened
+        f32 wind_wait = 0;                      ///< Calendar units to the wind's next change
+        u64 sites_due = 0;                      ///< The tick the enclosures' grounds are next looked over at
     };
 
     struct SavedPark
@@ -348,6 +364,7 @@ namespace rct3::parkfile
         bool cheats_used = false;
         std::vector<save::model::Campaign> campaigns; ///< Those running
         std::optional<SavedSimulation> simulation;    ///< None in saves made before the run was kept
+        std::vector<std::byte> world;                 ///< The simulated park as a park file; empty in saves made before it was kept
     };
 
     /// A guest's wallet as their saved page keeps it, each sum held to the page's range.

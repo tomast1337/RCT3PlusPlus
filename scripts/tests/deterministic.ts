@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // A park runs the same way whatever the frames: opened twice from one seed, once run on in big steps and once frame
-// by frame, it has come to the same state at the same tick. Saved and loaded twice, it goes on the same way from
-// each load. How far a load is from the run never saved is logged; the people's in-between states (half-eaten
-// meals, rides mid-cycle) are not all kept yet, so the two are not held to be equal.
+// by frame, it has come to the same state at the same tick. Saved and loaded twice, it goes on from each load exactly
+// as the run never saved did.
 //
 //   ./nob script scripts/tests/deterministic.ts -- --no-audio
 
@@ -81,4 +80,4 @@ log("loaded, run on", JSON.stringify(first));
 const second = await load();
 log("loaded again, run on", JSON.stringify(second));
 expect(same(first, second), "a save run on the same way each time it is loaded");
-log("the loads' run", same(first, unsaved) ? "is" : "is not", "the run never saved");
+expect(same(first, unsaved), "a loaded save run on as the park never saved was");

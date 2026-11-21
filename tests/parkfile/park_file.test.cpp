@@ -2,9 +2,13 @@
 #include "parkfile/park_file.hpp"
 
 #include "core/types.hpp"
+#include "parkfile/binary.hpp"
+#include "simulation/component_tags.hpp"
 #include "simulation/components.hpp"
+#include "simulation/fingerprint.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/rides.hpp"
+#include "simulation/sandbox.hpp"
 #include "simulation/staff/patrol.hpp"
 
 #include <cstring>
@@ -87,12 +91,12 @@ TEST_CASE("a park read back from its file is the park that was written")
     CHECK_FALSE(r.any_of<simulation::Pose, simulation::Mood, simulation::Wallet>(b));
 }
 
-TEST_CASE("a ride's departure settings are kept, and a load the format does not know is refused")
+TEST_CASE("a ride's departure settings are kept")
 {
     SimWorld world;
     const auto ride = world.registry.create();
     world.registry.emplace<simulation::Departure>(ride, simulation::Departure { .wait_for = simulation::LoadWait::Half, .min_wait = units::Seconds { 10 } });
-    auto bytes = parkfile::write_park_file(world);
+    const auto bytes = parkfile::write_park_file(world);
     const auto read = parkfile::read_park_file(bytes);
     REQUIRE_MESSAGE(read, read.error());
     const auto& d = read->registry.get<simulation::Departure>(ride);
@@ -100,9 +104,6 @@ TEST_CASE("a ride's departure settings are kept, and a load the format does not 
     CHECK(d.min_wait->value == 10);
     CHECK_FALSE(d.max_wait);
     CHECK(parkfile::write_park_file(*read) == bytes);
-    // The load is the byte after the record's entity, 9 from the end.
-    bytes[bytes.size() - 9] = std::byte { 5 };
-    CHECK_FALSE(parkfile::read_park_file(bytes));
 }
 
 TEST_CASE("writing a park that was read gives the same bytes")
@@ -120,19 +121,20 @@ TEST_CASE("an empty park has a file too")
     CHECK(read->registry.view<entt::entity>().empty());
 }
 
-TEST_CASE("chunks of a newer build are skipped, but newer versions of known ones are refused")
+TEST_CASE("chunks of a newer build are skipped, but other versions of known ones are refused")
 {
-    auto bytes = header(1, 3);
-    chunk(bytes, "WRLD", 1, std::vector<std::byte>(16, std::byte { 0 }));
-    chunk(bytes, "ENTS", 1, std::vector<std::byte>(4, std::byte { 0 }));
+    auto bytes = parkfile::write_park_file(two_guests());
+    const u32 chunks = 1 + std::to_integer<u32>(bytes[12]) + (std::to_integer<u32>(bytes[13]) << 8);
+    bytes[12] = std::byte { static_cast<u8>(chunks) };
+    bytes[13] = std::byte { static_cast<u8>(chunks >> 8) };
     chunk(bytes, "ZZZZ", 9, std::vector<std::byte>(5, std::byte { 7 }));
     CHECK(parkfile::read_park_file(bytes));
 
     auto newer = header(1, 1);
-    chunk(newer, "WRLD", 2, std::vector<std::byte>(16, std::byte { 0 }));
+    chunk(newer, "WRLD", 9, std::vector<std::byte>(16, std::byte { 0 }));
     const auto refused = parkfile::read_park_file(newer);
     REQUIRE_FALSE(refused);
-    CHECK(refused.error().contains("version 2"));
+    CHECK(refused.error().contains("version 9"));
 }
 
 TEST_CASE("a file from a newer format is refused")
@@ -160,35 +162,21 @@ TEST_CASE("broken files are refused, not trusted")
     SUBCASE("a component of an entity that is not in the park")
     {
         auto bytes = header(1, 2);
-        std::vector<std::byte> one(4, std::byte { 0 });
-        one[0] = std::byte { 1 }; // count 1
-        chunk(bytes, "ENTS", 1, { std::byte { 0 }, std::byte { 0 }, std::byte { 0 }, std::byte { 0 } });
-        std::vector<std::byte> wallet(4 + 4 + 8, std::byte { 0 });
-        wallet[0] = std::byte { 1 }; // one record
-        wallet[4] = std::byte { 5 }; // for entity 5
+        chunk(bytes, "ENTS", 2, std::vector<std::byte>(8, std::byte { 0 }));
+        std::vector<std::byte> wallet(8 + 4 + 4 + 8 * 9 + 1, std::byte { 0 });
+        const u64 layout = parkfile::detail::layout_hash<simulation::Wallet>();
+        std::memcpy(wallet.data(), &layout, 8);
+        wallet[8] = std::byte { 1 };  // one record
+        wallet[12] = std::byte { 5 }; // for entity 5
         chunk(bytes, "WALT", 1, wallet);
         const auto read = parkfile::read_park_file(bytes);
         REQUIRE_FALSE(read);
         CHECK(read.error().contains("entity 5"));
     }
-    SUBCASE("a wallet of the first version holds cash alone")
-    {
-        auto bytes = header(1, 2);
-        chunk(bytes, "ENTS", 1, { std::byte { 1 }, std::byte { 0 }, std::byte { 0 }, std::byte { 0 }, std::byte { 0 }, std::byte { 0 }, std::byte { 0 }, std::byte { 0 } });
-        std::vector<std::byte> wallet(4 + 4 + 8, std::byte { 0 });
-        wallet[0] = std::byte { 1 }; // one record, for entity 0
-        wallet[8] = std::byte { 200 };
-        chunk(bytes, "WALT", 1, wallet);
-        const auto read = parkfile::read_park_file(bytes);
-        REQUIRE(read);
-        const auto& wallet_read = read->registry.get<simulation::Wallet>(entt::entity { 0 });
-        CHECK(wallet_read.cash.value == 200);
-        CHECK(wallet_read.bank.value == 0);
-    }
     SUBCASE("a count larger than the file")
     {
         auto bytes = header(1, 1);
-        chunk(bytes, "ENTS", 1, { std::byte { 0xFF }, std::byte { 0xFF }, std::byte { 0xFF }, std::byte { 0x7F } });
+        chunk(bytes, "ENTS", 2, { std::byte { 0xFF }, std::byte { 0xFF }, std::byte { 0xFF }, std::byte { 0x7F }, std::byte { 0 }, std::byte { 0 }, std::byte { 0 }, std::byte { 0 } });
         CHECK_FALSE(parkfile::read_park_file(bytes));
     }
     SUBCASE("not a park file")
@@ -223,3 +211,4 @@ TEST_CASE("a ride mid-breakdown and a staff member's patrol are read back as wri
     CHECK(read->registry.get<simulation::staff::Patrol>(handyman).zone == 2);
     CHECK(parkfile::write_park_file(*read) == bytes);
 }
+

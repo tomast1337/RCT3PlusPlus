@@ -20,6 +20,7 @@
 #include "park/ride/placement.hpp"
 #include "park/sky/look.hpp"
 #include "park/tile_shaping.hpp"
+#include "parkfile/park_file.hpp"
 #include "parkfile/saved_park.hpp"
 #include "profiling/profiler.hpp"
 #include "save/model/park.hpp"
@@ -2850,6 +2851,18 @@ namespace rct3::scene::park
         }
         saved.people = parkfile::keep_people(scene.sim, scene.people, looks);
         saved.simulation = parkfile::keep_simulation(scene.sim, { scene.sim_time });
+        saved.simulation->wages_seen = scene.wages_seen;
+        saved.simulation->supplies_seen = scene.supplies_seen;
+        saved.simulation->receipts_seen = scene.receipts_seen;
+        saved.simulation->vandalism_seen = scene.vandalism_seen;
+        saved.simulation->vandalism_warnings_seen = scene.vandalism_warnings_seen;
+        saved.simulation->awards_month = scene.awards_month;
+        saved.simulation->goals_day = scene.goals_day;
+        saved.simulation->research_time = scene.research_time;
+        saved.simulation->themes_judged = scene.themes_judged;
+        saved.simulation->wind_wait = scene.park.wind_wait;
+        saved.simulation->sites_due = scene.sites_due;
+        saved.world = parkfile::write_park_file(scene.sim);
         saved.queues = parkfile::keep_queues(scene.sim);
         saved.runs = parkfile::keep_runs(scene.sim);
         saved.campaigns = scene.park_model.campaigns;

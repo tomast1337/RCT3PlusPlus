@@ -650,7 +650,9 @@ namespace rct3::parkfile
         Writer w;
         const bool shows = park.shows && !park.shows->empty();
         write_header(
-            w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.research ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.animals ? 1 : 0) + (park.day_mode ? 1 : 0) + (park.pools ? 1 : 0) + (park.flower_beds.empty() ? 0 : 1) + (park.litter ? 1 : 0) + (park.queues.empty() ? 0 : 1) + (park.runs.empty() ? 0 : 1) + (park.cheats_used ? 1 : 0) + (park.campaigns.empty() ? 0 : 1) + (park.simulation ? 1 : 0));
+            w,
+            kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.research ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.animals ? 1 : 0) + (park.day_mode ? 1 : 0) + (park.pools ? 1 : 0) + (park.flower_beds.empty() ? 0 : 1) + (park.litter ? 1 : 0) + (park.queues.empty() ? 0 : 1) + (park.runs.empty() ? 0 : 1) + (park.cheats_used ? 1 : 0) + (park.campaigns.empty() ? 0 : 1) + (park.simulation ? 1 : 0)
+                + (park.world.empty() ? 0 : 1));
         each_chunk(park, [&](std::string_view tag, const auto& value) { put_chunk(w, tag, 1, value); });
         if (park.people)
             put_chunk(w, "PEOP", 8, *park.people);
@@ -685,7 +687,14 @@ namespace rct3::parkfile
         if (!park.campaigns.empty())
             put_chunk(w, "CAMP", 1, park.campaigns);
         if (park.simulation)
-            put_chunk(w, "SIMS", 1, *park.simulation);
+            put_chunk(w, "SIMS", 2, *park.simulation);
+        if (!park.world.empty())
+        {
+            // A park file of its own, kept as its bytes.
+            const usize at = begin_chunk(w, "SNAP", 1);
+            w.bytes(park.world.data(), park.world.size());
+            end_chunk(w, at);
+        }
         return w.take();
     }
 
@@ -803,9 +812,20 @@ namespace rct3::parkfile
             }
             if (tag == "SIMS")
             {
-                if (park.simulation || version != 1)
+                if (park.simulation || version == 0 || version > 2) // 2 adds what the books and calendar had taken in
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
+                // A park saved before is opened as one saved before the run was kept.
+                if (version == 1)
+                    return { };
                 return get_chunk(tag, body, park.simulation.emplace());
+            }
+            if (tag == "SNAP")
+            {
+                if (!park.world.empty() || version != 1)
+                    return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
+                const auto bytes = body.slice(body.left());
+                park.world.assign(bytes.begin(), bytes.end());
+                return { };
             }
             if (tag == "CAMP")
             {

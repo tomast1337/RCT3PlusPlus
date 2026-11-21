@@ -40,6 +40,7 @@
 #include "park/track/ground.hpp"
 #include "park/water/flow.hpp"
 #include "park/water/jet.hpp"
+#include "parkfile/park_file.hpp"
 #include "parkfile/saved_park.hpp"
 #include "profiling/profiler.hpp"
 #include "save/left_out.hpp"
@@ -102,6 +103,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 
@@ -1033,7 +1035,7 @@ namespace rct3::scene::park
                         return out;
                     };
                     const auto placed = kept != nullptr ? parkfile::place_guests(scene.sim, *kept) : std::vector<entt::entity> { };
-                    const auto guests = kept != nullptr ? by_look(scene.people.guests.size(), placed, kept->guests) : simulation::import_guests(scene.sim, scene.people);
+                    auto guests = kept != nullptr ? by_look(scene.people.guests.size(), placed, kept->guests) : simulation::import_guests(scene.sim, scene.people);
                     simulation::import_stalls(scene.sim, scene.rides, scene.carried);
                     simulation::import_pools(scene.sim, scene.pools, scene.scenery_pool_extras);
                     const auto timings = simulation::flat_ride_timings(scene.rides, scene.objects, [&](const save::model::PlacedObject& o) -> const rct3::park::object::ObjectModel* {
@@ -1185,7 +1187,7 @@ namespace rct3::scene::park
                     if (park_model && park_model->group_mix)
                         simulation::import_party_mix(scene.sim, *park_model->group_mix);
                     const auto placed_staff = kept != nullptr ? parkfile::place_staff(scene.sim, *kept) : std::vector<entt::entity> { };
-                    const auto staff = kept != nullptr ? by_look(scene.people.staff.size(), placed_staff, kept->staff) : simulation::import_staff(scene.sim, scene.people);
+                    auto staff = kept != nullptr ? by_look(scene.people.staff.size(), placed_staff, kept->staff) : simulation::import_staff(scene.sim, scene.people);
                     if (kept == nullptr)
                         simulation::resume_saved_uses(scene.sim, scene.people, guests, staff, world.use_points, scene.carried);
                     simulation::import_passport_rules(scene.sim, scene.people, world.use_points, scene.carried);
@@ -1254,17 +1256,80 @@ namespace rct3::scene::park
                         load_models(install, std::span(&crate, 1), false, scene.models, scene.pictures);
                         animals_changed(device, scene);
                     }
+                    if (saved && saved->simulation)
+                    {
+                        parkfile::place_simulation(scene.sim, *saved->simulation);
+                        scene.sim_time = saved->simulation->unstepped.value;
+                    }
+                    // A save that kept the simulated park whole puts it in place of the one made again above, entity for
+                    // entity, so the run goes on exactly as it would have; the scene's rides and people go over to its
+                    // entities: the rides by their saved ids, the people by the entities they were saved as.
+                    if (saved && !saved->world.empty() && kept != nullptr)
+                    {
+                        if (const auto check = parkfile::read_park_file(saved->world); !check)
+                            log.warning("the simulated park kept: {}; it is made again from the rest of the save", check.error());
+                        else
+                        {
+                            std::unordered_map<entt::entity, entt::entity> moved;
+                            std::unordered_map<u64, entt::entity> rides_was;
+                            for (const auto [e, attraction] : scene.sim.registry.view<const simulation::Attraction>().each())
+                                if (attraction.saved != 0)
+                                    rides_was.emplace(attraction.saved, e);
+                            for (usize i = 0; i < placed.size() && i < kept->guests.size(); ++i)
+                                moved[placed[i]] = static_cast<entt::entity>(kept->guests[i].entity);
+                            for (usize i = 0; i < placed_staff.size() && i < kept->staff.size(); ++i)
+                                if (placed_staff[i] != entt::null)
+                                    moved[placed_staff[i]] = static_cast<entt::entity>(kept->staff[i].entity);
+                            if (auto read = parkfile::read_park_file(saved->world, scene.sim); !read)
+                                log.error("the simulated park kept: {}", read.error()); // Read once above, so it does not fail here
+                            for (const auto [e, attraction] : scene.sim.registry.view<const simulation::Attraction>().each())
+                                if (const auto was = rides_was.find(attraction.saved); attraction.saved != 0 && was != rides_was.end())
+                                    moved[was->second] = e;
+                            const auto to = [&](entt::entity e) {
+                                const auto found = moved.find(e);
+                                return found != moved.end() ? found->second : entt::null;
+                            };
+                            const auto rekey = [&](auto& map) {
+                                std::remove_cvref_t<decltype(map)> out;
+                                for (auto& [e, value] : map)
+                                    if (const entt::entity now = to(e); now != entt::null)
+                                        out.emplace(now, std::move(value));
+                                map = std::move(out);
+                            };
+                            for (entt::entity& e : scene.ride_entities)
+                                e = to(e);
+                            for (ParkScene::BonedRide& boned : scene.boned_rides)
+                                boned.ride = to(boned.ride);
+                            rekey(scene.ride_seatings);
+                            rekey(scene.ride_seats);
+                            rekey(scene.ride_cars);
+                            for (entt::entity& e : guests)
+                                e = to(e);
+                            for (entt::entity& e : staff)
+                                e = to(e);
+                            // The books took in the run's counts kept with it as far as they had, and no further.
+                            if (const auto& run = saved->simulation)
+                            {
+                                scene.wages_seen = run->wages_seen;
+                                scene.supplies_seen = run->supplies_seen;
+                                scene.receipts_seen = run->receipts_seen;
+                                scene.vandalism_seen = run->vandalism_seen;
+                                scene.vandalism_warnings_seen = run->vandalism_warnings_seen;
+                                scene.awards_month = run->awards_month;
+                                scene.goals_day = run->goals_day;
+                                scene.research_time = run->research_time;
+                                scene.themes_judged = run->themes_judged;
+                                scene.park.wind_wait = run->wind_wait;
+                                scene.sites_due = run->sites_due;
+                            }
+                        }
+                    }
                     for (const auto [e, upkeep] : scene.sim.registry.view<const simulation::Upkeep>().each())
                     {
                         if (upkeep.broken)
                             scene.broken_rides.push_back({ e });
                         if (upkeep.reliability.value < kLowReliability)
                             scene.unreliable_rides.push_back(e);
-                    }
-                    if (saved && saved->simulation)
-                    {
-                        parkfile::place_simulation(scene.sim, *saved->simulation);
-                        scene.sim_time = saved->simulation->unstepped.value;
                     }
                     scene.known_guests.insert(guests.begin(), guests.end());
                     for (ShownPerson& p : scene.shown_people)

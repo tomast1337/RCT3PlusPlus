@@ -49,7 +49,7 @@ namespace rct3::simulation::park
         i32 climate = 0;      ///< The park file's climate (simulation::Climate)
         f32 weather_hold = 0; ///< Calendar units before the forecast arrives
         f32 wind_change = 0;  ///< How fast the wind is rising (falling when negative)
-        f32 wind_wait = 0;    ///< Calendar units to the wind's next change; not saved
+        f32 wind_wait = 0;    ///< Calendar units to the wind's next change
         GameSpeed speed;
         ParkMessages messages;
         bool cheats_used = false;        ///< A cheat was used in the park at some time; kept for good, cheats off or on

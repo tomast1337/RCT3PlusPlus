@@ -189,6 +189,8 @@ namespace rct3::simulation
             links_.clear();
         }
         [[nodiscard]] std::optional<const PathLink&> link_between(NodeId from, NodeId to) const;
+        /// Every link, in the order the network goes through them, which adding them in again keeps.
+        [[nodiscard]] std::vector<PathLink> links() const;
 
         /// The nodes after `from` on a shortest walk to `to`, ending with `to`; empty when `from` is `to`, none
         /// when no walk reaches it. Queues are only entered at `to`, never walked through, but one starting in a queue

@@ -25,6 +25,9 @@ namespace rct3::simulation
 
 namespace rct3::simulation::park
 {
+    /// The publicity of a park nobody has heard more of, as park files keep it.
+    inline constexpr f32 kPlainPublicity = 100;
+
     struct ParkState
     {
         std::optional<units::Money> cash; ///< None when money never runs out
@@ -49,7 +52,8 @@ namespace rct3::simulation::park
         f32 wind_wait = 0;    ///< Calendar units to the wind's next change; not saved
         GameSpeed speed;
         ParkMessages messages;
-        bool cheats_used = false; ///< A cheat was used in the park at some time; kept for good, cheats off or on
+        bool cheats_used = false;        ///< A cheat was used in the park at some time; kept for good, cheats off or on
+        f32 publicity = kPlainPublicity; ///< The park's own, without what marketing campaigns add (own_publicity)
     };
 
     /// Calendar units a game hour moves the calendar on: a whole day of the clock is a month and three fifths

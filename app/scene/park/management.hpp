@@ -51,6 +51,10 @@ namespace rct3::scene::park
         std::optional<std::pair<usize, f32>> research_priority;
         /// Focus research on this item, or end the focus when it holds none (ui::screens::management::kFocusButton, kUnfocusButton)
         std::optional<std::optional<u64>> research_focus;
+        /// Set up a campaign of this kind on the campaigns tab (ui::screens::management::kCampaignsTab)
+        std::optional<save::model::CampaignKind> campaign_kind;
+        /// Start this campaign (ui::screens::management::kStartCampaignButton)
+        std::optional<simulation::park::CampaignOrder> start_campaign;
     };
 
     /// Writes the open windows' pages again where the player picked a tab or where it is time to, and returns

@@ -809,11 +809,12 @@ namespace rct3::scene::park
         simulation::Research research;   ///< How far the park's research has got
         /// What is left to invent; none until the build lists are read, which says what each item is.
         std::optional<std::vector<simulation::ResearchItem>> research_items;
-        std::optional<f32> research_time;           ///< The calendar's time research was last moved on to; none before the first time
-        simulation::Supplies supplies_seen;         ///< Of what supplies cost, what has come out of the park's cash
-        simulation::Receipts receipts_seen;         ///< Of what guests have paid, what has gone into the park's cash
-        std::vector<BrokenRide> broken_rides;       ///< Rides the player has been told are broken down
-        std::vector<entt::entity> unreliable_rides; ///< Rides the player has been told are unreliable, until they recover
+        std::optional<f32> research_time;                ///< The calendar's time research was last moved on to; none before the first time
+        ui::screens::management::CampaignSetup campaign; ///< The kind picked on the park window's campaigns tab
+        simulation::Supplies supplies_seen;              ///< Of what supplies cost, what has come out of the park's cash
+        simulation::Receipts receipts_seen;              ///< Of what guests have paid, what has gone into the park's cash
+        std::vector<BrokenRide> broken_rides;            ///< Rides the player has been told are broken down
+        std::vector<entt::entity> unreliable_rides;      ///< Rides the player has been told are unreliable, until they recover
         /// Of each ride whose trains have crashed, the crashes, dangers and injured (simulation::Wrecks) already taken in.
         std::unordered_map<entt::entity, std::tuple<u32, u32, u32>> crashes_seen;
         std::set<std::tuple<entt::entity, usize, usize>> wrecks_blown; ///< By ride, train and car: wrecks shown blowing up

@@ -146,6 +146,29 @@ namespace rct3::simulation
         std::optional<f32> rating { }; ///< The park's, 0..1; none before it has one
         units::Money guest_cash { };   ///< What guests bring in on average; none for the tuning's
         units::Money guest_bank { };   ///< What cash machines can give them on average; none for the tuning's
+        /// Parties marketing campaigns draw on top of these, as a share of them (simulation::park::campaign_pull),
+        /// and of that the shares coming with a coupon for free entry and with one for a free ride on
+        /// `coupon_ride`.
+        f32 advertised = 0;
+        f32 entry_coupons = 0;
+        f32 ride_coupons = 0;
+        std::optional<u64> coupon_ride { }; ///< The attraction's saved id (Attraction::saved)
+    };
+
+    /// A coupon from a marketing campaign that a guest came with: free entry to the park, or with a `ride` a free
+    /// ride on it. Given up once used.
+    /// shortcut: not kept in saves, so a guest saved holding one loses it; keep it once saved guests keep what
+    /// they carry.
+    struct Coupon
+    {
+        std::optional<u64> ride { }; ///< The attraction's saved id (Attraction::saved)
+    };
+
+    /// Coupons guests have used, in the registry's context.
+    struct CouponsUsed
+    {
+        u32 entries = 0;
+        u32 rides = 0;
     };
 
     /// Room in the park, in the registry's context, made by open rides that are not simulated yet (water

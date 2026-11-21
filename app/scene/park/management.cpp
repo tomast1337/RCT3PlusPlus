@@ -43,14 +43,25 @@ namespace rct3::scene::park
             return at < facts.park->content.entries.size() ? std::optional(facts.park->content.entries[at].id) : std::nullopt;
         }
 
-        void show(ui::screens::management::ManagementWindow& window, ui::screens::management::ManagementTopic topic, const ui::screens::management::ManagementFacts& facts, const ui::StringTable& strings, const ui::screens::info::InfoUnits& units)
+        /// `facts` with what the window's own controls hold.
+        ui::screens::management::ManagementFacts shown_facts(const ui::screens::management::ManagementWindow& window, ui::screens::management::ManagementTopic topic, const ui::screens::management::ManagementFacts& facts)
         {
             ui::screens::management::ManagementFacts shown = facts;
             if (topic == ui::screens::management::ManagementTopic::Research)
                 shown.research_pick = research_pick(window, facts);
             if (topic == ui::screens::management::ManagementTopic::Finances)
                 shown.ledger_line = static_cast<usize>(std::max(0, window.control_value(ui::screens::management::kLedgerLineControl).value_or(0)));
-            window.show_page(ui::screens::management::management_page(topic, window.tab(), shown, strings, units));
+            if (topic == ui::screens::management::ManagementTopic::ParkOperations && window.tab() == ui::screens::management::kCampaignsTab)
+            {
+                shown.campaign.weeks = window.control_value(ui::screens::management::kCampaignWeeksControl).value_or(shown.campaign.weeks);
+                shown.campaign.ride = static_cast<usize>(std::max(0, window.control_value(ui::screens::management::kCampaignRideControl).value_or(0)));
+            }
+            return shown;
+        }
+
+        void show(ui::screens::management::ManagementWindow& window, ui::screens::management::ManagementTopic topic, const ui::screens::management::ManagementFacts& facts, const ui::StringTable& strings, const ui::screens::info::InfoUnits& units)
+        {
+            window.show_page(ui::screens::management::management_page(topic, window.tab(), shown_facts(window, topic, facts), strings, units));
         }
     } // namespace
 
@@ -130,6 +141,18 @@ namespace rct3::scene::park
                 asks.borrow = *button == ui::screens::management::kBorrowButton;
             if (button && topic == ui::screens::management::ManagementTopic::Finances && ui::screens::management::finance_page(window->tab(), units.original_finances) == ui::screens::management::FinancePage::Ledger)
                 asks.export_ledger = *button == ui::screens::management::kExportLedgerButton;
+            // The campaigns tab: a kind picked to set up, a campaign started, or the setup changed.
+            const bool campaigns = topic == ui::screens::management::ManagementTopic::ParkOperations && window->tab() == ui::screens::management::kCampaignsTab;
+            if (button && campaigns && *button < ui::screens::management::kStartCampaignButton)
+            {
+                asks.campaign_kind = static_cast<save::model::CampaignKind>(*button);
+                window->age_page();
+            }
+            if (button && campaigns && *button == ui::screens::management::kStartCampaignButton)
+            {
+                asks.start_campaign = ui::screens::management::campaign_order(shown_facts(*window, topic, facts));
+                window->age_page();
+            }
             const auto choice = window->take_choice();
             if (choice && park_page && choice->button == ui::screens::management::kOpenCloseParkButton)
                 asks.park_open = choice->choice == 0;
@@ -152,7 +175,7 @@ namespace rct3::scene::park
             const auto change = window->take_change();
             // The ledger's line picked shows at once; the loan once it has moved, on the next update.
             const ui::screens::management::FinancePage finance = ui::screens::management::finance_page(window->tab(), units.original_finances);
-            if (change && topic == ui::screens::management::ManagementTopic::Finances && finance == ui::screens::management::FinancePage::Ledger)
+            if (change && ((topic == ui::screens::management::ManagementTopic::Finances && finance == ui::screens::management::FinancePage::Ledger) || campaigns))
                 show(*window, topic, facts, strings, units);
             if (change && topic == ui::screens::management::ManagementTopic::Finances && finance == ui::screens::management::FinancePage::Loan && change->id == ui::screens::management::kLoanControl)
             {

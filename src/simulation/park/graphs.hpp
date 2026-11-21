@@ -28,16 +28,17 @@ namespace rct3::simulation::park
         i32 adults = 0;
         i32 teenagers = 0;
         i32 children = 0;
-        i32 intake = 0;              ///< Guests who came in during the week
-        units::Money cash_less_loan; ///< Now
-        units::Money income;         ///< Taken during the week
-        units::Money profit;         ///< Change in cash over the week
-        units::Money park_value;     ///< Now (see park_value)
+        i32 intake = 0;                   ///< Guests who came in during the week
+        units::Money cash_less_loan;      ///< Now
+        units::Money income;              ///< Taken during the week
+        units::Money profit;              ///< Change in cash over the week
+        units::Money park_value;          ///< Now (see park_value)
+        std::optional<f32> publicity { }; ///< Now; none carries the last week's on
     };
 
     /// Ends the week in `park`'s graphs with `figures`, starting any series it has none of. The company is worth
-    /// its cash less its loan and the park's value. Share price and publicity, which the simulation does not work
-    /// out, carry on as they were.
+    /// its cash less its loan and the park's value. Share price, which the simulation does not work out, carries on
+    /// as it was.
     void close_week(save::model::ParkModel& park, const WeekFigures& figures);
 
 } // namespace rct3::simulation::park

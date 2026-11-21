@@ -49,7 +49,10 @@ namespace rct3::simulation::park
             level(p.teenagers_in_park, static_cast<f32>(f.teenagers));
             level(p.children_in_park, static_cast<f32>(f.children));
             total(p.guest_intake, static_cast<f32>(f.intake));
-            carry(p.publicity_level);
+            if (f.publicity)
+                level(p.publicity_level, *f.publicity);
+            else
+                carry(p.publicity_level);
         }
         {
             save::model::Finance& m = park.finance;

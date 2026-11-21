@@ -56,6 +56,7 @@
 #include "simulation/guests.hpp"
 #include "simulation/holding.hpp"
 #include "simulation/import_park.hpp"
+#include "simulation/park/campaigns.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/staff/care.hpp"
@@ -234,6 +235,7 @@ namespace rct3::scene::park
                                 t = { .income = t.income + a.income, .customers = t.customers + a.customers };
                         return t;
                     },
+                .campaign = scene.campaign,
             };
         }
 
@@ -1193,6 +1195,7 @@ namespace rct3::scene::park
             simulation::advance(scene.day_clock, game_seconds);
             const f32 before = scene.park.time;
             const i32 weeks = simulation::park::pass_time(scene.park, game_seconds);
+            simulation::park::step_campaigns(scene.park, scene.park_model.finance, scene.ledger_month, scene.park_model.campaigns, before);
             simulation::advance_weather(scene.park, scene.park.time - before, scene.gameplay, options.flag(config::game::GameOption::DisableWeather));
             scene.thunder = rct3::park::advance_weather_look(scene.weather_look, scene.park.weather, scene.park.speed.paused ? 0.0f : elapsed.value, scene.weather_dice);
             if (scene.rain_strength)
@@ -1271,6 +1274,7 @@ namespace rct3::scene::park
                             .income = units::Money { income - began.income },
                             .profit = units::Money { cash - began.cash },
                             .park_value = simulation::park::park_value(scene.park.guests, scene.rides),
+                            .publicity = scene.park.publicity + simulation::park::campaigns_publicity(scene.park_model.campaigns),
                         });
                     began = { .intake = intake, .income = income, .cash = cash };
                 }
@@ -1473,7 +1477,21 @@ namespace rct3::scene::park
                     simulation::import_pools(scene.sim, scene.pools, scene.scenery_pool_extras);
                     scene.machine_waves = rct3::park::pools::machine_waves(scene.pools, scene.scenery_pool_extras, scene.grid);
                 }
-                scene.sim.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<u32>(scene.footpaths.pools.size()), .rating = scene.park.rating, .guest_cash = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_cash : 0 }, .guest_bank = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_bank_funds : 0 } });
+                simulation::Draw draw { .entrance_fee = { fee }, .pool_squares = static_cast<u32>(scene.footpaths.pools.size()), .rating = scene.park.rating, .guest_cash = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_cash : 0 }, .guest_bank = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_bank_funds : 0 } };
+                // Running campaigns draw parties of their own, some with coupons.
+                for (const save::model::Campaign& c : scene.park_model.campaigns)
+                {
+                    const f32 pull = simulation::park::campaign_pull(c.kind);
+                    draw.advertised += pull;
+                    if (c.kind == save::model::CampaignKind::ParkVouchers)
+                        draw.entry_coupons += pull;
+                    else if (c.kind == save::model::CampaignKind::AttractionVouchers)
+                    {
+                        draw.ride_coupons += pull;
+                        draw.coupon_ride = c.attraction;
+                    }
+                }
+                scene.sim.registry.ctx().insert_or_assign(draw);
                 if (auto* passports = scene.sim.registry.ctx().find<simulation::PassportRules>())
                     passports->park_cash = scene.park.cash;
                 // What a crashed train's wrecks fly over and into: the ground, and the scenery, stalls and flat rides
@@ -2484,6 +2502,10 @@ namespace rct3::scene::park
         }
         if (asks.research_budget)
             scene.research.budget = *asks.research_budget;
+        if (asks.campaign_kind)
+            scene.campaign.kind = *asks.campaign_kind;
+        if (asks.start_campaign)
+            (void)simulation::park::start_campaign(scene.park, scene.park_model.finance, scene.ledger_month, scene.park_model.campaigns, *asks.start_campaign);
         if (asks.research_focus && scene.research_items)
             (void)simulation::focus_research(scene.research, *asks.research_focus, *scene.research_items);
         // Areas past the end of the priorities weigh the most until set.
@@ -2685,6 +2707,7 @@ namespace rct3::scene::park
         saved.people = parkfile::keep_people(scene.sim, scene.people, looks);
         saved.queues = parkfile::keep_queues(scene.sim);
         saved.runs = parkfile::keep_runs(scene.sim);
+        saved.campaigns = scene.park_model.campaigns;
         saved.litter = parkfile::keep_litter(scene.sim);
         saved.no_queue_signs.assign(scene.led_signs.hidden.begin(), scene.led_signs.hidden.end());
         saved.shows = scene.shows;

@@ -96,3 +96,39 @@ TEST_CASE("an animal species gives the space, appetite and sociability its anima
     CHECK(items[0].species->care.sociability == 16);
     CHECK(items[0].species->care.space == 40);
 }
+
+TEST_CASE("an animal species names the species it preys on, from its statistics block")
+{
+    Pool pool;
+    const u32 gnu = pool.add("gnu");
+    const u32 hare = pool.add("Hare");
+    pool.add("jackal:was");
+    const u32 at = pool.base();
+    // The species, its statistics block after it, then the list of its prey.
+    std::vector<std::byte> bytes;
+    put(bytes, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, at + 0x3C });
+    bytes.resize(0x3C, std::byte { 0 });
+    put(bytes, { 2, at + 0x4C, 95, 120 });
+    put(bytes, { gnu, hare });
+    const auto overlay = make_record_overlay(5, pool, "jackal:was", bytes);
+    const auto items = read_animal_species(overlay, overlay.common());
+    REQUIRE(items[0].species.has_value());
+    REQUIRE(items[0].species->prey.size() == 2);
+    CHECK(items[0].species->prey[0] == "gnu");
+    CHECK(items[0].species->prey[1] == "Hare");
+}
+
+TEST_CASE("a prey count over the list's bytes leaves the prey out")
+{
+    Pool pool;
+    pool.add("jackal:was");
+    const u32 at = pool.base();
+    std::vector<std::byte> bytes;
+    put(bytes, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, at + 0x3C });
+    bytes.resize(0x3C, std::byte { 0 });
+    put(bytes, { 40, at + 0x4C, 95, 120 });
+    const auto overlay = make_record_overlay(5, pool, "jackal:was", bytes);
+    const auto items = read_animal_species(overlay, overlay.common());
+    REQUIRE(items[0].species.has_value());
+    CHECK(items[0].species->prey.empty());
+}

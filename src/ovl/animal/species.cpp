@@ -27,7 +27,10 @@ namespace rct3::ovl::animal
         constexpr usize kAppetite = 0x00;
         constexpr usize kSociability = 0x08;
         constexpr usize kStatisticsSize = 0x10;
+        constexpr usize kPreyCount = 0x00;
+        constexpr usize kPreyList = 0x04;
         constexpr usize kSpace = 0x0C;
+        constexpr i32 kMostPrey = 64; // Far over the dozen or so a meat-eater of the game hunts
 
         // An animal's own block.
         constexpr usize kVariantSize = 0x34;
@@ -70,7 +73,16 @@ namespace rct3::ovl::animal
                     }
                 if (const u32 at = record->read_u32(kStatistics); at != 0)
                     if (const auto stats = ItemRecord::open(space, refs, at, kStatisticsSize))
+                    {
                         s.care.space = stats->read_i32(kSpace);
+                        const i32 prey = stats->read_i32(kPreyCount);
+                        if (prey > 0 && prey <= kMostPrey)
+                            if (const auto list = ItemRecord::open(space, refs, stats->read_u32(kPreyList), 4 * static_cast<usize>(prey)))
+                                for (usize i = 0; i < static_cast<usize>(prey); ++i)
+                                    // Not ItemRecord::text: a pointer of 0 here is the start of the data, not null.
+                                    if (const auto name = space.cstring_at(list->read_u32(4 * i)))
+                                        s.prey.push_back(*name);
+                    }
                 for (usize i = 0; i < s.variants.size(); ++i)
                 {
                     const u32 at = record->read_u32(kVariants + 4 * i);

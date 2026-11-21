@@ -219,6 +219,7 @@ namespace rct3::park
                     item.rarity = v->rarity;
                     item.species_name = s.own_name;
                     item.care = s.care;
+                    item.prey.assign(s.prey.begin(), s.prey.end());
                     items.push_back(std::move(item));
                 }
             }

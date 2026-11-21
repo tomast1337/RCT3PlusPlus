@@ -185,6 +185,12 @@ namespace rct3::ui::screens::info
         place();
     }
 
+    void InfoPanel::mark_graph(std::optional<f32> now)
+    {
+        if (auto plot = body_->find_as<widgets::LinePlot>("graph"))
+            plot->marker = now;
+    }
+
     void InfoPanel::show_page(const InfoPage& page)
     {
         if (painting_page_)
@@ -346,6 +352,7 @@ namespace rct3::ui::screens::info
                 n.style.horizontal = Align::End;
                 n.style.vertical = Align::Centre;
             }
+            plot.marker = page.graph_now;
             // Across the longest series, shown or not, so the marks stay put as series are ticked.
             for (const InfoSeries& series : page.graph)
                 plot.slots = std::max(plot.slots, series.values.size());

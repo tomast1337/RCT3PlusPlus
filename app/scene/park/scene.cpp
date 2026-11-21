@@ -564,6 +564,7 @@ namespace rct3::scene::park
         if (info)
         {
             const profiling::Scope zone("InfoPanel");
+            mark_train(scene, *info);
             // A double click on a ride's round view rides along on it, as the ride camera key does.
             if (info->take_view_double_click() && !scene.riding_along() && scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride)
                 ride_cam(scene, assets, scene.shown->ride());

@@ -169,6 +169,7 @@ namespace rct3::simulation
         LapRecorder lap { };                           ///< Of the first train's lap under way
         /// The first train's last lap, for the ride's graphs, till the park takes it.
         std::optional<save::model::RideGraphs> lap_done { };
+        usize lap_samples = 0; ///< Taken over the first train's last whole lap, before the graphs keep only its end
     };
 
     /// A ride whose trains have crashed, and how long since the last did. A crashed train's cars fly off as

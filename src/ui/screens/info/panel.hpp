@@ -308,6 +308,7 @@ namespace rct3::ui::screens::info
         /// under the graph are left to the controls.
         std::vector<std::u16string> graph_axis;
         std::vector<InfoTick> graph_ticks;
+        std::optional<f32> graph_now { };        ///< Where the ride's first train is on the graph, samples before its newest
         std::vector<InfoControl> controls;       ///< Under the note
         std::optional<usize> controls_after { }; ///< How many lines go over the controls; all when empty
         f32 width = 0;                           ///< Of the page; 0 for info_panel::kPageWidth
@@ -436,6 +437,9 @@ namespace rct3::ui::screens::info
         /// values clear of the widest label, its note and its controls, each clear of its label. A page sits on paper,
         /// striped where it has lines, in dark text. An empty page hides the strip.
         void show_page(const InfoPage& page);
+        /// Moves the line on the page's graph that marks where a train is, as InfoPage::graph_now, without building
+        /// the page again.
+        void mark_graph(std::optional<f32> now);
 
         /// Shows the picture `texture` in the round view on the disc; 0 shows the plain disc.
         void show_view(TextureId texture)

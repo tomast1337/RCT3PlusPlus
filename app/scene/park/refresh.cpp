@@ -871,7 +871,7 @@ namespace rct3::scene::park
         {
             const usize i = *scene.riding;
             const rct3::park::ride::CarSpot spot = scene.car_spots[i];
-            ovl::RideCameraTuning tuning = scene.models.at(rct3::park::object::model_ref(scene.cars[i])).ride_look;
+            ovl::RideCameraTuning tuning = scene.models.at(rct3::park::object::model_key(scene.cars[i])).ride_look;
             // On a lift chain the view shakes as the train sets for the chain, from when this car is on it.
             const entt::entity ride = scene.simulate && spot.ride.value < scene.ride_entities.size() ? scene.ride_entities[spot.ride.value] : entt::null;
             const auto* fleet = ride != entt::null ? scene.sim.registry.try_get<simulation::Trains>(ride) : nullptr;
@@ -943,7 +943,7 @@ namespace rct3::scene::park
         for (ParkScene::BonedCar& boned : scene.boned_cars)
         {
             scene.car_mesh_places[boned.car] = glm::mat4(0.0f);
-            const rct3::park::object::ObjectModel& model = scene.models.at(rct3::park::object::model_ref(scene.cars[boned.car]));
+            const rct3::park::object::ObjectModel& model = scene.models.at(rct3::park::object::model_key(scene.cars[boned.car]));
             const rct3::park::ride::CarSpot spot = scene.car_spots[boned.car];
             const entt::entity ride = scene.simulate && spot.ride.value < scene.ride_entities.size() ? scene.ride_entities[spot.ride.value] : entt::null;
             const auto* boats = ride != entt::null ? scene.sim.registry.try_get<simulation::Boats>(ride) : nullptr;

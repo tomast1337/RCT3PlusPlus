@@ -16,7 +16,7 @@
 // The binary lives in build/debug, which a clean step deletes, so copy it out first:
 //   cp build/debug/build-times build/ && systemd-run --user --scope build/build-times
 // CPU time and peak memory come from the cgroup the tool runs in, hence the scope of its own. The load average before
-// and after each step shows how busy the machine was.
+// and after each step shows how busy the machine was. Linux only (/proc, cgroups), hence main_linux.cpp.
 #include "core/types.hpp"
 
 #include <algorithm>

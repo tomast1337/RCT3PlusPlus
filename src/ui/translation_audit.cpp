@@ -90,6 +90,8 @@ namespace rct3::ui
                 std::string_view note = comment == std::string_view::npos ? std::string_view { } : rest_of_line.substr(comment);
                 while (!note.empty() && (note.front() == '/' || note.front() == '<' || note.front() == ' '))
                     note.remove_prefix(1);
+                if (note.ends_with('\r')) // A checkout on Windows may end its lines with CR LF
+                    note.remove_suffix(1);
                 out.prefixes.push_back({ .text = pattern, .place = place, .note = std::string(note) });
             }
             if (ends_with_lookup(before))

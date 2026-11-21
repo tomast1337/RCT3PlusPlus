@@ -118,6 +118,7 @@ TEST_CASE("Without ffmpeg, a recording keeps its frames as PNG files and its sou
 
     std::ifstream wav(folder / "clip.wav", std::ios::binary);
     const std::vector<u8> bytes { std::istreambuf_iterator<char>(wav), { } };
+    wav.close(); // Windows does not delete an open file
     REQUIRE(bytes.size() == kWavHeaderBytes + 3 * 1600 * 2 * 2);
     CHECK(read_u32(bytes, 40) == 3 * 1600 * 2 * 2);
     CHECK(read_u16(bytes, kWavHeaderBytes) == 0);

@@ -243,8 +243,8 @@ namespace rct3::render::opengl
         gl.ClearTexImage(t.texture, 0, GL_RGBA, GL_FLOAT, clear.data());
         gl.CreateTextures(GL_TEXTURE_2D, 1, &t.depth);
         gl.TextureStorage2D(t.depth, 1, GL_DEPTH_COMPONENT32F, width, height);
-        const f32 far = 1.0f;
-        gl.ClearTexImage(t.depth, 0, GL_DEPTH_COMPONENT, GL_FLOAT, &far);
+        const f32 far_depth = 1.0f; // not `far`, a macro of <windows.h>
+        gl.ClearTexImage(t.depth, 0, GL_DEPTH_COMPONENT, GL_FLOAT, &far_depth);
         gl.CreateFramebuffers(1, &t.framebuffer);
         gl.NamedFramebufferTexture(t.framebuffer, GL_COLOR_ATTACHMENT0, t.texture, 0);
         gl.NamedFramebufferTexture(t.framebuffer, GL_DEPTH_ATTACHMENT, t.depth, 0);

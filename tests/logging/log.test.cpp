@@ -206,6 +206,7 @@ TEST_CASE("a log file is written and write_recent dumps the ring")
     std::ifstream ring(dir / "recent" / "ring.txt");
     const std::string ring_text((std::istreambuf_iterator<char>(ring)), std::istreambuf_iterator<char>());
     CHECK(ring_text.find("hello 1") != std::string::npos);
+    ring.close(); // Windows does not delete an open file
     std::filesystem::remove_all(dir);
 }
 

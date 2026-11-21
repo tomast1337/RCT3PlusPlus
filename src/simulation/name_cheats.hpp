@@ -8,12 +8,12 @@
 // name.
 #pragma once
 
+#include "core/function_ref.hpp"
 #include "core/types.hpp"
 #include "units/units.hpp"
 
 #include <array>
 #include <cstddef>
-#include <functional>
 #include <optional>
 #include <string>
 #include <string_view>

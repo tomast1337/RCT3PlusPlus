@@ -19,6 +19,7 @@
 //  - Curve: 0 straight, 1 loose, 2 medium, 3 tight; negative to the left.
 #pragma once
 
+#include "core/function_ref.hpp"
 #include "core/maybe.hpp"
 #include "core/types.hpp"
 #include "park/object/placement.hpp"
@@ -28,7 +29,6 @@
 #include <cstdint>
 #include <expected>
 #include <filesystem>
-#include <functional>
 #include <glm/glm.hpp>
 #include <optional>
 #include <span>

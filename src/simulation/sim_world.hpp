@@ -48,6 +48,9 @@ namespace rct3::simulation
         PathNetwork paths;
         u64 tick = 0;                                 ///< Simulation steps run so far
         random::Seed seed;                            ///< Randomness of the whole run derives from it
+        /// What the park rolls outside the entities' own dice (weather, research, awards, the player's hires); set with
+        /// `seed`, as its Gameplay stream.
+        random::RandomState gameplay = random::stream({ }, random::RandomStream::Gameplay);
         RatingModel ratings = builtin_rating_model(); ///< How rides untested in the park get rated
         StepBuffers buffers { };
         f32 guest_slowdown = 1;            ///< Developer switch: guests live this many times slower than the park

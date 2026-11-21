@@ -775,3 +775,24 @@ TEST_CASE("park: a scenario's group mix is read in kind order; a mix object with
     const auto empty = load({ { "Park", 1, { fstr("Name", "Played") } }, { "GuestDemographics", 2, { fint("Unrelated", 1) } } });
     CHECK_FALSE(empty->model.group_mix.has_value());
 }
+
+TEST_CASE("park: a running campaign keeps its kind, medium, dates and its vouchers' attraction")
+{
+    const auto l = load(
+        {
+            { "Campaign", 30, { fint("CampType", 2), fint("PubType", 0), fref("CarriedItem", 31), ffloat("StartDate", 120.0f), ffloat("EndDate", 180.0f) } },
+            { "CarriedItemInstance", 31, { fref("VoucherTarget", 32) } },
+            { "AnimatedRideInstance", 32, { fint("Unused", 0) } },
+            { "Campaign", 33, { fint("CampType", 1), fint("PubType", 0), fref("CarriedItem", 0), ffloat("StartDate", 10.0f), ffloat("EndDate", 40.0f) } },
+            { "Campaign", 34, { fint("CampType", 9) } }, // A kind not known is left out
+        });
+    REQUIRE(l->model.campaigns.size() == 2);
+    const Campaign& vouchers = l->model.campaigns[0];
+    CHECK(vouchers.kind == CampaignKind::AttractionVouchers);
+    CHECK(vouchers.medium == 0);
+    CHECK(vouchers.attraction == std::optional<u64>(32));
+    CHECK(vouchers.start == doctest::Approx(120.0f));
+    CHECK(vouchers.end == doctest::Approx(180.0f));
+    CHECK(l->model.campaigns[1].kind == CampaignKind::Advertising);
+    CHECK_FALSE(l->model.campaigns[1].attraction.has_value());
+}

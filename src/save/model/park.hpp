@@ -618,6 +618,26 @@ namespace rct3::save::model
         f32 single_parent = 0; ///< Chance a family comes with one parent
     };
 
+    /// The kinds of marketing campaign, numbered in the order the park window lists them.
+    /// The park file's numbers for them are unconfirmed: no park file seen holds a campaign.
+    enum class CampaignKind : u8
+    {
+        ParkVouchers,       ///< Coupons for free entry to the park
+        Advertising,        ///< Advertising for the park
+        AttractionVouchers, ///< Coupons for a free ride on one attraction
+    };
+    inline constexpr usize kCampaignKinds = 3;
+
+    /// A marketing campaign running in the park.
+    struct Campaign
+    {
+        CampaignKind kind = CampaignKind::Advertising;
+        i32 medium = 0;                    ///< Where it runs: 0 television, the only medium the game offers
+        std::optional<u64> attraction { }; ///< Attraction vouchers': the attraction they are for (AttractionCommon::id)
+        f32 start = 0;                     ///< Calendar units (GameClock), as the park file keeps them
+        f32 end = 0;
+    };
+
     struct ParkModel
     {
         Park park { };
@@ -629,6 +649,7 @@ namespace rct3::save::model
         MessageLog messages { };
         RequiredContent content { };
         std::optional<GroupMix> group_mix { }; ///< None when the file stores no weights
+        std::vector<Campaign> campaigns { };   ///< Those running
 
         // Which singletons the file had; the rest of the model holds defaults when false.
         bool has_park = false;

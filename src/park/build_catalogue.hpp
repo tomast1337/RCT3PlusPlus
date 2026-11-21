@@ -180,7 +180,6 @@ namespace rct3::park
         /// Animals: their species' own name as its data spells it, which the string keys of its facts start with.
         std::string species_name;
         ovl::animal::SpeciesCare care { }; ///< Animals: what keeps their species well
-        std::vector<std::string> prey { }; ///< Animals: the own names of the species they hunt, in any case
         /// Shops: whether placed as a stall, as against a special attraction such as a toilet.
         bool stall = false;
         bool names_category = false; ///< Scenery: names a research category, which keeps it out of research
@@ -194,7 +193,8 @@ namespace rct3::park
         std::vector<Goods> goods;
         /// Pool tools: the pool type's price list (ovl::PoolType::prices), what their squares cost.
         std::vector<i32> pool_prices { };
-        std::string pool_extra { }; ///< Pool extras: the words of their setting, read by park::pools::pool_extra_fit
+        std::string pool_extra { };        ///< Pool extras: the words of their setting, read by park::pools::pool_extra_fit
+        std::vector<std::string> prey { }; ///< Animals: the own names of the species they hunt, in any case
     };
 
     /// Names the theme of each item that has only its number, after another item of that number.

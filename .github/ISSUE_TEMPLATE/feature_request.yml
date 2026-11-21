@@ -24,3 +24,10 @@ body:
         - Tools, modding or development
     validations:
       required: true
+  - type: checkboxes
+    id: ai
+    attributes:
+      label: AI use
+      description: Tick it if an AI tool helped write this issue or find what it reports, and say which and how above.
+      options:
+        - label: An AI tool was used to write this issue or to find what it reports.

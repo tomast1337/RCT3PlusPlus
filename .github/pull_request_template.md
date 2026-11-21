@@ -16,3 +16,10 @@
       addresses, and no absolute paths, in the code, tests, docs or this description
       ([ORIGINAL_WORK.md](../ORIGINAL_WORK.md))
 - [ ] Values borrowed from another project name their source at the place of use
+
+## AI use
+
+<!-- Tick it if an AI tool wrote or helped write the code, the tests or this description, and say which tool and
+for what part. It does not count against the change; reviewers read such changes with that in mind. -->
+
+- [ ] An AI tool was used for this change or its description

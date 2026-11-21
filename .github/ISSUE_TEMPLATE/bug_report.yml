@@ -57,3 +57,10 @@ body:
       label: Log
       description: The end of rct3++'s log, if there is one. Remove anything personal, such as your home directory's name.
       render: text
+  - type: checkboxes
+    id: ai
+    attributes:
+      label: AI use
+      description: Tick it if an AI tool helped write this issue or find what it reports, and say which and how above.
+      options:
+        - label: An AI tool was used to write this issue or to find what it reports.

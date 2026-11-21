@@ -3,6 +3,7 @@
 
 #include "core/types.hpp"
 #include "parkfile/binary.hpp"
+#include "random/generator.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/rides.hpp"
@@ -906,4 +907,69 @@ TEST_CASE("a save keeps where a ride is in its cycle, its trains on the track an
     // A crashed train keeps nothing of its ride.
     fleet.trains[0].crashed = true;
     CHECK(parkfile::keep_runs(world).empty());
+}
+
+TEST_CASE("a save keeps where the run has got: its tick, its rolls, and each one's entity and dice")
+{
+    using namespace simulation;
+    // A path, a stall and a gate, made alike in the park saved and in the one loaded.
+    const auto make_world = [](SimWorld& world) {
+        world.paths.add({ 0, 0, 0 });
+        world.paths.add({ 1, 0, 0 });
+        const entt::entity stall = world.registry.create();
+        world.registry.emplace<Attraction>(stall, Attraction { .kind = AttractionKind::Shop, .name = "Drinks", .saved = 31 });
+        const entt::entity gate = world.registry.create();
+        world.registry.emplace<ParkGate>(gate, ParkGate { .node = NodeId { 1 } });
+        return std::pair { stall, gate };
+    };
+    const auto rolled = [](u64 seed) { return random::stream(random::Seed { seed }, random::RandomStream::Gameplay); };
+    SimWorld world;
+    world.seed = random::Seed { 7 };
+    auto& r = world.registry;
+    const auto [stall, gate] = make_world(world);
+    // Others come and go before the guests, so the guests' entities are not the first free ones.
+    for (i32 i = 0; i < 3; ++i)
+        r.destroy(r.create());
+    std::vector<entt::entity> guests;
+    for (u64 i = 0; i < 2; ++i)
+    {
+        const entt::entity g = guests.emplace_back(r.create());
+        r.emplace<Visitor>(g);
+        r.emplace<Pose>(g, Pose { .position = world.paths.centre(NodeId { 0 }) });
+        r.emplace<Needs>(g);
+        r.emplace<Mood>(g);
+        r.emplace<Wallet>(g);
+        r.emplace<Dice>(g, Dice { rolled(100 + i) });
+    }
+    r.emplace<Dice>(stall, Dice { rolled(200) });
+    r.emplace<Dice>(gate, Dice { rolled(300) });
+    world.tick = 1234;
+    world.gameplay = rolled(400);
+    (void)random::next(world.gameplay);
+
+    parkfile::SavedPark park = small_park();
+    park.people = parkfile::keep_people(world, { }, { });
+    park.simulation = parkfile::keep_simulation(world, units::Seconds { 0.125f });
+    const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE_MESSAGE(read, (read ? "" : read.error()));
+    REQUIRE(read->simulation);
+    CHECK(read->simulation->seed == random::Seed { 7 });
+    CHECK(read->simulation->unstepped.value == 0.125f);
+
+    SimWorld loaded;
+    loaded.seed = read->simulation->seed;
+    auto& l = loaded.registry;
+    const auto placed = parkfile::place_guests(loaded, *read->people);
+    const auto [stall2, gate2] = make_world(loaded);
+    start_guests(loaded); // Which gives them fresh dice
+    parkfile::place_guest_dice(loaded, *read->people, placed);
+    parkfile::place_simulation(loaded, *read->simulation);
+    CHECK(loaded.tick == 1234);
+    CHECK(loaded.gameplay == world.gameplay);
+    // Each as the entity they were, in the order the save keeps them.
+    CHECK(std::ranges::is_permutation(placed, guests));
+    for (const entt::entity g : guests)
+        CHECK(l.get<Dice>(g).state == r.get<Dice>(g).state);
+    CHECK(l.get<Dice>(stall2).state == r.get<Dice>(stall).state);
+    CHECK(l.get<Dice>(gate2).state == r.get<Dice>(gate).state);
 }

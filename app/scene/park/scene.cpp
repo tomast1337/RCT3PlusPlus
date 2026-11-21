@@ -2843,6 +2843,7 @@ namespace rct3::scene::park
                 looks.emplace(p.guest, static_cast<i32>(p.saved));
         }
         saved.people = parkfile::keep_people(scene.sim, scene.people, looks);
+        saved.simulation = parkfile::keep_simulation(scene.sim, { scene.sim_time });
         saved.queues = parkfile::keep_queues(scene.sim);
         saved.runs = parkfile::keep_runs(scene.sim);
         saved.campaigns = scene.park_model.campaigns;

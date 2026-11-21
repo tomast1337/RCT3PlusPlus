@@ -1116,6 +1116,7 @@ namespace rct3::scene::park
                     simulation::start_guests(scene.sim);
                     if (kept != nullptr)
                     {
+                        parkfile::place_guest_dice(scene.sim, *kept, placed);
                         parkfile::place_parties(scene.sim, *kept, placed);
                         parkfile::place_swimmers(scene.sim, *kept, placed);
                         parkfile::place_queues(scene.sim, saved->queues, placed);
@@ -1260,6 +1261,11 @@ namespace rct3::scene::park
                         if (upkeep.reliability.value < kLowReliability)
                             scene.unreliable_rides.push_back(e);
                     }
+                    if (saved && saved->simulation)
+                    {
+                        parkfile::place_simulation(scene.sim, *saved->simulation);
+                        scene.sim_time = saved->simulation->unstepped.value;
+                    }
                     scene.known_guests.insert(guests.begin(), guests.end());
                     for (ShownPerson& p : scene.shown_people)
                     {
@@ -1307,6 +1313,9 @@ namespace rct3::scene::park
                 return std::unexpected(read.error());
             saved = std::move(*read);
             *bytes = std::move(saved->base);
+            // A run saved goes on from its own seed, whatever this one was opened with.
+            if (saved->simulation)
+                seed = saved->simulation->seed;
         }
         // What an original park holds that loading never looks at is told once the park is in.
         std::optional<save::FieldReads> reads;
@@ -1340,7 +1349,7 @@ namespace rct3::scene::park
         scene.sim.seed = seed;
         scene.sim.gameplay = random::stream(seed, random::RandomStream::Gameplay);
         scene.file = path;
-        log.info("{}: seed {} (--seed repeats it)", path.string(), random::seed_text(seed));
+        log.info("{}: seed {} ({})", path.string(), random::seed_text(seed), saved && saved->simulation ? "kept with the save" : "--seed repeats it");
         scene.camera = rct3::park::overview(scene.grid);
         scene.day_clock = park_day(*file, index, *world, options);
         if (saved)

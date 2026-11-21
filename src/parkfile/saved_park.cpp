@@ -4,6 +4,7 @@
 #include "core/types.hpp"
 #include "parkfile/binary.hpp"
 #include "simulation/enjoyment.hpp"
+#include "simulation/fence_wear.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/rides.hpp"
@@ -109,7 +110,8 @@ namespace rct3::parkfile
             const auto* errand = r.try_get<Errand>(e);
             const auto* door = swimmer != nullptr && errand != nullptr && errand->kind == ErrandKind::Swimming && r.valid(errand->target) ? r.try_get<PoolDoor>(errand->target) : nullptr;
             const bool off = door == nullptr && !world.paths.nearest(pose.position) && stride != nullptr && stride->to.value < world.paths.nodes().size();
-            SavedGuest& g = out.guests.emplace_back(SavedGuest { .look = look(e, model.guests.size()), .visitor = visitor, .position = off ? world.paths.centre(stride->to) : pose.position, .heading = pose.heading.value, .needs = needs, .mood = mood, .cash = wallet.cash.value });
+            const auto* dice = r.try_get<Dice>(e);
+            SavedGuest& g = out.guests.emplace_back(SavedGuest { .look = look(e, model.guests.size()), .entity = entt::to_integral(e), .dice = dice != nullptr ? std::optional(dice->state) : std::nullopt, .visitor = visitor, .position = off ? world.paths.centre(stride->to) : pose.position, .heading = pose.heading.value, .needs = needs, .mood = mood, .cash = wallet.cash.value });
             if (const auto* taste = r.try_get<Taste>(e))
                 g.taste = *taste;
             // Those going home are only told by where they head.
@@ -145,8 +147,9 @@ namespace rct3::parkfile
             model.guests[i].in_park = in_park[i];
         for (const auto [e, staff, pose] : r.view<const Staff, const Pose>().each())
         {
+            const auto* dice = r.try_get<Dice>(e);
             SavedWorker& w = out.staff.emplace_back(
-                SavedWorker { .look = look(e, model.staff.size()), .role = staff.role, .wage = staff.wage.value, .wage_level = staff.wage_level, .training = staff.training, .warnings = staff.warnings, .happiness = staff.happiness.value, .laziness = staff.laziness.value, .position = pose.position, .heading = pose.heading.value, .mended = staff.mended, .think = { staff.think.value }, .miserable = staff.miserable, .job = staff.job, .busy = staff.busy, .job_length = staff.job_length, .load = staff.load });
+                SavedWorker { .look = look(e, model.staff.size()), .entity = entt::to_integral(e), .dice = dice != nullptr ? std::optional(dice->state) : std::nullopt, .role = staff.role, .wage = staff.wage.value, .wage_level = staff.wage_level, .training = staff.training, .warnings = staff.warnings, .happiness = staff.happiness.value, .laziness = staff.laziness.value, .position = pose.position, .heading = pose.heading.value, .mended = staff.mended, .think = { staff.think.value }, .miserable = staff.miserable, .job = staff.job, .busy = staff.busy, .job_length = staff.job_length, .load = staff.load });
             // Only a mechanic at work on a ride keeps it; one on the way is sent again.
             if (staff.ride != entt::null && staff.busy.value > 0)
                 if (const auto* ride = r.try_get<Attraction>(staff.ride))
@@ -167,7 +170,7 @@ namespace rct3::parkfile
         std::vector<entt::entity> out;
         for (const SavedGuest& g : people.guests)
         {
-            const entt::entity e = out.emplace_back(r.create());
+            const entt::entity e = out.emplace_back(r.create(static_cast<entt::entity>(g.entity)));
             r.emplace<Visitor>(e, g.visitor);
             r.emplace<Pose>(e, g.position, g.heading, g.position, g.heading);
             r.emplace<Needs>(e, g.needs);
@@ -193,6 +196,13 @@ namespace rct3::parkfile
                 r.emplace<Umbrella>(e);
         }
         return out;
+    }
+
+    void place_guest_dice(simulation::SimWorld& world, const SavedPeople& people, std::span<const entt::entity> guests)
+    {
+        for (usize i = 0; i < people.guests.size() && i < guests.size(); ++i)
+            if (const auto& dice = people.guests[i].dice; dice && world.registry.valid(guests[i]))
+                world.registry.emplace_or_replace<simulation::Dice>(guests[i], *dice);
     }
 
     void place_parties(simulation::SimWorld& world, const SavedPeople& people, std::span<const entt::entity> guests)
@@ -267,7 +277,7 @@ namespace rct3::parkfile
             const bool walks = staff::walks_paths(w.role);
             if (walks && (!at || world.paths.nodes()[at->value].queue))
                 continue;
-            const entt::entity e = r.create();
+            const entt::entity e = r.create(static_cast<entt::entity>(w.entity));
             // The tasks the player set are on the worker's page.
             const bool paged = w.look && static_cast<usize>(*w.look) < people.model.staff.size();
             Staff staff { .role = w.role, .tasks = paged ? people.model.staff[static_cast<usize>(*w.look)].task_flags : kEveryTask, .wage = { w.wage }, .wage_level = w.wage_level, .training = w.training, .warnings = w.warnings, .happiness = { w.happiness }, .laziness = { w.laziness } };
@@ -299,6 +309,8 @@ namespace rct3::parkfile
                 r.emplace<staff::Patrol>(e, *w.patrol);
             if (walks)
                 start_walking(world, e, *at);
+            if (w.dice)
+                r.emplace_or_replace<Dice>(e, *w.dice);
             out[i] = e;
         }
         return out;
@@ -323,7 +335,8 @@ namespace rct3::parkfile
         {
             places.emplace(e, static_cast<i32>(out.animals.size()));
             const auto* care = r.try_get<AnimalCare>(e);
-            out.animals.push_back({ .animal = animal, .position = pose.position, .heading = pose.heading.value, .care = care != nullptr ? *care : AnimalCare { } });
+            const auto* dice = r.try_get<Dice>(e);
+            out.animals.push_back({ .animal = animal, .position = pose.position, .heading = pose.heading.value, .care = care != nullptr ? *care : AnimalCare { }, .entity = entt::to_integral(e), .dice = dice != nullptr ? std::optional(dice->state) : std::nullopt });
         }
         for (const auto [e, dung, pose] : r.view<const Dung, const Pose>().each())
         {
@@ -366,11 +379,11 @@ namespace rct3::parkfile
         std::vector<entt::entity> placed;
         for (const SavedAnimal& saved : animals.animals)
         {
-            const entt::entity e = placed.emplace_back(r.create());
+            const entt::entity e = placed.emplace_back(r.create(static_cast<entt::entity>(saved.entity)));
             r.emplace<Animal>(e, saved.animal);
             r.emplace<AnimalCare>(e, saved.care);
             r.emplace<Pose>(e, saved.position, saved.heading, saved.position, saved.heading);
-            r.emplace<Dice>(e, dice_for(world, e));
+            r.emplace<Dice>(e, saved.dice ? Dice { *saved.dice } : dice_for(world, e));
         }
         std::vector<entt::entity> dropped;
         for (const SavedDung& saved : animals.dung)
@@ -390,8 +403,41 @@ namespace rct3::parkfile
             const entt::entity target = saved.target && static_cast<usize>(*saved.target) < targets.size() ? targets[static_cast<usize>(*saved.target)] : entt::null;
             const bool lost = target == entt::null && saved.job != KeeperJob::Idle && saved.job != KeeperJob::Strolling;
             r.emplace_or_replace<KeeperDuty>(keeper, lost ? KeeperDuty { .house = homes[i] } : KeeperDuty { .house = homes[i], .job = saved.job, .goal = saved.goal, .target = target, .busy = units::Seconds { saved.busy } });
-            r.emplace_or_replace<Dice>(keeper, dice_for(world, keeper));
+            // A keeper rolls on with the dice kept with the staff.
+            if (!r.all_of<Dice>(keeper))
+                r.emplace<Dice>(keeper, dice_for(world, keeper));
         }
+    }
+
+    SavedSimulation keep_simulation(const simulation::SimWorld& world, units::Seconds unstepped)
+    {
+        using namespace simulation;
+        const entt::registry& r = world.registry;
+        SavedSimulation out { .seed = world.seed, .tick = world.tick, .gameplay = world.gameplay, .unstepped = unstepped };
+        for (const auto [e, attraction, dice] : r.view<const Attraction, const Dice>().each())
+            if (attraction.saved != 0)
+                out.attractions.push_back({ .owner = attraction.saved, .dice = dice.state });
+        for (const auto [e, gate, dice] : r.view<const ParkGate, const Dice>().each())
+            out.gates.push_back({ .owner = gate.node.value, .dice = dice.state });
+        if (const auto* fences = r.ctx().find<FenceUpkeep>())
+            out.fences = fences->dice;
+        return out;
+    }
+
+    void place_simulation(simulation::SimWorld& world, const SavedSimulation& saved)
+    {
+        using namespace simulation;
+        entt::registry& r = world.registry;
+        world.tick = saved.tick;
+        world.gameplay = saved.gameplay;
+        for (const auto [e, attraction] : r.view<const Attraction>().each())
+            if (const auto kept = std::ranges::find(saved.attractions, attraction.saved, &SavedDice::owner); attraction.saved != 0 && kept != saved.attractions.end())
+                r.emplace_or_replace<Dice>(e, kept->dice);
+        for (const auto [e, gate] : r.view<const ParkGate>().each())
+            if (const auto kept = std::ranges::find(saved.gates, u64 { gate.node.value }, &SavedDice::owner); kept != saved.gates.end())
+                r.emplace_or_replace<Dice>(e, kept->dice);
+        if (saved.fences)
+            r.ctx().insert_or_assign(FenceUpkeep { .dice = *saved.fences });
     }
 
     std::vector<SavedLitter> keep_litter(const simulation::SimWorld& world)
@@ -585,10 +631,10 @@ namespace rct3::parkfile
     {
         Writer w;
         const bool shows = park.shows && !park.shows->empty();
-        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.research ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.animals ? 1 : 0) + (park.day_mode ? 1 : 0) + (park.pools ? 1 : 0) + (park.flower_beds.empty() ? 0 : 1) + (park.litter ? 1 : 0) + (park.queues.empty() ? 0 : 1) + (park.runs.empty() ? 0 : 1) + (park.cheats_used ? 1 : 0) + (park.campaigns.empty() ? 0 : 1));
+        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.research ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.animals ? 1 : 0) + (park.day_mode ? 1 : 0) + (park.pools ? 1 : 0) + (park.flower_beds.empty() ? 0 : 1) + (park.litter ? 1 : 0) + (park.queues.empty() ? 0 : 1) + (park.runs.empty() ? 0 : 1) + (park.cheats_used ? 1 : 0) + (park.campaigns.empty() ? 0 : 1) + (park.simulation ? 1 : 0));
         each_chunk(park, [&](std::string_view tag, const auto& value) { put_chunk(w, tag, 1, value); });
         if (park.people)
-            put_chunk(w, "PEOP", 7, *park.people);
+            put_chunk(w, "PEOP", 8, *park.people);
         if (!park.no_queue_signs.empty())
             put_chunk(w, "QSGN", 1, park.no_queue_signs);
         if (shows)
@@ -606,7 +652,7 @@ namespace rct3::parkfile
         if (park.day_mode)
             put_chunk(w, "DAYM", 1, *park.day_mode);
         if (park.animals)
-            put_chunk(w, "ANML", 4, *park.animals);
+            put_chunk(w, "ANML", 5, *park.animals);
         if (park.pools)
             put_chunk(w, "POOL", 10, *park.pools);
         if (park.litter)
@@ -619,6 +665,8 @@ namespace rct3::parkfile
             put_chunk(w, "CHTS", 1, park.cheats_used);
         if (!park.campaigns.empty())
             put_chunk(w, "CAMP", 1, park.campaigns);
+        if (park.simulation)
+            put_chunk(w, "SIMS", 1, *park.simulation);
         return w.take();
     }
 
@@ -630,8 +678,11 @@ namespace rct3::parkfile
             std::expected<void, std::string> result;
             if (tag == "PEOP")
             {
-                if (park.people || version != 7) // 2 adds the swimmers, 3 those outside the park, 4 passports, 5 the gift, 6 maps and umbrellas, 7 jobs
+                if (park.people || version < 7 || version > 8) // 2 adds the swimmers, 3 those outside the park, 4 passports, 5 the gift, 6 maps and umbrellas, 7 jobs, 8 entities and dice
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
+                // A park saved before is opened as one saved before people were kept.
+                if (version < 8)
+                    return { };
                 return get_chunk(tag, body, park.people.emplace());
             }
             if (tag == "QSGN")
@@ -694,10 +745,10 @@ namespace rct3::parkfile
             }
             if (tag == "ANML")
             {
-                if (park.animals || version < 2 || version > 4) // 2 adds each dung's size, 3 the wear of each tile's fence, 4 the care of each animal and house
+                if (park.animals || version < 2 || version > 5) // 2 adds each dung's size, 3 the wear of each tile's fence, 4 the care of each animal and house, 5 their entities and dice
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 // A park saved before is opened as one saved before the animals were kept.
-                if (version < 4)
+                if (version < 5)
                     return { };
                 return get_chunk(tag, body, park.animals.emplace());
             }
@@ -730,6 +781,12 @@ namespace rct3::parkfile
                 if (park.cheats_used || version != 1)
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 return get_chunk(tag, body, park.cheats_used);
+            }
+            if (tag == "SIMS")
+            {
+                if (park.simulation || version != 1)
+                    return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
+                return get_chunk(tag, body, park.simulation.emplace());
             }
             if (tag == "CAMP")
             {

@@ -17,9 +17,9 @@
 //   "RIDE" v1  save::model::RideModel
 //   "PARK" v1  SavedProgress: the money, the calendar and the weather, with the ledger and the weekly graphs
 //   "VIEW" v1  park::ParkCamera
-//   "PEOP" v7  SavedPeople: the people's looks and pages, where the guests and staff stand and how they are,
-//              the staff's jobs in hand, their passports, and the park's passport gift. Saves made before it lack it; their people start
-//              again from the original park.
+//   "PEOP" v8  SavedPeople: the people's looks and pages, where the guests and staff stand and how they are,
+//              the staff's jobs in hand, their passports, and the park's passport gift, with each one's entity and
+//              dice. Saves made before it lack it, and v7 is skipped; their people start again from the original park.
 //   "QSGN" v1  std::vector<save::model::ObjectId>: the rides whose queues have no signs, by id. Only when there are any.
 //   "SHOW" v1  std::vector<save::model::RideShow>: the show rides' shows. Only when there are any; without it, the
 //              shows are read again from the original park.
@@ -33,9 +33,9 @@
 //              Saves made before it lack it; their waterfalls are read again from the original park.
 //   "DAYM" v1  simulation::DayMode: which part of the day the park keeps. Saves made before it lack it; they keep
 //              the original park's mode.
-//   "ANML" v4  SavedAnimals: the enclosures with their fences' wear, animal houses, animals and their dung, with
-//              their care. Saves made before it lack it, and v2 and v3 are skipped; their enclosures are read again
-//              from the original park.
+//   "ANML" v5  SavedAnimals: the enclosures with their fences' wear, animal houses, animals and their dung, with
+//              their care, and each animal's entity and dice. Saves made before it lack it, and v2 to v4 are skipped;
+//              their enclosures are read again from the original park.
 //   "POOL" v10 park::pools::PoolMap: the swimming pools the player laid, their extras and changing rooms; their
 //              pieces are built again on loading. Only when there are any.
 //   "BEDS" v1  std::vector<save::model::FlowerBedState>: how much water each flower bed holds. Only when there are any;
@@ -48,6 +48,8 @@
 //   "CHTS" v1  bool, true: a cheat was used in the park. Only when one was.
 //   "CAMP" v1  std::vector<save::model::Campaign>: the marketing campaigns running. Only when any are; without it,
 //              none run.
+//   "SIMS" v1  SavedSimulation: the run's seed, tick and gameplay rolls, and the dice of the attractions, the gates
+//              and the fences. Saves made before it lack it; their run starts afresh from the seed it is opened with.
 //
 // The rest of the simulation (a mechanic on the way to a ride, a pool's rides) starts again from the original park.
 #pragma once
@@ -55,6 +57,7 @@
 #include "core/types.hpp"
 #include "park/camera.hpp"
 #include "park/pools/pools.hpp"
+#include "random/generator.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
@@ -130,6 +133,8 @@ namespace rct3::parkfile
     struct SavedGuest
     {
         std::optional<i32> look { }; ///< Place in SavedPeople::model.guests of the guest drawn for them
+        u32 entity = 0;              ///< Their entity in the run saved, which they get back when it is free
+        std::optional<random::RandomState> dice { };
         simulation::Visitor visitor;
         glm::vec3 position { 0.0f };
         f32 heading = 0;
@@ -150,6 +155,8 @@ namespace rct3::parkfile
     struct SavedWorker
     {
         std::optional<i32> look { }; ///< Place in SavedPeople::model.staff
+        u32 entity = 0;              ///< Their entity in the run saved, which they get back when it is free
+        std::optional<random::RandomState> dice { };
         simulation::StaffRole role = simulation::StaffRole::Other;
         i64 wage = 0;
         i32 wage_level = 2;
@@ -206,6 +213,8 @@ namespace rct3::parkfile
         glm::vec3 position { 0.0f };
         f32 heading = 0;
         simulation::AnimalCare care { };
+        u32 entity = 0; ///< Its entity in the run saved, which it gets back when it is free
+        std::optional<random::RandomState> dice { };
     };
 
     /// Dung left lying.
@@ -289,6 +298,27 @@ namespace rct3::parkfile
         std::vector<SavedTrain> trains { };
     };
 
+    /// Dice kept by what owns them.
+    struct SavedDice
+    {
+        u64 owner = 0;
+        random::RandomState dice { };
+    };
+
+    /// Where the park's run has got, so a park loaded goes on as the run saved would have: what its randomness
+    /// starts from, the ticks run, and what the gameplay and each attraction, gate and the fences roll next. The
+    /// people's and animals' dice are kept with them.
+    struct SavedSimulation
+    {
+        random::Seed seed { };
+        u64 tick = 0;
+        random::RandomState gameplay { };
+        units::Seconds unstepped { };           ///< Park time run that no tick has stepped yet
+        std::vector<SavedDice> attractions { }; ///< By the attraction's saved id (simulation::Attraction::saved)
+        std::vector<SavedDice> gates { };       ///< By the gate's path node
+        std::optional<random::RandomState> fences { };
+    };
+
     struct SavedPark
     {
         std::vector<std::byte> base;
@@ -317,6 +347,7 @@ namespace rct3::parkfile
         std::vector<SavedRun> runs;                                    ///< Of the rides kept mid-cycle
         bool cheats_used = false;
         std::vector<save::model::Campaign> campaigns; ///< Those running
+        std::optional<SavedSimulation> simulation;    ///< None in saves made before the run was kept
     };
 
     /// A guest's wallet as their saved page keeps it, each sum held to the page's range.
@@ -326,20 +357,25 @@ namespace rct3::parkfile
     /// drawn (guests in model.guests, staff in model.staff).
     [[nodiscard]] SavedPeople keep_people(const simulation::SimWorld& world, save::model::PeopleModel model, const std::unordered_map<entt::entity, i32>& looks);
 
-    /// Adds the saved guests to `world`, standing where they stood; returns them in the order of people.guests.
-    /// Call after import_paths in place of import_guests, then start_guests, then place_parties.
+    /// Adds the saved guests to `world`, standing where they stood, each as the entity they were when it is free;
+    /// returns them in the order of people.guests. Call after import_paths in place of import_guests, before
+    /// anything else adds entities, then start_guests, then place_parties and place_guest_dice.
     std::vector<entt::entity> place_guests(simulation::SimWorld& world, const SavedPeople& people);
 
     /// Makes the saved parties again of the guests start_guests set walking, `guests` being place_guests's
     /// answer; in place of import_parties.
     void place_parties(simulation::SimWorld& world, const SavedPeople& people, std::span<const entt::entity> guests);
 
+    /// Gives the guests back the dice they had, `guests` being place_guests's answer; after start_guests, which
+    /// gives them new ones.
+    void place_guest_dice(simulation::SimWorld& world, const SavedPeople& people, std::span<const entt::entity> guests);
+
     /// Puts the saved swimmers back in the pools of their changing rooms, as they were; `guests` being
     /// place_guests's answer. Call after import_pools and start_guests. Returns how many.
     usize place_swimmers(simulation::SimWorld& world, const SavedPeople& people, std::span<const entt::entity> guests);
 
-    /// Adds the saved staff to `world`, walking; returns them in the order of people.staff, null for those not
-    /// on a path. In place of import_staff.
+    /// Adds the saved staff to `world`, walking, each as the entity and with the dice they had; returns them in the
+    /// order of people.staff, null for those not on a path. In place of import_staff.
     std::vector<entt::entity> place_staff(simulation::SimWorld& world, const SavedPeople& people);
 
     /// The enclosures and the animals of `world` as a save keeps them, the keepers named by their place in
@@ -349,6 +385,13 @@ namespace rct3::parkfile
     /// Adds the saved animal houses, animals and dung to `world`, the houses' keepers being among `staff`,
     /// place_staff's answer.
     void place_animals(simulation::SimWorld& world, const SavedAnimals& animals, std::span<const entt::entity> staff);
+
+    /// Where the run of `world` has got, with `unstepped` park seconds left for the next tick.
+    [[nodiscard]] SavedSimulation keep_simulation(const simulation::SimWorld& world, units::Seconds unstepped);
+
+    /// Puts `world` back where the run saved had got: its tick and gameplay rolls, and the dice of the attractions,
+    /// gates and fences. Call once the park is loaded; its seed is set before, as the park is made from it.
+    void place_simulation(simulation::SimWorld& world, const SavedSimulation& saved);
 
     /// The litter lying on the paths of `world`.
     [[nodiscard]] std::vector<SavedLitter> keep_litter(const simulation::SimWorld& world);

@@ -4,6 +4,7 @@
 #include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
+#include "simulation/rides.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/systems.hpp"
 
@@ -73,4 +74,53 @@ TEST_CASE("watchers of a fountain show come away thinking of the water show")
     const auto& recent = r.get<Thoughts>(g).recent;
     REQUIRE_FALSE(recent.empty());
     CHECK(recent.front().kind == ThoughtKind::WaterShowGood);
+}
+
+TEST_CASE("guests passing a stage watch its show while it runs and walk on cheered, lifted less than by a display")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 6, 0 });
+    const entt::entity g = park.guest({ 3, 0 });
+    const entt::entity stage = park.flat_ride("Stage", { 0, 0 }, 0);
+    auto& r = park.world().registry;
+    r.get<Attraction>(stage).open = false; // Watched from the path, not ridden
+    r.emplace<Stage>(stage, Stage { .centre = { 30, 0, 20 } });
+    park.run(1);
+    r.get<Mood>(g).happiness.value = 0.5f;
+    park.run(1);
+    CHECK_FALSE(r.all_of<FireworkWatcher>(g)); // Between shows nothing goes on
+
+    r.get<CycleRide>(stage).phase = RidePhase::Running;
+    park.run(1);
+    REQUIRE(r.all_of<FireworkWatcher, Linger>(g));
+    CHECK(r.get<FireworkWatcher>(g).stage == stage);
+    const f32 before = r.get<Mood>(g).happiness.value;
+    park.run(5);
+    CHECK(r.all_of<FireworkWatcher>(g)); // Still on
+
+    r.get<CycleRide>(stage).phase = RidePhase::Loading;
+    park.run(1);
+    CHECK_FALSE(r.all_of<FireworkWatcher>(g));
+    CHECK_FALSE(r.all_of<Linger>(g));
+    CHECK(r.get<Gesture>(g).kind == GestureKind::Cheer);
+    CHECK(r.get<Mood>(g).happiness.value - before == doctest::Approx(kStageLift.value).epsilon(0.2));
+    const auto& recent = r.get<Thoughts>(g).recent;
+    REQUIRE_FALSE(recent.empty());
+    CHECK(recent.front().kind == ThoughtKind::GreatEntertainer);
+    CHECK(recent.front().about == stage);
+}
+
+TEST_CASE("guests far from a stage walk on past its show")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 6, 0 });
+    const entt::entity g = park.guest({ 3, 0 });
+    const entt::entity stage = park.flat_ride("Stage", { 0, 0 }, 0);
+    auto& r = park.world().registry;
+    r.get<Attraction>(stage).open = false;
+    r.emplace<Stage>(stage, Stage { .centre = { kStageReach.value * 3, 0, 0 } });
+    park.run(1);
+    r.get<CycleRide>(stage).phase = RidePhase::Running;
+    park.run(1);
+    CHECK_FALSE(r.all_of<FireworkWatcher>(g));
 }

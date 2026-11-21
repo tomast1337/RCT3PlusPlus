@@ -3,10 +3,13 @@
 
 #include "core/maybe.hpp"
 #include "core/types.hpp"
+#include "park/object/mesh.hpp"
+#include "park/object/placement.hpp"
 #include "park/pools/pools.hpp"
 #include "park/track/rules.hpp"
 #include "scene/park/scene.hpp"
 #include "simulation/components.hpp"
+#include "simulation/fireworks.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/swimming.hpp"
@@ -107,9 +110,23 @@ namespace rct3::scene::park
 
     void stage_show(ParkScene& scene, const save::model::RideShow& show)
     {
-        for (auto [_, a, ride] : scene.sim.registry.view<simulation::Attraction, simulation::CycleRide>().each())
+        // Passers-by watch from round the middle of the ground the ride's own object stands on.
+        const auto saved = std::ranges::find(scene.rides.rides, show.ride, [](const save::model::Ride& r) { return r.base.id; });
+        std::optional<glm::vec3> centre;
+        for (const save::model::PlacedObject& o : scene.objects)
+            if (const auto model = scene.models.find(rct3::park::object::model_ref(o)); saved != scene.rides.rides.end() && o.owner_ref == saved->base.placement && model != scene.models.end() && !model->second.seat_places.empty())
+            {
+                const glm::vec2 middle = rct3::park::object::footprint_middle(o, model->second.squares);
+                centre = glm::vec3 { scene.grid.origin_x + middle.x * scene.grid.tile_size_x, 0.0f, scene.grid.origin_z + middle.y * scene.grid.tile_size_z };
+                break;
+            }
+        for (auto [e, a, ride] : scene.sim.registry.view<simulation::Attraction, simulation::CycleRide>().each())
             if (a.saved == show.ride)
+            {
                 simulation::stage_show(ride, show);
+                if (centre)
+                    scene.sim.registry.emplace_or_replace<simulation::Stage>(e, simulation::Stage { .centre = *centre });
+            }
     }
 
 } // namespace rct3::scene::park

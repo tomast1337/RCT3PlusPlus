@@ -233,6 +233,20 @@ namespace rct3::ui::screens::management
     /// for the scenario's name; the scenario's name when the park has none.
     [[nodiscard]] std::u16string park_name(const save::model::Park& park, const StringTable& strings);
 
+    /// What challenge `which` of `set` asks, as the box offering it tells it: its name, its description with the
+    /// figure its first goal asks for written in, and its prizes.
+    [[nodiscard]] std::u16string challenge_text(const save::model::ObjectiveSet& set, usize which, const StringTable& strings, const info::InfoUnits& units);
+
+    /// Whether a challenge's prizes are told while it is offered or once they are the player's.
+    enum class PrizesTold : u8
+    {
+        Offered,
+        Won,
+    };
+
+    /// The prizes of challenge `c`: a heading, then a line each.
+    [[nodiscard]] std::u16string challenge_prizes_text(const save::model::Challenge& c, PrizesTold told, const StringTable& strings, const info::InfoUnits& units);
+
     [[nodiscard]] usize management_row_id(ManagementRow row);
     [[nodiscard]] ManagementRow management_row(usize id);
 

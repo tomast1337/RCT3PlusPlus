@@ -49,6 +49,7 @@
 #include "scene/track/trains.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/awards.hpp"
+#include "simulation/challenges.hpp"
 #include "simulation/components.hpp"
 #include "simulation/enjoyment.hpp"
 #include "simulation/fence_wear.hpp"
@@ -127,7 +128,10 @@ namespace rct3::scene::park
         constexpr std::string_view kTapeFence = "KeepClearFence"; ///< Closes a broken ride off until it is fixed
         constexpr std::string_view kTapeFenceOverlay = "Style\\Vanilla\\style";
         constexpr std::string_view kOk = "SMB_Label_OK";
+        constexpr std::string_view kYes = "SMB_Label_Yes";
+        constexpr std::string_view kNo = "SMB_Label_No";
         constexpr std::string_view kPrizeName = "prize_won"; ///< The box telling a prize won, one at a time
+        constexpr std::string_view kChallengeName = "challenge_offered";
         constexpr glm::vec4 kDeleteMarkColour { 1.0f, 0.35f, 0.3f, 0.9f };
 
         constexpr units::Seconds kHoverPickInterval { 0.1f }; ///< Between looks at what is under the pointer, for its look
@@ -1383,6 +1387,7 @@ namespace rct3::scene::park
             // The scenario's goals, checked as each day begins.
             if (const auto day = static_cast<i64>(std::floor(scene.park.time / (save::model::GameClock::kUnitsPerWeek / 7))); day != scene.goals_day)
             {
+                const i64 days_passed = scene.goals_day ? day - *scene.goals_day : 0;
                 scene.goals_day = day;
                 std::vector<simulation::GoalRide> goal_rides;
                 for (usize i = 0; i < scene.ride_groups.size() && i < scene.rides.rides.size(); ++i)
@@ -1399,6 +1404,20 @@ namespace rct3::scene::park
                 save::model::Finance& money = scene.park_model.finance;
                 (void)simulation::park::ledger_month(money, scene.ledger_month, scene.park.date);
                 const save::model::LedgerPeriod last_month = money.ledger.size() > 1 ? money.ledger[1] : save::model::LedgerPeriod { };
+                // The rides and stalls of each theme, counted only while a challenge running asks for them.
+                save::model::ObjectiveSet& goals = scene.park_model.objectives;
+                const auto running = std::ranges::find(goals.challenges, save::model::ChallengeState::Running, &save::model::Challenge::state);
+                std::vector<i32> themed;
+                if (running != goals.challenges.end() && std::ranges::any_of(goals.conditions, [&](const save::model::Condition& c) { return c.theme && c.challenge == running->challenge_id; }) && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+                {
+                    const std::map<std::string, i32, std::less<>> by_name = simulation::themed_attractions(scene.rides, scene.objects, scene.build.items.get());
+                    for (const rct3::park::BuildItem& item : scene.build.items.get())
+                        if (const auto n = by_name.find(item.style); item.style_index && *item.style_index >= 0 && n != by_name.end())
+                        {
+                            themed.resize(std::max(themed.size(), static_cast<usize>(*item.style_index) + 1));
+                            themed[static_cast<usize>(*item.style_index)] = n->second;
+                        }
+                }
                 const simulation::ParkFigures figures {
                     .park_value = { simulation::park::park_value(scene.park.guests, scene.rides).value },
                     .guests = scene.park.guests,
@@ -1408,6 +1427,7 @@ namespace rct3::scene::park
                     .animal_health = animals > 0 ? static_cast<i32>(std::floor(health / static_cast<f32>(animals) * units::kPercent)) : 0,
                     .dung = static_cast<i32>(scene.sim.registry.view<const simulation::Dung>().size()),
                     .rides = goal_rides,
+                    .themed = themed,
                 };
                 scene.goal_readings.clear();
                 for (const save::model::Condition& c : scene.park_model.objectives.conditions)
@@ -1444,6 +1464,16 @@ namespace rct3::scene::park
                         }
                     }
                 }
+                // The scenario's challenges: offered in turn, and judged while one runs. One met gives its prizes,
+                // told with its completion text.
+                if (const auto met = simulation::step_challenges(goals, figures, static_cast<f32>(days_passed) * simulation::kChallengeDay, scene.park.messages))
+                {
+                    const save::model::Challenge& c = goals.challenges[*met];
+                    simulation::give_challenge_prizes(scene.park, scene.park_model.finance, scene.ledger_month, scene.research, goals, c);
+                    const std::u16string_view done = assets.strings->get_ignoring_case(c.completion_key);
+                    scene.challenge_notes.push_back(std::u16string(done.empty() ? assets.strings->get("Challenge_DefaultCompletionText") : done) + u"\n\n" + ui::screens::management::challenge_prizes_text(c, ui::screens::management::PrizesTold::Won, *assets.strings, info_units(assets, options)));
+                    simulation::park::post(scene.park.messages, { .text_key = "Challenge_DefaultCompletionText" });
+                }
             }
             simulation::park::age(scene.park.messages, game_seconds);
             if (scene.simulate)
@@ -1479,7 +1509,10 @@ namespace rct3::scene::park
                     scene.machine_waves = rct3::park::pools::machine_waves(scene.pools, scene.scenery_pool_extras, scene.grid);
                 }
                 simulation::Draw draw { .entrance_fee = { fee }, .pool_squares = static_cast<u32>(scene.footpaths.pools.size()), .rating = scene.park.rating, .guest_cash = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_cash : 0 }, .guest_bank = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_bank_funds : 0 } };
-                // Running campaigns draw parties of their own, some with coupons.
+                // Running campaigns draw parties of their own, some with coupons, and so does a challenge's publicity as
+                // a plain advertising campaign would.
+                if (scene.park.time < scene.park_model.objectives.publicity_until)
+                    draw.advertised += simulation::park::campaign_pull(save::model::CampaignKind::Advertising);
                 for (const save::model::Campaign& c : scene.park_model.campaigns)
                 {
                     const f32 pull = simulation::park::campaign_pull(c.kind);
@@ -1609,6 +1642,18 @@ namespace rct3::scene::park
                 };
                 const auto name = [&](u8 who) { return strings::to_utf8(assets.strings->get(simulation::vip_name_key(who))); };
                 simulation::advance_vips(scene.sim, scene.park_model.objectives, scene.park.time, game_seconds, scene.park.messages, { .name = name, .themed = themed });
+                // What guests bought at stalls counts to the challenge running.
+                auto& sales = scene.sim.registry.ctx().emplace<simulation::Sales>();
+                for (const simulation::Sales::Sale& sale : sales.sold)
+                {
+                    const auto* attraction = scene.sim.registry.try_get<const simulation::Attraction>(sale.stall);
+                    const auto* shop = scene.sim.registry.try_get<const simulation::Shop>(sale.stall);
+                    if (attraction == nullptr || shop == nullptr)
+                        continue;
+                    const auto stall = std::ranges::find(scene.rides.stalls, attraction->saved, [](const save::model::Stall& st) { return st.base.id; });
+                    simulation::count_sale(scene.park_model.objectives, stall != scene.rides.stalls.end() ? std::string_view(stall->base.symbol) : std::string_view { }, sale.ware < shop->menu.size() ? std::string_view(shop->menu[sale.ware].symbol) : std::string_view { });
+                }
+                sales.sold.clear();
                 // The guests in the park now, coming in at the gate and going home, for the bar and the rating.
                 const auto inside = scene.sim.registry.view<const simulation::Visitor>(entt::exclude<simulation::Left>);
                 scene.park.guests = static_cast<i32>(std::ranges::distance(inside.begin(), inside.end()));
@@ -2620,6 +2665,41 @@ namespace rct3::scene::park
             const ui::widgets::QuestionBoxStyle style = skins::question_box_style(assets.palette);
             desktop.root().add<ui::widgets::QuestionBox>(std::string(kPrizeName), style, std::u16string(assets.strings->get(scene.prizes.front())), std::vector<ui::widgets::QuestionAnswer> { { std::u16string(assets.strings->get(kOk)), style.confirm_icon } });
             scene.prizes.erase(scene.prizes.begin());
+        }
+        else if (!scene.challenge_notes.empty())
+        {
+            const ui::widgets::QuestionBoxStyle style = skins::question_box_style(assets.palette);
+            desktop.root().add<ui::widgets::QuestionBox>(std::string(kPrizeName), style, std::move(scene.challenge_notes.front()), std::vector<ui::widgets::QuestionAnswer> { { std::u16string(assets.strings->get(kOk)), style.confirm_icon } });
+            scene.challenge_notes.erase(scene.challenge_notes.begin());
+        }
+        // A challenge offered asks in a box of its own: take it on, put it off (only once) or turn it down. Closing
+        // the box gives the last answer.
+        save::model::ObjectiveSet& goals = scene.park_model.objectives;
+        const std::optional<usize> offered = simulation::challenge_offered(goals);
+        std::vector<simulation::ChallengeAnswer> answers { simulation::ChallengeAnswer::Accept };
+        if (offered && simulation::may_postpone(goals.challenges[*offered]))
+            answers.push_back(simulation::ChallengeAnswer::Postpone);
+        answers.push_back(simulation::ChallengeAnswer::Decline);
+        if (auto box = desktop.root().find_as<ui::widgets::QuestionBox>(kChallengeName))
+        {
+            if (const auto answer = box->take_answer(); answer && offered && *answer < answers.size())
+            {
+                simulation::answer_challenge(goals, *offered, answers[*answer]);
+                // Taken on, some challenges give a hint.
+                if (const std::u16string_view hint = assets.strings->get_ignoring_case(goals.challenges[*offered].acceptance_key); answers[*answer] == simulation::ChallengeAnswer::Accept && !hint.empty())
+                    scene.challenge_notes.emplace_back(hint);
+            }
+        }
+        else if (offered && !desktop.root().find_as<ui::widgets::QuestionBox>(kPrizeName))
+        {
+            const ui::widgets::QuestionBoxStyle style = skins::question_box_style(assets.palette);
+            std::u16string asked = std::u16string(assets.strings->get("ChallengeWindow_NewChallenge")) + u"\n\n" + ui::screens::management::challenge_text(goals, *offered, *assets.strings, info_units(assets, options)) + u"\n\n" + std::u16string(assets.strings->get("ChallengeWindow_DoYouAccept"));
+            if (!simulation::may_postpone(goals.challenges[*offered]))
+                asked += u"\n" + std::u16string(assets.strings->get("ChallengeWindow_PostponeOnce"));
+            std::vector<ui::widgets::QuestionAnswer> named;
+            for (const simulation::ChallengeAnswer a : answers)
+                named.push_back(a == simulation::ChallengeAnswer::Accept ? ui::widgets::QuestionAnswer { std::u16string(assets.strings->get(kYes)), style.confirm_icon } : a == simulation::ChallengeAnswer::Postpone ? ui::widgets::QuestionAnswer { std::u16string(assets.strings->get("ChallengeWindow_Postpone")), { } } : ui::widgets::QuestionAnswer { std::u16string(assets.strings->get(kNo)), style.cancel_icon });
+            desktop.root().add<ui::widgets::QuestionBox>(std::string(kChallengeName), style, std::move(asked), named);
         }
     }
 

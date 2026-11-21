@@ -920,6 +920,7 @@ namespace rct3::scene::park
         std::optional<ui::screens::info::SceneryTab> room_tab;         ///< Last open in a changing room's window
         std::vector<rct3::park::AttractionRef> demolish_asked;         ///< Waiting on the question whether to pull them down
         std::vector<std::string> prizes;                               ///< Text keys told one box at a time, oldest first: prizes won, deletes refused
+        std::vector<std::u16string> challenge_notes;                   ///< Told after those, the same way: challenges met with their prizes, and hints for those taken on
         std::vector<std::string_view> left_out;                        ///< What loading the original park left behind, as text keys of its groups, told in a box first
         bool info_shown = false;                                       ///< The info panel showed last frame, to tell it opening
         std::optional<ui::screens::park_view::ParkTool> menu_shown;    ///< The tool row's menu open last frame, to tell one opening

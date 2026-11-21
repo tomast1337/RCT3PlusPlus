@@ -3,6 +3,7 @@
 
 #include "core/types.hpp"
 #include "simulation/awards.hpp"
+#include "simulation/challenges.hpp"
 #include "simulation/objectives.hpp"
 #include "simulation/park/finance.hpp"
 #include "simulation/park/graphs.hpp"
@@ -915,6 +916,9 @@ namespace rct3::ui::screens::management
                 case save::model::ConditionKind::AnimalHealth:
                 case save::model::ConditionKind::Dung:
                 case save::model::ConditionKind::ViewingGalleries:
+                case save::model::ConditionKind::ThemedAttractions:
+                case save::model::ConditionKind::SceneryItems:
+                case save::model::ConditionKind::EscapedAnimals:
                     return whole(v);
                 default:
                     return std::u16string(kDash);
@@ -1079,6 +1083,22 @@ namespace rct3::ui::screens::management
 
         // ----- challenges -----
 
+        /// A challenge's text by `key`, whatever the case of the key's letters (the files spell some differently).
+        std::u16string challenge_key_text(const StringTable& strings, std::string_view key)
+        {
+            const std::u16string_view found = strings.get_ignoring_case(key);
+            return found.empty() ? strings::to_utf16(key) : std::u16string(found);
+        }
+
+        /// Whole days, as "# days".
+        std::u16string days(i64 n, const StringTable& strings)
+        {
+            std::u16string shown = text(strings, n == 1 ? "OneDay" : "ManyDays");
+            if (const auto at = shown.find(u'#'); at != std::u16string::npos)
+                shown.replace(at, 1, whole(n));
+            return shown;
+        }
+
         void challenges(ManagementPage& page, const ManagementFacts& f, const StringTable& strings, const info::InfoUnits& units)
         {
             if (f.park == nullptr)
@@ -1086,27 +1106,28 @@ namespace rct3::ui::screens::management
                 page.note = text(strings, kNotRead);
                 return;
             }
-            const std::vector<save::model::Challenge>& list = f.park->objectives.challenges;
-            if (list.empty())
+            // The challenge running, how long it has left, and where each of its goals stands.
+            const save::model::ObjectiveSet& set = f.park->objectives;
+            const auto running = std::ranges::find(set.challenges, save::model::ChallengeState::Running, &save::model::Challenge::state);
+            if (running == set.challenges.end())
             {
                 page.note = text(strings, "ChallengeWindow_NoChallenge");
                 return;
             }
-            page.columns = {
-                { text(strings, "ChallengeWindow_CurrentChallenge"), 0, Align::Start, true },
-                { text(strings, "ChallengeWindow_TimeLimit"), 90, Align::End, false },
-                { text(strings, "ChallengeWindow_TimeRemaining"), 100, Align::End, false },
-                { text(strings, "Objectives_Prize"), 90, Align::End, true },
-            };
-            for (usize i = 0; i < list.size(); ++i)
+            const save::model::Challenge& c = *running;
+            page.lines.push_back({ text(strings, "ChallengeWindow_CurrentChallenge"), challenge_key_text(strings, c.name_key), false, "ChallengeWindow_CurrentChallenge" });
+            page.lines.push_back({ text(strings, "ChallengeWindow_TimeLimit"), days(std::lround(c.time_limit), strings), false, "ChallengeWindow_TimeLimit" });
+            page.lines.push_back({ text(strings, "ChallengeWindow_TimeRemaining"), days(std::max<i64>(0, static_cast<i64>(std::ceil(c.time_remaining / simulation::kChallengeDay))), strings), false, "ChallengeWindow_TimeRemaining" });
+            for (usize i = 0; i < set.conditions.size(); ++i)
             {
-                const save::model::Challenge& c = list[i];
-                std::u16string name = text(strings, c.name_key);
-                if (name.empty())
-                    name = strings::to_utf16(c.name_key);
-                // The time fields' unit is not known yet.
-                page.rows.push_back({ { name, std::u16string(kDash), std::u16string(kDash), money(units, units::Money { c.prize_cash }) }, { std::nullopt, std::nullopt, std::nullopt, static_cast<f64>(c.prize_cash) }, management_row_id({ ManagementRow::Kind::None, i }) });
+                const save::model::Condition& g = set.conditions[i];
+                if (g.challenge != c.challenge_id)
+                    continue;
+                const std::string_view key = simulation::condition_name(g.kind);
+                const std::optional<i64> now = i < f.goals.size() ? f.goals[i].now : std::nullopt;
+                page.lines.push_back({ key.empty() ? std::u16string(kDash) : text(strings, key), (now ? goal_figure(g, *now, units) : std::u16string(kDash)) + u" / " + condition_target(g, units), false, std::string(key) });
             }
+            page.note = challenge_text(set, static_cast<usize>(running - set.challenges.begin()), strings, units);
         }
     } // namespace
 
@@ -1125,6 +1146,41 @@ namespace rct3::ui::screens::management
         for (auto at = name.find(kMe); at != std::u16string::npos; at = name.find(kMe, at + scenario.size()))
             name.replace(at, kMe.size(), scenario);
         return name;
+    }
+
+    std::u16string challenge_text(const save::model::ObjectiveSet& set, usize which, const StringTable& strings, const info::InfoUnits& units)
+    {
+        const save::model::Challenge& c = set.challenges.at(which);
+        std::u16string description = challenge_key_text(strings, c.description_key);
+        constexpr std::u16string_view kAmount = u"%AMOUNT1%";
+        const auto first = std::ranges::find(set.conditions, std::optional(c.challenge_id), &save::model::Condition::challenge);
+        if (const auto at = description.find(kAmount); at != std::u16string::npos && first != set.conditions.end())
+            description.replace(at, kAmount.size(), condition_target(*first, units));
+        const std::u16string prizes = challenge_prizes_text(c, PrizesTold::Offered, strings, units);
+        return challenge_key_text(strings, c.name_key) + u"\n" + description + (prizes.empty() ? u"" : u"\n\n" + prizes);
+    }
+
+    std::u16string challenge_prizes_text(const save::model::Challenge& c, PrizesTold told, const StringTable& strings, const info::InfoUnits& units)
+    {
+        std::vector<std::u16string> lines;
+        if (c.prize_cash > 0)
+        {
+            std::u16string cash = text(strings, "ChallengePrize_Cash");
+            if (const auto at = cash.find(u'#'); at != std::u16string::npos)
+                cash.replace(at, 1, money(units, units::Money { c.prize_cash }));
+            lines.push_back(std::move(cash));
+        }
+        if (c.prize_research_boost > 0)
+            lines.push_back(text(strings, "ChallengePrize_ResearchBoost"));
+        constexpr std::array<std::string_view, 4> kPublicity = { "ChallengePrize_PublicitySmall", "ChallengePrize_PublicityMedium", "ChallengePrize_PublicityLarge", "ChallengePrize_PublicityHuge" };
+        if (c.prize_publicity > 0)
+            lines.push_back(text(strings, std::cmp_less_equal(c.prize_publicity, kPublicity.size()) ? kPublicity[static_cast<usize>(c.prize_publicity - 1)] : "ChallengePrize_PublicityUnspecified"));
+        if (lines.empty())
+            return { };
+        std::u16string shown = told == PrizesTold::Offered ? text(strings, "ChallengeSetupDialog_Prizes") : text(strings, lines.size() == 1 ? "ChallengePrize_OnePrize" : "ChallengePrize_MultiplePrizes");
+        for (const std::u16string& line : lines)
+            shown += u"\n- " + line;
+        return shown;
     }
 
     std::optional<ManagementTopic> management_topic(park_view::ToolItem item)

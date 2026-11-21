@@ -2,6 +2,7 @@
 #include "ui/screens/management/pages.hpp"
 
 #include "core/types.hpp"
+#include "simulation/challenges.hpp"
 #include "simulation/park/finance.hpp"
 #include "ui/thought_text.hpp"
 
@@ -567,6 +568,38 @@ TEST_CASE("without challenges the window says there are none")
     const ManagementPage page = management_page(ManagementTopic::Challenges, 0, { .park = &park }, s, kUnits);
     CHECK(page.note == u"None now.");
     CHECK(page.rows.empty());
+}
+
+TEST_CASE("the challenges window shows the one running: its time left, its goals and what it asks and gives")
+{
+    StringTable s = test_strings();
+    s.add("ChallengeWindow_CurrentChallenge", u"Current:");
+    s.add("ChallengeWindow_TimeLimit", u"Limit:");
+    s.add("ChallengeWindow_TimeRemaining", u"Left:");
+    s.add("OneDay", u"# day");
+    s.add("ManyDays", u"# days");
+    s.add("ObjectiveCondition_ItemsBought", u"Items bought");
+    s.add("ChallengeSetupDialog_Prizes", u"Prizes:");
+    s.add("ChallengePrize_OnePrize", u"Reward:");
+    s.add("ChallengePrize_MultiplePrizes", u"Rewards:");
+    s.add("ChallengePrize_Cash", u"Cash (#)");
+    s.add("ChallengePrize_PublicityHuge", u"Huge publicity");
+    s.add("Made_Up_Title", u"Snacks");
+    s.add("Made_Up_Text", u"Sell %AMOUNT1% snacks.");
+    save::model::ParkModel park;
+    park.objectives.challenges = { { .name_key = "made_up_title", .description_key = "Made_Up_Text", .challenge_id = 4, .state = save::model::ChallengeState::Running, .prize_cash = 1000, .prize_publicity = 4, .time_limit = 30, .time_remaining = 2.5f * simulation::kChallengeDay } };
+    park.objectives.conditions = { { .kind = save::model::ConditionKind::ItemsBought, .value = 25, .challenge = 4 } };
+    const std::vector<simulation::GoalReading> goals { { .now = 7 } };
+    const ManagementPage page = management_page(ManagementTopic::Challenges, 0, { .park = &park, .goals = goals }, s, kUnits);
+    CHECK(value_of(page, u"Current:") == u"Snacks"); // Its key found whatever its case
+    CHECK(value_of(page, u"Limit:") == u"30 days");
+    CHECK(value_of(page, u"Left:") == u"3 days");
+    CHECK(value_of(page, u"Items bought") == u"7 / 25");
+    CHECK(page.note == u"Snacks\nSell 25 snacks.\n\nPrizes:\n- Cash (" + money(1000) + u")\n- Huge publicity");
+    CHECK(challenge_prizes_text(park.objectives.challenges[0], PrizesTold::Won, s, kUnits).starts_with(u"Rewards:\n- Cash"));
+    // Over, it is no longer shown.
+    park.objectives.challenges[0].state = save::model::ChallengeState::Done;
+    CHECK(management_page(ManagementTopic::Challenges, 0, { .park = &park }, s, kUnits).note == u"None now.");
 }
 
 TEST_CASE("a park's name fills in the scenario's for its placeholder")

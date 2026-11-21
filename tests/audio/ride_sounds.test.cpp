@@ -77,3 +77,11 @@ TEST_CASE("a ride's tune is kept as its music file and listed by its place among
     CHECK(tune_of("", tunes) == 0);
     CHECK(tune_of("Marching Band.wma", tunes) == 0);
 }
+
+TEST_CASE("the window lists tunes style by style, then by name, those with no style last")
+{
+    std::vector<std::u16string> tunes { u"Tea Party", u"Marching Band", u"Calm Lake", u"Stomp" };
+    const auto shown = order_by_style(tunes, "# a comment*Rock*y\r\n\\Tea Party.wma*Jazz*y\r\n\\stomp.WMA*Brass*y\r\n\\Calm Lake.wma*Jazz*y\r\n\\Odd.wma**y\r\n");
+    CHECK(tunes == std::vector<std::u16string> { u"Stomp", u"Calm Lake", u"Tea Party", u"Marching Band" });
+    CHECK(shown == std::vector<std::u16string> { u"Brass - Stomp", u"Jazz - Calm Lake", u"Jazz - Tea Party", u"Marching Band" });
+}

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/setup.hpp"
 
+#include "audio/ride_sounds.hpp"
+#include "config/text_file.hpp"
 #include "core/maybe.hpp"
 #include "core/types.hpp"
 #include "logging/log.hpp"
@@ -1672,7 +1674,9 @@ namespace rct3::scene::park
             for (const auto& file : std::filesystem::directory_iterator(install.root() / "Music", missing))
                 if (strings::equals_ignoring_case(file.path().extension().string(), ".wma"))
                     scene.tunes.push_back(file.path().stem().u16string());
-            std::ranges::sort(scene.tunes);
+            // Listed style by style, as the music folder's list of styles gives them.
+            const auto styles = config::read_text_file(install.root() / "Music" / "MusicGenre.txt");
+            scene.tune_labels = audio::order_by_style(scene.tunes, styles && *styles ? **styles : std::string { });
             load_park_fireworks(scene.fireworks, *file);
             show_park_particles(scene.particles, rct3::park::object::object_effects(scene.objects, scene.models, scene.grid, scene.fitted, scene.places.transforms, scene.places.models));
             const render::VertexLayout crossing_layout { sizeof(CrossingVertex), kCrossingAttributes };

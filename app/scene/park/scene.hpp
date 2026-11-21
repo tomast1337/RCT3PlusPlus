@@ -785,12 +785,13 @@ namespace rct3::scene::park
         /// Tracked rides and the rest each keep the tab last opened, as in the game: this is the other one's, swapped
         /// with info_tab when the panel goes from one to the other.
         ui::screens::info::AttractionTab other_info_tab = ui::screens::info::AttractionTab::View;
-        bool info_tracked = false;         ///< Whether info_tab is the tracked rides' one
-        bool ride_styles_shown = false;    ///< Whether a ride's window shows the looks of its fence and doors to pick from
-        usize info_section = 0;            ///< Of the open tab's page
-        std::vector<std::u16string> tunes; ///< The install's music, by name, for rides to play
-        rct3::park::CarriedKinds carried;  ///< What stalls sell and its extras, read with the park's people
-        bool carried_read = false;         ///< Whether their pictures are read, once a stall's window first opens
+        bool info_tracked = false;               ///< Whether info_tab is the tracked rides' one
+        bool ride_styles_shown = false;          ///< Whether a ride's window shows the looks of its fence and doors to pick from
+        usize info_section = 0;                  ///< Of the open tab's page
+        std::vector<std::u16string> tunes;       ///< The install's music, by name, for rides to play
+        std::vector<std::u16string> tune_labels; ///< Each of tunes as its window lists it, with its style
+        rct3::park::CarriedKinds carried;        ///< What stalls sell and its extras, read with the park's people
+        bool carried_read = false;               ///< Whether their pictures are read, once a stall's window first opens
         /// The tracked rides, by id, whose track is greased.
         /// shortcut: kept only while the park is open and the trains run as before; save it and lower the
         /// trains' losses once friction is part of the train model.

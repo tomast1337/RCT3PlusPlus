@@ -121,6 +121,7 @@ await screenshot("queue_railed");
 // A tune, heard near the open ride.
 const tune = await pickOther("AttractionViewDialogMusicToolTip", () => now().music);
 log("tune", tune);
+await screenshot("ride_music");
 expect(rides.setState(ride, "open") === null || now().joined, "the ride open");
 camera.look({ col: door.col + 0.5, row: door.row + 0.5 }, { col: door.col + 6.5, row: door.row + 8.5, up: 8 });
 await ui.click("bar/Top_Pause");

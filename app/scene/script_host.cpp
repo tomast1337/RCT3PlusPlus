@@ -24,6 +24,7 @@
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/crowds.hpp"
+#include "simulation/fingerprint.hpp"
 #include "simulation/guest_edits.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/import_park.hpp"
@@ -53,6 +54,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cctype>
 #include <chrono>
 #include <cmath>
@@ -398,6 +400,19 @@ namespace rct3::scene
             return park_->park.cash ? Json(park_->park.cash->value) : Json(nullptr);
         });
         engine_.define("park.cheatsUsed", [this](const Json&) { return Json(park_of(park_).park.cheats_used); });
+        engine_.define("park.fingerprint", [this](const Json&) -> Json {
+            const park::ParkScene& scene = park_of(park_);
+            const simulation::park::ParkState& p = scene.park;
+            // As text: script numbers keep only 53 bits.
+            return Json { { "tick", scene.sim.tick },
+                          { "simulation", std::format("{:016x}", simulation::fingerprint(scene.sim)) },
+                          { "time", std::format("{:08x}", std::bit_cast<u32>(p.time)) },
+                          { "day", std::format("{:08x}", std::bit_cast<u32>(scene.day_clock.time)) },
+                          { "cash", p.cash ? Json(p.cash->value) : Json() },
+                          { "rating", p.rating ? Json(*p.rating) : Json() },
+                          { "guests", p.guests },
+                          { "weather", std::to_underlying(p.weather) } };
+        });
         engine_.define("park.ledger", [this](const Json&) -> Json {
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");

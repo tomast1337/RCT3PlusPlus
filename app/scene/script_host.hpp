@@ -50,6 +50,8 @@
 //   render.live()       { buffers, pipelines, textures } alive on the device as the last frame ended
 //   park.cash()         hundredths of the currency, or undefined in a park without money
 //   park.cheatsUsed()   whether a cheat was ever used in the park, as its park window says
+//   park.fingerprint()  { tick, simulation, time, day, cash, rating, guests, weather }: the ticks run and what the
+//                       park has come to, equal for runs that went the same way
 //   camera.look(at, from)  looks at the map point `at` from `from`, or as now when `from` is left out; map
 //                       points are { col, row, up }: tiles, with fractions between, and world units above the
 //                       ground

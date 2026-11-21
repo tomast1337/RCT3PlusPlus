@@ -216,6 +216,18 @@ declare namespace park {
     function cash(): Money | undefined;
     /** Whether a cheat was ever used in the park, as its park window says; kept in its save. */
     function cheatsUsed(): boolean;
+    /** The ticks the park has run and what it has come to by then (the simulation's state as a hash, the calendar
+     *  and day's time as bits, money, rating, guests, weather): two runs that went the same way give equal ones. */
+    function fingerprint(): {
+        tick: number;
+        simulation: string;
+        time: string;
+        day: string;
+        cash: number | null;
+        rating: number | null;
+        guests: number;
+        weather: number;
+    };
     /** The loan, in hundredths of the currency. */
     function loan(): Money;
     /** Sets the cash, in hundredths of the currency, of a park with money. */

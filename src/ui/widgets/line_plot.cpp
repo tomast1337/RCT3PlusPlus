@@ -146,6 +146,11 @@ namespace rct3::ui::widgets
                 context.list.polygon(band, s.colour);
             }
         }
+        if (marker && *marker + 1 <= static_cast<f32>(across))
+        {
+            const f32 x = std::round(r.x0 + plot_x(*marker, across, r.width()));
+            context.list.fill({ x - 1, r.y0, x + 1, r.y1 }, marker_colour);
+        }
         if (const auto back = pointed())
         {
             const f32 x = std::round(r.x0 + plot_x(static_cast<f32>(*back), across, r.width()));

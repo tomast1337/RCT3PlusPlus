@@ -293,6 +293,13 @@ TEST_CASE("vehicles, operating mode and graphs are written from the ride")
     REQUIRE(graphs.graph_ticks.size() == 1);
     CHECK(graphs.graph_ticks[0].back == 2);
     CHECK(graphs.graph_ticks[0].label == u"0:00");
+    // The first train's place on its lap marks the last lap's graph, while it is on it.
+    CHECK_FALSE(graphs.graph_now);
+    AttractionFacts running = f;
+    running.lap_to_go = 2;
+    CHECK(attraction_page(AttractionTab::Graphs, running, s, { }).graph_now == 2);
+    running.lap_to_go = 3; // Before the part of a long lap the graph keeps
+    CHECK_FALSE(attraction_page(AttractionTab::Graphs, running, s, { }).graph_now);
     // Speed alone shows at first, its numbers up the left in km/h from its round full value; a tick for each
     // series.
     CHECK(graphs.graph[0].shown);

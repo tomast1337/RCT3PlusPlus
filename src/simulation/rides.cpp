@@ -601,6 +601,7 @@ namespace rct3::simulation
                         record(fleet->lap, train, dt);
                     if (t == 0 && lap_end)
                     {
+                        fleet->lap_samples = fleet->lap.speed.size();
                         fleet->lap_done = end_lap(fleet->lap);
                         ride.untested = false;
                     }

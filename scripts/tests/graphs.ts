@@ -101,6 +101,7 @@ await ui.click("bar/Top_Play");
 // The first ride with a graph tab and a test to show on it.
 const list = rides.list();
 let shown = false;
+let graphed = 0;
 for (let i = 0; i < list.length && !shown; ++i) {
     if (list[i].flat || list[i].demolished) continue;
     rides.show(list[i].index);
@@ -117,9 +118,13 @@ for (let i = 0; i < list.length && !shown; ++i) {
     await frames(5);
     log("ride graphs:", list[i].name);
     shown = true;
+    graphed = list[i].index;
 }
 expect(shown, "a coaster with test graphs");
 await screenshot("ride_graphs");
+// Part way round its next lap, a line on the graph marks where its first train is.
+await until(() => (rides.list()[graphed].lapSamples ?? 0) > 50, 3600, "a train part way round");
+await screenshot("ride_graphs_under_way");
 await ui.click("info/close").catch(() => undefined);
 
 // A new sandbox, with no graphs kept, starts them as its weeks end.

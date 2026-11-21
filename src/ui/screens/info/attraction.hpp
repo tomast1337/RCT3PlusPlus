@@ -204,6 +204,8 @@ namespace rct3::ui::screens::info
         bool low_friction = false;
         /// Which of the graph's series show, a bit each: speed, altitude, vertical and lateral forces.
         u8 graph_series = kSpeedOnly;
+        /// Of a running ride, how many graph samples its first train is from the end of its lap.
+        std::optional<usize> lap_to_go { };
         /// Of a stall, the carried items its kind may sell, by symbol as `Burger:cid`.
         std::vector<std::string> offers { };
         /// The carried items and extras the install has, for their names, pictures and extras.
@@ -322,6 +324,10 @@ namespace rct3::ui::screens::info
     [[nodiscard]] std::u16string_view speed_unit(DistanceUnits units);
 
     /// The page of `tab`, at `section` when the page has several.
+    /// Where on `ride`'s graph to mark its first train, `lap_to_go` samples from the end of its lap, as
+    /// InfoPage::graph_now; none before the part of its lap the graph keeps.
+    [[nodiscard]] std::optional<f32> graph_marker(const save::model::Ride& ride, std::optional<usize> lap_to_go);
+
     [[nodiscard]] InfoPage attraction_page(AttractionTab tab, const AttractionFacts& facts, const StringTable& strings, const InfoUnits& units, usize section = 0);
 
     /// The latest of the thoughts `all` on `page`, newest first, as many as it has room for, each with its mood's face.

@@ -628,7 +628,7 @@ namespace rct3::ui::screens::info
             }
         }
 
-        void graphs(InfoPage& page, const save::model::Ride& ride, u8 shown, const StringTable& strings, const InfoUnits& units)
+        void graphs(InfoPage& page, const save::model::Ride& ride, u8 shown, std::optional<usize> lap_to_go, const StringTable& strings, const InfoUnits& units)
         {
             const save::model::RideGraphs& g = ride.graphs;
             if (g.speed.empty() && g.altitude.empty() && g.vertical_g.empty() && g.lateral_g.empty())
@@ -679,6 +679,7 @@ namespace rct3::ui::screens::info
                 const usize second = at / save::model::kGraphSamplesPerSecond;
                 page.graph_ticks.push_back({ static_cast<f32>(samples - 1 - at), second % 5 == 0 ? ascii(std::format("{}:{:02}", second / 60, second % 60)) : std::u16string { } });
             }
+            page.graph_now = graph_marker(ride, lap_to_go);
         }
 
         void maintenance(InfoPage& page, const save::model::Ride& ride, const StringTable& strings)
@@ -965,6 +966,15 @@ namespace rct3::ui::screens::info
         return offers;
     }
 
+    std::optional<f32> graph_marker(const save::model::Ride& ride, std::optional<usize> lap_to_go)
+    {
+        // The last lap's graph ends where the lap does, and keeps only the end of a long one.
+        const usize samples = std::ranges::max({ ride.graphs.speed.size(), ride.graphs.altitude.size(), ride.graphs.vertical_g.size(), ride.graphs.lateral_g.size() });
+        if (!lap_to_go || *lap_to_go >= samples)
+            return std::nullopt;
+        return static_cast<f32>(*lap_to_go);
+    }
+
     InfoPage attraction_page(AttractionTab tab, const AttractionFacts& f, const StringTable& strings, const InfoUnits& units, usize section)
     {
         InfoPage page;
@@ -1102,7 +1112,7 @@ namespace rct3::ui::screens::info
                 break;
             case AttractionTab::Graphs:
                 if (f.ride)
-                    graphs(page, *f.ride, f.graph_series, strings, units);
+                    graphs(page, *f.ride, f.graph_series, f.lap_to_go, strings, units);
                 break;
             case AttractionTab::Extras:
                 if (f.stall && f.stall->extras.empty())

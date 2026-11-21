@@ -54,6 +54,8 @@ namespace rct3::ui::widgets
         f32 tick = 4;                         ///< Height of a tick; a major one is twice as tall
         usize most_slots = 0;                 ///< The wheel zooms out to this many slots at most; 0 for no zooming
         usize fewest_slots = 4;               ///< And in to this many at least
+        std::optional<f32> marker { };        ///< A line at this many samples before the newest, as where a train is
+        Color marker_colour = hex("#202020c0");
 
         [[nodiscard]] bool takes_pointer() const override
         {

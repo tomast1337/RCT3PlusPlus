@@ -768,6 +768,8 @@ interface RideRun {
     /** On a track: the trains it runs, and how many are under way now. */
     running?: number;
     moving?: number;
+    /** On a track: graph samples its first train has taken so far on the lap it is on. */
+    lapSamples?: number;
     /** On a track: each train's front along the track (metres), its speed along it (m/s), a slide car's
      *  swing up its trough's wall (radians, to its right; null for other trains), each car's swinging part's
      *  angle from rest (radians, front car first; empty where none swings), each car's spinning part's angle

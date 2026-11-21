@@ -1711,6 +1711,7 @@ namespace rct3::scene
                     {
                         one["running"] = fleet->trains.size();
                         one["moving"] = std::ranges::count_if(fleet->trains, [](const simulation::Coaster& c) { return c.running; });
+                        one["lapSamples"] = fleet->lap.speed.size();
                         Json at = Json::array();
                         for (usize t = 0; t < fleet->trains.size(); ++t)
                         {

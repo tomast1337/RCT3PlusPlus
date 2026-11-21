@@ -50,6 +50,8 @@ namespace rct3::scene::park
 
     /// Shows the page of what the panel is open on again, as it stands now: a party, a prop, an animal, a person
     /// or an attraction.
+    /// Moves the mark on a ride's graph page to where its first train is now, each frame.
+    void mark_train(const ParkScene& scene, ui::screens::info::InfoPanel& panel);
     void show_info_page(ParkScene& scene, ui::screens::info::InfoPanel& panel, const ui::InterfaceAssets& assets, const config::game::GameOptions& options);
 
     /// The round view of a person: looking at them from where the player looks from, turning from there.

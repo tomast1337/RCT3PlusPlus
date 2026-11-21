@@ -39,9 +39,15 @@
 
 namespace rct3::scene::park
 {
-
     namespace
     {
+        /// How many graph samples a ride's first train is from the end of its lap: as far as the last lap was then.
+        std::optional<usize> lap_to_go(const simulation::Trains* fleet)
+        {
+            if (fleet == nullptr || fleet->lap.speed.empty() || fleet->lap.speed.size() > fleet->lap_samples)
+                return std::nullopt;
+            return fleet->lap_samples - fleet->lap.speed.size();
+        }
 
         namespace skins = ui::game_skins;
 
@@ -249,6 +255,7 @@ namespace rct3::scene::park
                 // aboard (set_trains).
                 const entt::entity e = scene.simulate && ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null;
                 const auto* fleet = e != entt::null ? scene.sim.registry.try_get<simulation::Trains>(e) : nullptr;
+                f.lap_to_go = lap_to_go(fleet);
                 const bool aboard = fleet && std::ranges::any_of(fleet->riders, [](const auto& riders) { return !riders.empty(); });
                 const auto limits = scene.train_limits.find(ref.ride());
                 if (limits != scene.train_limits.end() && f.ride->base.state != save::model::AttractionState::Open && !aboard)
@@ -449,6 +456,16 @@ namespace rct3::scene::park
         const std::vector<std::string_view> names(files.begin(), files.end());
         const usize skins = ui::add_extra_skins(device, assets, names);
         logging::logger("park").info("{} carried items, {} extras, {} pictures", scene.carried.items.size(), scene.carried.extras.size(), skins);
+    }
+
+    void mark_train(const ParkScene& scene, ui::screens::info::InfoPanel& panel)
+    {
+        if (!scene.shown || scene.shown->kind != rct3::park::AttractionRef::Kind::Ride || scene.info_tab != ui::screens::info::AttractionTab::Graphs || !scene.simulate)
+            return;
+        const usize index = scene.shown->index;
+        if (index >= scene.rides.rides.size() || index >= scene.ride_entities.size() || scene.ride_entities[index] == entt::null)
+            return;
+        panel.mark_graph(ui::screens::info::graph_marker(scene.rides.rides[index], lap_to_go(scene.sim.registry.try_get<simulation::Trains>(scene.ride_entities[index]))));
     }
 
     void show_info_page(ParkScene& scene, ui::screens::info::InfoPanel& panel, const ui::InterfaceAssets& assets, const config::game::GameOptions& options)

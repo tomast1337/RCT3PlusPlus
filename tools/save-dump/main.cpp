@@ -586,7 +586,7 @@ int main(int argc, char** argv)
             const f32 saved = *park->park.rating();
             error_sum += std::abs(static_cast<f64>(p.total) - static_cast<f64>(saved));
             ++compared;
-            out.info("{:<44} saved {:4.0f} ours {:4d}  happy {:3d} rides {:3d} up {:3d} guests {:3d} litter {:4d} lost {:4d} crash {:4d} awards {:4d} harder {:4d}  ({:d} guests, {:d} rides)", std::string(argv[i]).substr(std::string(argv[i]).find_last_of('/') + 1).c_str(), static_cast<f64>(saved), p.total, p.happiness, p.rides, p.reliability, p.guests, p.litter, p.lost_guests, p.crash, p.awards, p.harder, input.guests, input.rides.size());
+            out.info("{:<44} saved {:4.0f} ours {:4d}  happy {:3d} rides {:3d} up {:3d} guests {:3d} litter {:4d} lost {:4d} awards {:4d} harder {:4d}  ({:d} guests, {:d} rides)", std::string(argv[i]).substr(std::string(argv[i]).find_last_of('/') + 1).c_str(), static_cast<f64>(saved), p.total, p.happiness, p.rides, p.reliability, p.guests, p.litter, p.lost_guests, p.awards, p.harder, input.guests, input.rides.size());
         }
         if (compared > 0)
             out.info("mean difference {:.0f} over {:d} saves", error_sum / static_cast<f64>(compared), compared);

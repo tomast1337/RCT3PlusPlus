@@ -126,20 +126,6 @@ TEST_CASE("lost guests take some off each, up to a cap")
     CHECK(simulation::park::rate_park(in).lost_guests == -t.most_lost_guests);
 }
 
-TEST_CASE("a crash takes most off just after, less as the park forgets it")
-{
-    const f32 crash = simulation::kTuning.rating.crash.value;
-    const f32 forgotten = simulation::kTuning.crashes.forgotten.value;
-    RatingInput in;
-    CHECK(simulation::park::rate_park(in).crash == 0);
-    in.since_crash = units::Seconds { 0 };
-    CHECK(simulation::park::rate_park(in).crash == -static_cast<i32>(std::lround(crash)));
-    in.since_crash = units::Seconds { forgotten / 2 };
-    CHECK(simulation::park::rate_park(in).crash == -static_cast<i32>(std::lround(crash / 2)));
-    in.since_crash = units::Seconds { forgotten };
-    CHECK(simulation::park::rate_park(in).crash == 0);
-}
-
 TEST_CASE("awards add, fines take off, and a prize adds what is left of it untouched by the harder rating")
 {
     const auto& t = simulation::kTuning.rating;
@@ -156,7 +142,7 @@ TEST_CASE("awards add, fines take off, and a prize adds what is left of it untou
     CHECK(p.total == sum + p.harder + 40);
 }
 
-TEST_CASE("lost guests, crashes and awards are gathered from the park")
+TEST_CASE("lost guests and awards are gathered from the park")
 {
     save::model::PeopleModel people;
     people.guests.resize(3);
@@ -165,11 +151,6 @@ TEST_CASE("lost guests, crashes and awards are gathered from the park")
     people.guests[1].in_park = false; // Gone, so not counted
 
     save::model::RideModel rides;
-    rides.rides.resize(3);
-    rides.rides[0].base.time_since_crash = units::Seconds { 600 };
-    rides.rides[1].base.time_since_crash = units::Seconds { 200 }; // The latest
-    rides.rides[2].base.time_since_crash = units::Seconds { 100 };
-    rides.rides[2].base.demolished = true;
 
     constexpr i32 kFine = 30; // Neglected animals
     REQUIRE(simulation::award_is_fine(kFine));
@@ -181,8 +162,6 @@ TEST_CASE("lost guests, crashes and awards are gathered from the park")
 
     const RatingInput in = simulation::park::rating_input(people, rides, awards, 0);
     CHECK(in.lost_guests == 1);
-    REQUIRE(in.since_crash);
-    CHECK(in.since_crash->value == 200);
     CHECK(in.awards == 2);
     CHECK(in.fines == 1);
 }

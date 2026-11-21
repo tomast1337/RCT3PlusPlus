@@ -12,7 +12,6 @@
 //  - Guests: a busy park scores more, with less to gain from each guest as the park fills.
 //  - Litter: litter and vomit left lying take some off, up to a cap.
 //  - Lost guests: guests cut off from their party take some off, up to a cap.
-//  - Crash: a ride that crashed lately takes some off, less as the park forgets it.
 //  - Awards: each award of the last months adds some, each fine takes some off.
 //  - Prize: what a prize for winning a scenario level adds, fading week by week.
 //
@@ -55,8 +54,7 @@ namespace rct3::simulation::park
         std::vector<RideRatingInput> rides;
         i32 old_litter = 0; ///< Pieces lying long enough to count, vomit too
         i32 lost_guests = 0;
-        std::optional<units::Seconds> since_crash; ///< Since the park's latest crash; none once it is forgotten
-        i32 awards = 0;                            ///< Given in the months the park keeps
+        i32 awards = 0; ///< Given in the months the park keeps
         i32 fines = 0;
         f32 prize = 0; ///< Points a prize adds (ParkState::rating_bonus)
     };
@@ -70,7 +68,6 @@ namespace rct3::simulation::park
         i32 guests = 0;
         i32 litter = 0;      ///< Zero or negative
         i32 lost_guests = 0; ///< Zero or negative
-        i32 crash = 0;       ///< Zero or negative
         i32 awards = 0;      ///< Awards less fines
         i32 prize = 0;
         i32 harder = 0; ///< Zero or negative: what the harder rating took off

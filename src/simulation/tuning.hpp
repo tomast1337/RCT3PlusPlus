@@ -456,12 +456,11 @@ namespace rct3::simulation::tuning
         f32 guests_for_busy = 300;              ///< About two thirds of the guests part at this many guests
         // Fitted to saved parks' ratings (save-dump --rating): litter counting once it is as old as Litter::old,
         // awards and fines over the months the park keeps. Saves hold few lost guests, so their weight is only the
-        // most the fit leaves room for, and none hold a recent crash, so its weight is chosen by eye.
+        // most the fit leaves room for.
         i32 per_litter = 5;
         i32 most_litter = 600;
         i32 per_lost_guest = 2;
         i32 most_lost_guests = 100;
-        units::RatingPoints crash { 100 }; ///< Chosen by eye: taken off just after a crash, less as the park forgets it
         units::RatingPoints per_award { 20 };
         units::RatingPoints per_fine { 40 };
         units::Share harder_share { 0.15f }; ///< Taken off the score by the harder rating

@@ -60,12 +60,10 @@ namespace rct3::simulation::park
         const auto& t = kTuning.rating;
         p.litter = -std::min(t.most_litter, t.per_litter * std::max(input.old_litter, 0));
         p.lost_guests = -std::min(t.most_lost_guests, t.per_lost_guest * std::max(input.lost_guests, 0));
-        if (input.since_crash)
-            p.crash = -whole(t.crash.value * std::clamp(1.0f - input.since_crash->value / kTuning.crashes.forgotten.value, 0.0f, 1.0f));
         p.awards = whole(t.per_award.value * static_cast<f32>(input.awards) - t.per_fine.value * static_cast<f32>(input.fines));
         p.prize = whole(std::max(input.prize, 0.0f));
 
-        const i32 sum = p.happiness + p.rides + p.reliability + p.guests + p.litter + p.lost_guests + p.crash + p.awards;
+        const i32 sum = p.happiness + p.rides + p.reliability + p.guests + p.litter + p.lost_guests + p.awards;
         if (input.harder)
             p.harder = -whole(static_cast<f32>(std::max(sum, 0)) * t.harder_share.value);
         // The harder rating leaves a prize whole.
@@ -97,8 +95,6 @@ namespace rct3::simulation::park
                 r.intensity = ride.assessment.intensity;
             }
             in.rides.push_back(r);
-            if (ride.base.time_since_crash && ride.base.time_since_crash->value < kTuning.crashes.forgotten.value)
-                in.since_crash = std::min(in.since_crash.value_or(*ride.base.time_since_crash), *ride.base.time_since_crash);
         }
         for (const auto& month : awards.earned)
             for (const i32 kind : month)

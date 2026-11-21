@@ -105,14 +105,13 @@ namespace rct3::ui::screens::park_view
         i32 simulation::park::RatingParts::* part = nullptr;
         bool always = false;
     };
-    inline constexpr std::array<RatingLine, 10> kRatingLines { {
+    inline constexpr std::array<RatingLine, 9> kRatingLines { {
         { "Rct3pp_RatingHappiness", &simulation::park::RatingParts::happiness, true },
         { "Rct3pp_RatingRides", &simulation::park::RatingParts::rides, true },
         { "Rct3pp_RatingReliability", &simulation::park::RatingParts::reliability, true },
         { "Rct3pp_RatingGuests", &simulation::park::RatingParts::guests, true },
         { "Rct3pp_RatingLitter", &simulation::park::RatingParts::litter, false },
         { "Rct3pp_RatingLostGuests", &simulation::park::RatingParts::lost_guests, false },
-        { "Rct3pp_RatingCrash", &simulation::park::RatingParts::crash, false },
         { "Rct3pp_RatingAwards", &simulation::park::RatingParts::awards, false },
         { "Rct3pp_RatingPrize", &simulation::park::RatingParts::prize, false },
         { "Rct3pp_RatingHarder", &simulation::park::RatingParts::harder, false },

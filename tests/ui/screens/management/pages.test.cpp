@@ -121,7 +121,7 @@ TEST_CASE("the rating breakdown lists each part with its sign, leaving out penal
     s.add("Graph_ParkRating", u"Park rating:");
     s.add("Rct3pp_RatingHappiness", u"Happy:");
     s.add("Rct3pp_RatingLostGuests", u"Lost:");
-    s.add("Rct3pp_RatingCrash", u"Crash:");
+    s.add("Rct3pp_RatingLitter", u"Litter:");
     s.add("Rct3pp_RatingScore", u"Score:");
     s.add("Rct3pp_RatingNotYet", u"Not yet");
     simulation::park::ParkState state;
@@ -134,7 +134,7 @@ TEST_CASE("the rating breakdown lists each part with its sign, leaving out penal
     const ManagementPage page = management_page(ManagementTopic::ParkOperations, kRatingTab, { .state = &state }, s, kUnits);
     CHECK(value_of(page, u"Happy:") == u"+400");
     CHECK(value_of(page, u"Lost:") == u"-20");
-    CHECK_FALSE(value_of(page, u"Crash:"));
+    CHECK_FALSE(value_of(page, u"Litter:"));
     CHECK(page.lines.back().value == u"380");
     CHECK(page.lines.back().label == u"Score:");
 }

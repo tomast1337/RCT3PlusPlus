@@ -4,6 +4,7 @@
 #include "core/types.hpp"
 #include "simulation/awards.hpp"
 #include "strings/unicode.hpp"
+#include "ui/screens/info/attraction.hpp"
 #include "ui/text_layout.hpp"
 #include "ui/thought_text.hpp"
 
@@ -107,6 +108,20 @@ namespace rct3::ui::screens::park_view
             from = std::min(open, text.size());
         }
         return text;
+    }
+
+    void name_subjects(simulation::park::ParkMessages& messages, std::span<const save::model::Ride> rides, std::span<const save::model::Stall> stalls, const StringTable& strings)
+    {
+        for (simulation::park::ParkMessage& m : messages.list)
+        {
+            if (!m.subject)
+                continue;
+            const auto ride = std::ranges::find(rides, *m.subject, [](const save::model::Ride& r) { return r.base.id; });
+            const auto stall = std::ranges::find(stalls, *m.subject, [](const save::model::Stall& s) { return s.base.id; });
+            const save::model::AttractionCommon* base = ride != rides.end() ? &ride->base : stall != stalls.end() ? &stall->base : nullptr;
+            if (base != nullptr && (m.subject_name.empty() || m.subject_name == base->name))
+                m.subject_name = strings::to_utf8(info::attraction_name(*base, strings));
+        }
     }
 
     std::vector<DrawerMessage> drawer_messages(const simulation::park::ParkMessages& messages, const StringTable& strings, const MessageDrawerStyle& style)

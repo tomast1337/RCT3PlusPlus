@@ -79,6 +79,28 @@ TEST_CASE("a message's text fills in its subject's name, or leaves the name out"
     CHECK(message_text(m, strings) == u"100% fun");
 }
 
+TEST_CASE("a message about a ride or stall with its default name names its kind and number")
+{
+    StringTable strings;
+    strings.add("CarouselName", u"Carousel");
+    strings.add("SweetsStallName", u"Sweets");
+    strings.add("StillBroken", u"%NAME% is still out of order.");
+    std::vector<save::model::Ride> rides(1);
+    rides[0].base = { .id = 7, .symbol = "Carousel:anr", .name = "%ME% 1" };
+    std::vector<save::model::Stall> stalls(1);
+    stalls[0].base = { .id = 8, .symbol = "SweetsStall:sta", .name = "%ME% 2" };
+    simulation::park::ParkMessages messages;
+    messages.list.push_back({ .text_key = "StillBroken", .subject = 7, .subject_name = "%ME% 1" });     // Posted with the name as stored
+    messages.list.push_back({ .text_key = "StillBroken", .subject = 8 });                               // Posted without a name
+    messages.list.push_back({ .text_key = "StillBroken", .subject = 7, .subject_name = "Old Horses" }); // Named before a rename
+    name_subjects(messages, rides, stalls, strings);
+    CHECK(message_text(messages.list[0], strings) == u"Carousel 1 is still out of order.");
+    CHECK(message_text(messages.list[1], strings) == u"Sweets 2 is still out of order.");
+    CHECK(message_text(messages.list[2], strings) == u"Old Horses is still out of order.");
+    for (const simulation::park::ParkMessage& m : messages.list)
+        CHECK(message_text(m, strings).find(u'%') == std::u16string::npos);
+}
+
 TEST_CASE("a message's other field is filled from its field key")
 {
     StringTable strings;

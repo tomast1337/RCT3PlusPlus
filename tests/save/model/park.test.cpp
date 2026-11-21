@@ -617,6 +617,33 @@ TEST_CASE("park: a challenge keeps the wait before it is offered, and its postpo
     CHECK(list[1].offer_days == std::array { 0, 0 });
 }
 
+TEST_CASE("park: a challenge's goals keep their challenge, the item and stall kind sold, and the theme")
+{
+    const auto l = load(
+        {
+            { "CIDDatabaseEntry", 1, { fstr("SymbolName", "MadeUpSnack:cid") } },
+            { "AIDDatabaseEntry", 2, { fstr("SYMBOLNAME", "MadeUpStall") } },
+            { "ItemsBoughtCondition", 3, { fint("ObjectiveId", -1), fint("ConditionId", 0), fint("ChallengeId", 1), fbool("IsChallengeCondtion", true), fref("Item", 1), fref("Stall", 2), fint("ItemsBoughtMode", 1), fint("ItemsPurchased", 4), fint("Value", 30) } },
+            { "NumWellThemedAttractionsCondition", 4, { fint("ObjectiveId", -1), fint("ConditionId", 0), fint("ChallengeId", 0), fbool("IsChallengeCondtion", true), fint("Theme", 5), fint("TargetNum", 3) } },
+            { "ParkGuestsCondition", 5, { fint("ObjectiveId", 0), fint("ConditionId", 0), fint("ChallengeId", 0), fbool("IsChallengeCondtion", false), fint("Value", 100) } },
+            { "Challenge", 6, { fint("ChallengeId", 1), fint("State", 2) } },
+        });
+    const auto& c = l->model.objectives.conditions;
+    REQUIRE(c.size() == 3);
+    REQUIRE(c[0].items);
+    CHECK(c[0].challenge == 1);
+    CHECK(c[0].items->counts == rct3::save::model::ItemsTarget::Counts::AtStall);
+    CHECK(c[0].items->item == "MadeUpSnack:cid");
+    CHECK(c[0].items->stall == "MadeUpStall");
+    CHECK(c[0].items->bought == 4);
+    CHECK(c[1].kind == rct3::save::model::ConditionKind::ThemedAttractions);
+    CHECK(c[1].theme == 5);
+    CHECK(c[1].value == 3);
+    CHECK(c[1].challenge == 0);
+    CHECK_FALSE(c[2].challenge); // A scenario goal
+    CHECK(l->model.objectives.challenges.at(0).state == rct3::save::model::ChallengeState::Running);
+}
+
 TEST_CASE("park: validation reports broken invariants")
 {
     const auto l = load(

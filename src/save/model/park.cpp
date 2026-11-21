@@ -65,6 +65,9 @@ namespace rct3::save::model
                 std::pair { std::string_view { "MinAnimalHealthCondition" }, ConditionKind::AnimalHealth },
                 std::pair { std::string_view { "DungTargetCondition" }, ConditionKind::Dung },
                 std::pair { std::string_view { "ViewingGalleriesCondition" }, ConditionKind::ViewingGalleries },
+                std::pair { std::string_view { "NumWellThemedAttractionsCondition" }, ConditionKind::ThemedAttractions },
+                std::pair { std::string_view { "NumSceneryItemsOfClassificationCondition" }, ConditionKind::SceneryItems },
+                std::pair { std::string_view { "EscapedAnimalsCondition" }, ConditionKind::EscapedAnimals },
             };
 
             // Group mix attributes, in GroupMix::weights order
@@ -181,6 +184,15 @@ namespace rct3::save::model
             constexpr std::string_view kVipMet = "ConditionMet";
             constexpr std::string_view kVipWarnedMonth = "GivenMonthWarning";
             constexpr std::string_view kVipWarnedWeek = "GivenWeekWarning";
+            constexpr std::string_view kItemsItem = "Item";
+            constexpr std::string_view kItemsStall = "Stall";
+            constexpr std::string_view kItemsCounts = "ItemsBoughtMode";
+            constexpr std::string_view kItemsBought = "ItemsPurchased";
+            constexpr std::string_view kTheme = "Theme";
+            constexpr std::string_view kThemedNeeded = "TargetNum";
+            constexpr std::string_view kForChallenge = "IsChallengeCondtion"; // Spelt so in the files
+            constexpr std::string_view kItemSymbol = "SymbolName";            // Of the carried item kind an items goal names
+            constexpr std::string_view kStallSymbol = "SYMBOLNAME";           // Of the stall kind
 
             // Challenge attributes
             constexpr std::string_view kChallengeName = "Name";
@@ -593,7 +605,7 @@ namespace rct3::save::model
                 });
         }
 
-        void load_condition_object(const DecodedObject& o, ObjectiveSet& set)
+        void load_condition_object(const SaveFile& file, const DecodedObject& o, const ObjectIndex& index, ObjectiveSet& set)
         {
             using namespace names;
             Condition c {
@@ -640,6 +652,30 @@ namespace rct3::save::model
                     .warned_month = bool_of(o.find(kVipWarnedMonth), false),
                     .warned_week = bool_of(o.find(kVipWarnedWeek), false),
                 };
+            if (c.kind == ConditionKind::ItemsBought)
+            {
+                // The item and stall are named by their kinds' entries.
+                const auto symbol = [&](std::string_view ref, std::string_view field) {
+                    const std::optional<u64> id = ref_of(o.find(ref), index);
+                    if (!id)
+                        return std::string { };
+                    const auto entry = decode_object(file, *index.find(*id));
+                    return entry ? string_of(entry->find(field)) : std::string { };
+                };
+                c.items = ItemsTarget {
+                    .counts = static_cast<ItemsTarget::Counts>(std::clamp(i32_of(o.find(kItemsCounts), 0), 0, 2)),
+                    .item = symbol(kItemsItem, kItemSymbol),
+                    .stall = symbol(kItemsStall, kStallSymbol),
+                    .bought = i32_of(o.find(kItemsBought), 0),
+                };
+            }
+            if (c.kind == ConditionKind::ThemedAttractions)
+            {
+                c.theme = i32_of(o.find(kTheme), 0);
+                c.value = i32_of(o.find(kThemedNeeded), 0);
+            }
+            if (bool_of(o.find(kForChallenge), false))
+                c.challenge = i32_of(o.find(kChallengeId), 0);
             set.conditions.push_back(std::move(c));
         }
 
@@ -653,7 +689,7 @@ namespace rct3::save::model
                     .acceptance_key = string_of(o.find(kChallengeAcceptance)),
                     .completion_key = string_of(o.find(kChallengeCompletion)),
                     .challenge_id = i32_of(o.find(kChallengeId), 0),
-                    .state = i32_of(o.find(kChallengeState), 0),
+                    .state = static_cast<ChallengeState>(std::clamp(i32_of(o.find(kChallengeState), 0), 0, static_cast<i32>(ChallengeState::Declined))),
                     .prize_cash = i32_of(o.find(kChallengePrizeCash), 0),
                     .prize_publicity = i32_of(o.find(kChallengePrizePublicity), 0),
                     .prize_research_boost = i32_of(o.find(kChallengePrizeResearch), 0),
@@ -1197,7 +1233,7 @@ namespace rct3::save::model
                     load_objective_object(*decoded, m.objectives);
                     break;
                 case Role::Condition:
-                    load_condition_object(*decoded, m.objectives);
+                    load_condition_object(file, *decoded, index, m.objectives);
                     break;
                 case Role::Challenge:
                     load_challenge_object(*decoded, m.objectives);

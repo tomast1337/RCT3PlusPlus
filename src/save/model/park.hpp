@@ -329,6 +329,9 @@ namespace rct3::save::model
         AnimalHealth, ///< The animals' average health
         Dung,         ///< Dung lying about, at most
         ViewingGalleries,
+        ThemedAttractions, ///< Rides and stalls carrying a theme
+        SceneryItems,      ///< Scenery of one kind placed
+        EscapedAnimals,    ///< Escaped animals caught again
     };
 
     /// Named bits of Condition::consistency_flags. Values beyond these bits are preserved in the raw word.
@@ -395,6 +398,22 @@ namespace rct3::save::model
         bool warned_month = false, warned_week = false; ///< The player was told the visit is near
     };
 
+    /// What an items-bought goal counts: sales of one item, anywhere or at one kind of stall, or every sale at that
+    /// kind of stall.
+    struct ItemsTarget
+    {
+        enum class Counts : u8
+        {
+            Item,
+            AtStall,
+            ItemAtStall,
+        };
+        Counts counts = Counts::Item;
+        std::string item { };  ///< The item's symbol, as `Burger:cid`
+        std::string stall { }; ///< The stall kind's symbol, without its tag
+        i64 bought = 0;        ///< Counted since its challenge was taken on
+    };
+
     struct Condition
     {
         ConditionKind kind = ConditionKind::Other;
@@ -412,6 +431,9 @@ namespace rct3::save::model
         std::optional<bool> greater_than { };     ///< Comparison direction, newer generations only
         std::optional<CoasterTarget> coaster { }; ///< Coaster conditions only
         std::optional<VipTarget> vip { };         ///< VIP conditions only
+        std::optional<ItemsTarget> items { };     ///< Items-bought conditions only
+        std::optional<i32> theme { };             ///< Themed-attraction conditions: the theme, as the build catalogue numbers them
+        std::optional<i32> challenge { };         ///< The challenge (Challenge::challenge_id) it belongs to; none for a scenario goal
 
         [[nodiscard]] bool has(ConditionFlag f) const noexcept
         {
@@ -419,17 +441,29 @@ namespace rct3::save::model
         }
     };
 
+    /// Where a challenge has got, in the file's numbering.
+    enum class ChallengeState : u8
+    {
+        Waiting,   ///< Not offered yet
+        Offered,   ///< Waiting on the player's answer
+        Running,   ///< Taken on
+        Done,      ///< Met in time
+        Failed,    ///< Ran out of time
+        Postponed, ///< Put off; offered again later
+        Declined,
+    };
+
     /// A scripted side goal of the newer generations.
     struct Challenge
     {
         std::string name_key { }, description_key { }, acceptance_key { }, completion_key { }; ///< Text keys
         i32 challenge_id = 0;
-        i32 state = 0; ///< Raw; labels unknown
+        ChallengeState state = ChallengeState::Waiting;
         i32 prize_cash = 0;
         i32 prize_publicity = 0;
         i32 prize_research_boost = 0;
-        f32 time_limit = 0.0f;
-        f32 time_remaining = 0.0f;
+        f32 time_limit = 0.0f;     ///< Days it may run
+        f32 time_remaining = 0.0f; ///< Game seconds it has left once taken on
         i32 times_postponed = 0;
         /// When it may be offered: 0 at once, 1..3 once the scenario's goals of that level are met.
         i32 start_condition = 0;
@@ -446,6 +480,7 @@ namespace rct3::save::model
         std::vector<Objective> objectives { };
         std::vector<Condition> conditions { };
         std::vector<Challenge> challenges { };
+        f32 publicity_until = 0; ///< Calendar time until which a challenge's publicity prize draws more parties
 
         /// Conditions that belong to the given objective, in slot order.
         [[nodiscard]] std::vector<const Condition*> conditions_for(i32 difficulty, i32 objective_id) const;

@@ -122,6 +122,14 @@ namespace rct3::park::track
                 const bool brakes = kind == CourseKind::Brake || (kind == CourseKind::BlockBrake && role == kRoleBlockBrake);
                 const auto brake_speed = brakes ? static_cast<f32>(piece.brake_speed.or_else([&] { return piece.speed_class; }).value_or(0)) : kind == CourseKind::Booster ? static_cast<f32>(piece.speed_class.value_or(0)) : -1.0f;
                 course.splash_end = role >= kRoleSlideBowl && role <= kRoleSlideEnd;
+                // A photo section's camera is its first point named so; a piece with none has one beside its middle,
+                // on its right and a little up (chosen by eye).
+                if (role == kRolePhoto)
+                {
+                    const bool own = model != models.end() && !model->second.view_places.empty();
+                    const glm::vec3 camera = own ? glm::vec3(model->second.view_places.front()[3]) : shape->line.path[shape->line.path.size() / 2] + glm::vec3(0, 1, 2);
+                    course.photo_cameras.push_back(glm::vec3(to_world * glm::vec4(camera, 1.0f)));
+                }
                 for (const auto& climb : shape->record.climbs)
                 {
                     auto& placed = course.climbs.emplace_back();

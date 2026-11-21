@@ -8,6 +8,7 @@
 #include <array>
 #include <cstdint>
 #include <doctest/doctest.h>
+#include <string>
 #include <vector>
 
 using namespace rct3;
@@ -516,4 +517,44 @@ TEST_CASE("a pool slide's track ends open at a bowl, a funnel or an end piece, a
     CHECK(ends_open(park::track::kRoleSlideEnd));
     CHECK_FALSE(ends_open(0));
     CHECK_FALSE(ends_open(park::track::kRoleBrakes));
+}
+
+TEST_CASE("a photo section's camera stands at its model's first camera point, or beside its middle where it has none")
+{
+    save::model::TerrainGrid grid;
+    grid.width = 8;
+    grid.height = 8;
+    grid.tile_size_x = 4;
+    grid.tile_size_z = 4;
+    grid.cells.resize(64);
+    park::track::PieceShape photo;
+    photo.line.path = { { 2, 0, 0 }, { 0, 0, 0 }, { -2, 0, 0 } };
+    photo.record.role = park::track::kRolePhoto;
+    park::track::PieceShape plain = photo;
+    plain.record.role = 0;
+    save::model::Ride ride;
+    auto& track = ride.track.emplace();
+    std::vector<save::model::PlacedObject> objects;
+    const std::array<std::string, 3> symbols { "Camera", "Bare", "Plain" };
+    for (u64 i = 0; i < symbols.size(); ++i)
+    {
+        save::model::PlacedObject& o = objects.emplace_back();
+        o.id = 100 + i;
+        o.symbol = symbols[i];
+        o.col = static_cast<i32>(i);
+        o.force_absolute_height = true;
+        save::model::TrackPiece& piece = track.pieces.emplace_back();
+        piece.symbol = symbols[i];
+        piece.scenery = o.id;
+    }
+    track.segments = { { .first_piece = 0, .piece_count = 3 } };
+    park::object::ObjectModels models;
+    park::object::ObjectModel& camera = models[park::object::model_key(objects[0])];
+    camera.view_places = { glm::translate(glm::mat4(1.0f), glm::vec3 { -1, 1.5f, -1.4f }), glm::translate(glm::mat4(1.0f), glm::vec3 { -1, 1.5f, 1.4f }) };
+    const auto shape_of = [&](const save::model::TrackPiece& p, const save::model::PlacedObject&) -> std::optional<const park::track::PieceShape&> { return p.symbol == "Plain" ? plain : photo; };
+    const auto course = park::track::track_course(ride, objects, models, grid, { }, shape_of);
+    REQUIRE(course);
+    REQUIRE(course->photo_cameras.size() == 2);
+    check_near(course->photo_cameras[0], glm::vec3(park::object::placed_transform(objects[0], &camera, grid) * glm::vec4(-1, 1.5f, -1.4f, 1)));
+    check_near(course->photo_cameras[1], glm::vec3(park::object::placed_transform(objects[1], nullptr, grid) * glm::vec4(0, 1, 2, 1)));
 }

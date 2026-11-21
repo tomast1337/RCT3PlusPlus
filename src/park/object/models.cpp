@@ -685,17 +685,19 @@ namespace rct3::park::object
                     continue;
                 if (const auto vendor = std::ranges::find_if(shape->effects, [](const ovl::ShapeEffect& e) { return strings::equals_ignoring_case(e.name, kVendor); }); !model.vendor_place && vendor != shape->effects.end())
                     model.vendor_place = column_matrix(vendor->transform);
-                // A bench's seats, as points named and numbered as a ride's seat bones are, in number order.
-                if (model.seat_places.empty())
-                {
-                    std::vector<std::pair<i32, glm::mat4>> seats;
-                    for (const ovl::ShapeEffect& e : shape->effects)
-                        if (i32 number = 0; is_numbered(e.name, kSeat) && std::from_chars(e.name.data() + kSeat.size(), e.name.data() + e.name.size(), number).ec == std::errc { })
-                            seats.emplace_back(number, column_matrix(e.transform));
-                    std::ranges::sort(seats, { }, &std::pair<i32, glm::mat4>::first);
-                    for (const auto& seat : seats)
-                        model.seat_places.push_back(seat.second);
-                }
+                // A bench's seats, and a track piece's cameras that photograph its riders, as points named and
+                // numbered as a ride's seat and camera bones are, in number order.
+                for (const auto& [kind, places] : { std::pair { kSeat, &model.seat_places }, std::pair { kView, &model.view_places } })
+                    if (places->empty())
+                    {
+                        std::vector<std::pair<i32, glm::mat4>> found;
+                        for (const ovl::ShapeEffect& e : shape->effects)
+                            if (i32 number = 0; is_numbered(e.name, kind) && std::from_chars(e.name.data() + kind.size(), e.name.data() + e.name.size(), number).ec == std::errc { })
+                                found.emplace_back(number, column_matrix(e.transform));
+                        std::ranges::sort(found, { }, &std::pair<i32, glm::mat4>::first);
+                        for (const auto& place : found)
+                            places->push_back(place.second);
+                    }
                 // A jumping fountain's nozzles, which its jets leave from and land in.
                 if (model.nozzles.empty())
                     for (const ovl::ShapeEffect& e : shape->effects)

@@ -2103,7 +2103,7 @@ namespace rct3::scene::park
                     objects_changed(scene);
                 }
             }
-            profiling::section("Cars", [&] { place_cars(scene, viewer, rct3::park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across), elapsed); });
+            profiling::section("Cars", [&] { place_cars(scene, viewer, rct3::park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across), elapsed, options, *assets.strings); });
         });
         profiling::section("Daylight", [&] { show_time_of_day(scene, viewer); });
 

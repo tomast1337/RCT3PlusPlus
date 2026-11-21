@@ -266,7 +266,8 @@ namespace rct3::park::object
         /// Of a jumping fountain: its nozzles, points named kNozzle and more, model space.
         std::vector<glm::vec3> nozzles;
         /// Of a flat ride, its own fixed cameras, bones named "camera" and a number: model space, by number,
-        /// looking along +Z with +Y up, and the rig's bone each is, when it has one.
+        /// looking along +Z with +Y up, and the rig's bone each is, when it has one. Of a photo section of track,
+        /// the points so named beside it that photograph its riders.
         std::vector<glm::mat4> view_places;
         std::vector<i32> view_bones;
         /// Of a car whose riders sit on an arm: the arm's joints at rest, model space, from the base out. The

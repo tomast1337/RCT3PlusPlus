@@ -56,6 +56,7 @@ namespace rct3::park::track
     inline constexpr u32 kRoleBrakes = 1;     ///< PieceRecord::role of brakes
     inline constexpr u32 kRoleBlockBrake = 2; ///< PieceRecord::role of a block brake
     inline constexpr u32 kRoleStation = 3;    ///< PieceRecord::role of a station piece, flagged one or not
+    inline constexpr u32 kRolePhoto = 4;      ///< PieceRecord::role of a photo section, whose camera photographs riders
     /// PieceRecord::role of a pool slide's open ends, where riders splash into the pool: a bowl and a funnel, which
     /// they drop out of the bottom of, and a plain end
     inline constexpr u32 kRoleSlideBowl = 83;

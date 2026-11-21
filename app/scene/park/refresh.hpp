@@ -45,8 +45,9 @@ namespace rct3::scene::park
 
     /// Moves the ride cars to where the simulation has their trains, or back to where the park kept them
     /// while it does not run; and the scenery moving on its own near `eye` in `view`. Riding along, it also
-    /// sets the rider's eyes, `elapsed` on from the last frame's.
-    void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, units::Seconds elapsed);
+    /// sets the rider's eyes, `elapsed` on from the last frame's. Cars passing a photo section have their riders
+    /// photographed, as `options` allow, the photos named after the ride in `strings`.
+    void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, units::Seconds elapsed, const config::game::GameOptions& options, const ui::StringTable& strings);
 
     /// Builds the people meshes again as often as they need, all beside the frame: the moving ones as soon as
     /// the last are done, the riders a few times a second, the still ones when a person's level of detail

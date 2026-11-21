@@ -30,7 +30,9 @@
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 #include "simulation/vip.hpp"
+#include "strings/unicode.hpp"
 #include "ui/scale.hpp"
+#include "ui/screens/info/attraction.hpp"
 #include "units/units.hpp"
 
 #include <algorithm>
@@ -84,6 +86,12 @@ namespace rct3::scene::park
 
         /// How far away scenery moving on its own is seen to move; beyond, it keeps its pose.
         constexpr f32 kPropMoveDistance = 200.0f;
+
+        // On-ride photos, chosen by eye.
+        constexpr f32 kPhotoLead = 4;      ///< A car is photographed this far short of the camera, coming up to it
+        constexpr f32 kPhotoReach = 8;     ///< Farthest a camera is from the car it photographs
+        constexpr f32 kPhotoStepMost = 10; ///< A car moving further in a frame has been put somewhere, not driven
+        constexpr f32 kPhotoHeadUp = 0.7f; ///< Of a rider's face over their seat
 
         /// Where rider carrier `carrier` (see ParkScene::rider_cars) stands now.
         glm::mat4 carrier_place(const ParkScene& scene, std::optional<usize> carrier)
@@ -652,7 +660,7 @@ namespace rct3::scene::park
         return rct3::park::object::placed_transform(o, &model->second, scene.grid, scene.fitted) * (*places)[at];
     }
 
-    void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, units::Seconds elapsed)
+    void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, units::Seconds elapsed, const config::game::GameOptions& options, const ui::StringTable& strings)
     {
         const f32 seconds = elapsed.value;
         // How far the moving part of car `i` of `train` has turned, as `turns` (its train's swings or spins) has it,
@@ -855,6 +863,33 @@ namespace rct3::scene::park
                     for (const rct3::park::object::SplashPoint& point : model->second.splash_points)
                         if (point.wake ? splash.wake : splash.splash)
                             fire_park_particles(scene.particles, point.wake ? kWakeEffect : kSplashEffects[std::min<usize>(point.strength, 2)], glm::vec3(place * glm::vec4(point.position, 1.0f)), glm::vec3(place[1]));
+                    // Past a photo section, a train's first car with seats has its riders photographed by the
+                    // section's camera as it comes up to it, close enough that their faces show.
+                    const glm::vec3 was(scene.car_places[i][3]);
+                    const glm::vec3 now(place[3]);
+                    const f32 step = glm::distance(was, now);
+                    const bool first_seated = !model->second.seat_places.empty() && std::ranges::none_of(std::views::iota(usize { 0 }, i), [&](usize k) {
+                        const auto other = scene.models.find(rct3::park::object::model_ref(scene.cars[k]));
+                        return scene.car_spots[k].ride == spot.ride && scene.car_spots[k].train == spot.train && other != scene.models.end() && !other->second.seat_places.empty();
+                    });
+                    const bool wanted = options.flag(config::game::GameOption::AllPhotos) && options.flag(config::game::GameOption::CoasterCameraPhotos);
+                    // shortcut: photos past a few waiting are dropped, as at photo spots.
+                    if (wanted && aboard && first_seated && step > 0 && step < kPhotoStepMost && scene.photos.size() < 4)
+                        for (const glm::vec3& camera : course.photo_cameras)
+                        {
+                            const glm::vec3 way = (now - was) / step;
+                            if (glm::distance(now, camera) > kPhotoReach || glm::dot(was - camera, way) >= -kPhotoLead || glm::dot(now - camera, way) < -kPhotoLead)
+                                continue;
+                            std::vector<glm::vec3> heads;
+                            glm::vec3 middle { 0.0f };
+                            for (const glm::mat4& seat : model->second.seat_places)
+                                middle += heads.emplace_back(place * seat * glm::vec4(0, kPhotoHeadUp, 0, 1)) / static_cast<f32>(model->second.seat_places.size());
+                            const glm::vec3 look = middle - camera;
+                            const f32 yaw = std::atan2(look.x, look.z);
+                            const f32 pitch = std::asin(std::clamp(-look.y / glm::length(look), -1.0f, 1.0f));
+                            const std::string name = strings::to_utf8(ui::screens::info::attraction_name(scene.rides.rides[spot.ride.value].base, strings));
+                            scene.photos.push_back({ rct3::park::framed(heads, yaw, pitch, glm::length(look)), std::format("{} photo_", name) });
+                        }
                 }
             }
             // Pulled down, its cars go with it; a kept train the park does not run (a shuttle runs one) is not shown

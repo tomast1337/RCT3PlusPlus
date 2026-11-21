@@ -70,7 +70,8 @@ namespace rct3::park::track
         /// Stretches, from and to a distance, where a slide's car on its way back to its lift is down in the pool's
         /// water: from where its path first falls below the height its piece starts at, to that piece's end.
         std::vector<std::array<f32, 2>> wades { };
-        std::vector<LiftRun> lifts { }; ///< Its lift towers, in order along it
+        std::vector<LiftRun> lifts { };           ///< Its lift towers, in order along it
+        std::vector<glm::vec3> photo_cameras { }; ///< Where the cameras of its photo sections stand, which photograph the riders going by
         [[nodiscard]] f32 length() const
         {
             return distance.empty() ? 0 : distance.back();

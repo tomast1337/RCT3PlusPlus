@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <ranges>
 #include <span>
 #include <utility>
@@ -21,10 +22,12 @@ namespace rct3::simulation
     {
         /// Where a party waits for those busy at an attraction. `starts` holds first their way out, then where the
         /// others stand. The spot is a footpath tile every one of `starts` walks to (past no-entry signs only the way
-        /// they allow) that is not a queue, has no queue beside it and is not `taken` by another party: the nearest
-        /// such to the way out, never the way out itself while there is another; failing that the nearest to one of
-        /// the others; failing that the nearest tile off the queues to the way out; failing that the way out.
-        NodeId gather_spot(const PathNetwork& paths, const std::vector<bool>& taken, std::span<const NodeId> starts)
+        /// they allow) that is not a queue, has no queue beside it and no other party waits on (`taken` counts them):
+        /// the nearest such to the way out, never the way out itself while there is another; failing that the nearest
+        /// to one of the others; failing that the tile off the queues with the fewest parties on it, the nearest to
+        /// the way out among those, so parties crowding round a busy ride spread over the tiles there rather than
+        /// all stand on one; failing that the way out.
+        NodeId gather_spot(const PathNetwork& paths, const std::vector<u16>& taken, std::span<const NodeId> starts)
         {
             const auto& nodes = paths.nodes();
             const NodeId from = starts.front();
@@ -39,9 +42,10 @@ namespace rct3::simulation
                     if (n != from && !nodes[n.value].queue)
                     {
                         const bool by_queue = std::ranges::any_of(nodes[n.value].next, [&](std::optional<NodeId> m) { return m && nodes[m->value].queue; });
-                        if (!by_queue && !taken[n.value] && reached(n))
+                        if (!by_queue && taken[n.value] == 0 && reached(n))
                             return n;
-                        fallback = fallback.value_or(n);
+                        if (!fallback || taken[n.value] < taken[fallback->value])
+                            fallback = n;
                     }
                     for (const std::optional<NodeId> m : nodes[n.value].next)
                         if (m && !nodes[m->value].queue && !nodes[m->value].removed && !std::ranges::contains(seen, *m) && paths.may_step(n, *m, Walker::Guest))
@@ -95,14 +99,14 @@ namespace rct3::simulation
         // 5. Parties: while some are busy (in a ride's queue or on it, at a stall's counter, sitting on a bench, at a
         // passport post), the others walk to a tile near there and wait; once all are back they stand together a
         // moment, then go on behind the leader.
-        std::vector<bool> taken(paths.nodes().size(), false); // Tiles parties wait on
+        std::vector<u16> taken(paths.nodes().size(), 0); // How many parties wait on each tile
         for (const auto [e, party] : r.view<const Party>().each())
             if (party.gather && party.gather->value < taken.size())
-                taken[party.gather->value] = true;
-        // Nor on any ride's way out, where its riders come off.
+                ++taken[party.gather->value];
+        // Nor on any ride's way out, where its riders come off, but as the very last choice.
         const auto keep_off = [&](std::optional<NodeId> out) {
             if (out && out->value < taken.size())
-                taken[out->value] = true;
+                taken[out->value] = std::numeric_limits<u16>::max() / 2;
         };
         for (const auto [e, ride] : r.view<const CycleRide>().each())
         {
@@ -163,7 +167,7 @@ namespace rct3::simulation
                         starts.push_back(at);
                 }
                 party.gather = gather_spot(paths, taken, starts);
-                taken[party.gather->value] = true;
+                ++taken[party.gather->value];
             }
             if (busy_at != entt::null || (waiting && party.gather && party.gather->value < taken.size()))
             {

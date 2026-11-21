@@ -10,9 +10,12 @@
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <doctest/doctest.h>
+#include <map>
+#include <ranges>
 
 using namespace rct3::simulation;
 namespace units = rct3::units;
@@ -848,6 +851,33 @@ TEST_CASE("two parties waiting by one exit each stand on a tile of their own")
             CHECK(r.get<Stride>(g).to == r.get<Stride>(those.front()).to);
         }
     CHECK(r.get<Stride>(waiting[0].front()).to != r.get<Stride>(waiting[1].front()).to);
+}
+
+TEST_CASE("more parties waiting by one exit than there are tiles spread over the tiles, none on the exit")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 6, 0 });
+    const auto ride = park.flat_ride("Spinner", { 6, 0 }, 100, { .capacity = 4, .cycle_seconds = 30, .exit = glm::ivec2 { 3, 0 } });
+    auto& r = park.world().registry;
+    std::vector<entt::entity> parties;
+    for (i32 k = 0; k < 9; ++k)
+    {
+        const auto leader = park.guest({ 6, 0 });
+        parties.push_back(park.party({ leader, park.guest({ 6, 0 }, { .nausea = 0.9f }) }));
+        r.get<Errand>(leader) = { ErrandKind::Heading, ride, 0 };
+    }
+    park.run_seconds(5);
+    std::map<u32, usize> on_tile; // Parties waiting on each tile
+    for (const auto p : parties)
+    {
+        const auto gather = r.get<Party>(p).gather;
+        REQUIRE(gather.has_value());
+        ++on_tile[gather->value];
+    }
+    const NodeId exit = *r.get<CycleRide>(ride).exit;
+    CHECK_FALSE(on_tile.contains(exit.value));
+    // Six tiles beside the exit for nine parties: one or two on each, never three on one.
+    CHECK(std::ranges::max(on_tile | std::views::values) <= 2);
 }
 
 TEST_CASE("two of a party in a queue stand side by side across the line, level with each other")

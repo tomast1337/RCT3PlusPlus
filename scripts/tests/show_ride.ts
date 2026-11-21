@@ -55,13 +55,23 @@ await screenshot("show_trick");
 const during = watching();
 log("watching", before, "then", during);
 expect(during > before, "passers-by stop to watch the show");
+// A watcher seen from just behind, by the guest camera (started as the game does, by the cheat name), facing the
+// show with the arena beyond them.
 const watcher = must(
-    people.list().find((p) => !p.staff && "state" in p && (p as WalkedPerson).lingering === "sight")?.at,
-    "where a watcher stands",
-);
-camera.look(watcher, { col: watcher.col - 6, row: watcher.row - 6, up: 25 });
-await frames(30);
+    people.list().find((p) => !p.staff && "state" in p && (p as WalkedPerson).lingering === "sight"),
+    "a watcher",
+).index;
+people.rename(watcher, must(ui.text("CheatPeepName_PeepCam"), "the guest camera's cheat name"));
+await until(() => camera.riding()?.eye !== undefined, 60, "the view from the watcher");
+await ui.click("ride_camera/RidecamGUI_Type");
+await frames(2);
+expect(camera.riding()?.kind === "behind", "behind the watcher");
+pointer.move(0.5, 0.5);
+pointer.wheel(-1);
+await frames(10);
 await screenshot("show_watchers");
+await ui.click("ride_camera/RidecamGUI_Exit");
+await frames(5);
 camera.look({ col: site.col, row: site.row }, { col: site.col + 6, row: site.row + 6, up: 14 });
 
 await park.advanceUntil(() => !show().running, first.seconds + 60, "the show ending");

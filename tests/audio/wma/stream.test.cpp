@@ -8,7 +8,6 @@
 #include <cmath>
 #include <doctest/doctest.h>
 #include <filesystem>
-#include <fstream>
 #include <vector>
 
 using namespace rct3::audio::wma;
@@ -16,13 +15,6 @@ namespace fs = std::filesystem;
 
 namespace
 {
-    fs::path write_sine(const char* name, usize size = rct3::test::kSineWma.size())
-    {
-        const fs::path path = fs::temp_directory_path() / name;
-        std::ofstream(path, std::ios::binary).write(reinterpret_cast<const char*>(rct3::test::kSineWma.data()), static_cast<std::streamsize>(size));
-        return path;
-    }
-
     std::vector<f32> read_all(WmaStream& s)
     {
         std::vector<f32> all;
@@ -40,7 +32,8 @@ namespace
 
 TEST_CASE("a WMA file decodes to its sound")
 {
-    const fs::path path = write_sine("rct3pp_sine.wma");
+    const rct3::test::SineWmaFile file("rct3pp_sine.wma");
+    const fs::path& path = file.path;
     auto s = WmaStream::open(path);
     REQUIRE(s);
     CHECK(s->sample_rate() == 22050);
@@ -68,24 +61,23 @@ TEST_CASE("a WMA file decodes to its sound")
 
     REQUIRE(s->rewind());
     CHECK(read_all(*s) == all);
-    fs::remove(path);
 }
 
 TEST_CASE("a cut short WMA file plays what it has")
 {
-    const fs::path path = write_sine("rct3pp_sine_cut.wma", rct3::test::kSineWma.size() - 600);
+    const rct3::test::SineWmaFile file("rct3pp_sine_cut.wma", rct3::test::kSineWma.size() - 600);
+    const fs::path& path = file.path;
     auto s = WmaStream::open(path);
     REQUIRE(s);
     const auto all = read_all(*s);
     CHECK_FALSE(all.empty());
     CHECK(all.size() / 2 < 22050 / 4);
-    fs::remove(path);
 }
 
 TEST_CASE("files that are not WMA are refused")
 {
     CHECK_FALSE(WmaStream::open(fs::temp_directory_path() / "rct3pp_no_such_file.wma"));
-    const fs::path path = write_sine("rct3pp_not_wma.wma", 100);
+    const rct3::test::SineWmaFile file("rct3pp_not_wma.wma", 100);
+    const fs::path& path = file.path;
     CHECK_FALSE(WmaStream::open(path));
-    fs::remove(path);
 }

@@ -17,7 +17,11 @@
 // An animal standing where there is no enclosure has escaped: one let out of its crate there, or one whose
 // enclosure was taken from under it. The park posts a message as it gets out. It roams about, and a keeper
 // goes after it, shuts it in a crate where it stands and takes it back to their own enclosure, where the crate
-// opens again. Guests keep to the paths, where a loose animal does not scare them off. All the rates are our own.
+// opens again. Guests keep to the paths, where a loose animal does not scare them off.
+//
+// A meat-eater hunts the species its species' data names as its prey. Hungry, it runs after the nearest of them in its
+// enclosure, which runs from it, and kills it once caught, which feeds it. The park posts a message, guests near enough
+// to see it are upset, and the body lies where it fell a while before it is cleared. All the rates are our own.
 
 #include "core/types.hpp"
 #include "save/model/people.hpp"
@@ -34,6 +38,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace rct3::simulation
 {
@@ -126,6 +131,22 @@ namespace rct3::simulation
         units::Seconds flying { };  ///< Left of the helicopter lowering its crate; the crate's own wait starts after
     };
 
+    /// A meat-eater's hunting, beside its Animal.
+    struct Hunter
+    {
+        std::vector<std::string> prey { }; ///< The species it hunts, as their data spells them, in any case
+        entt::entity quarry = entt::null;  ///< The animal it is running after
+    };
+
+    /// The body of an animal a predator killed, lying where it fell till cleared.
+    struct Carcass
+    {
+        std::string species { }; ///< The symbol of its species
+        bool adult = true;
+        bool male = false;
+        units::Seconds left { }; ///< Till it is cleared
+    };
+
     /// Dung an animal left in its enclosure.
     struct Dung
     {
@@ -156,14 +177,19 @@ namespace rct3::simulation
         units::Seconds mending { 600 };   ///< From dying to well again, while nothing ails it
         /// Between the keeper's rounds filling the troughs, by FeedingSchedule
         std::array<units::Seconds, 3> feeding { units::Seconds { 600 }, units::Seconds { 300 }, units::Seconds { 150 } };
-        units::Share refill { 0.3f };  ///< Either trough this low calls the keeper at once
-        units::Seconds filling { 5 };  ///< The keeper at the troughs
-        units::Money food { 2500 };    ///< Chosen by eye: charged on Animal food for each filling of the troughs
-        units::Seconds clearing { 3 }; ///< The keeper at a dung
-        i32 stroll_tries = 8;          ///< Spots picked for a stroll before giving up till later
-        units::Distance roam { 4 };    ///< Farthest an escaped animal wanders at a time
-        units::Seconds catching { 4 }; ///< The keeper shutting an escaped animal in its crate
-        i32 empty_tries = 3;           ///< Times in a row an animal finds its food trough empty before the inspector tells
+        units::Share refill { 0.3f };    ///< Either trough this low calls the keeper at once
+        units::Seconds filling { 5 };    ///< The keeper at the troughs
+        units::Money food { 2500 };      ///< Chosen by eye: charged on Animal food for each filling of the troughs
+        units::Seconds clearing { 3 };   ///< The keeper at a dung
+        i32 stroll_tries = 8;            ///< Spots picked for a stroll before giving up till later
+        units::Distance roam { 4 };      ///< Farthest an escaped animal wanders at a time
+        units::Seconds catching { 4 };   ///< The keeper shutting an escaped animal in its crate
+        i32 empty_tries = 3;             ///< Times in a row an animal finds its food trough empty before the inspector tells
+        units::Pace chase_pace { 3.5f }; ///< A predator runs after its prey at
+        units::Pace flee_pace { 2.5f };  ///< And its prey runs from it at
+        units::Distance pounce { 0.8f }; ///< A predator this near its prey has caught it
+        units::Seconds carcass { 240 };  ///< A killed animal's body lies this long
+        units::Distance seen { 20 };     ///< Guests this near a kill see it
     };
 
     inline constexpr AnimalRates kAnimalRates { };
@@ -187,6 +213,8 @@ namespace rct3::simulation
 
     /// The message posted as an animal escapes; its subject's name is the animal's.
     inline constexpr std::string_view kAnimalEscaped = "Thought_PI_AnimalEscaped1";
+    /// The message posted as a predator kills an animal; its subject's name is the killed animal's.
+    inline constexpr std::string_view kAnimalKilled = "WildAnimalMessage_Killed";
 
     /// A keeper, and the enclosure the park gave them.
     struct KeeperPost
@@ -212,8 +240,8 @@ namespace rct3::simulation
     /// its spot is in; returns how many pieces.
     usize import_dung(SimWorld& world, std::span<const save::model::Litter> litter, const std::function<std::optional<i32>(glm::vec2)>& enclosure);
 
-    /// Moves the animals and their keepers on by `dt`, posting to `messages` as animals escape, and leaving what the
-    /// park's inspector finds among the Findings.
+    /// Moves the animals and their keepers on by `dt`, posting to `messages` as animals escape or are killed, and leaving
+    /// what the park's inspector finds among the Findings.
     void step_animals(SimWorld& world, const AnimalGround& ground, units::Seconds dt, park::ParkMessages& messages);
 
 } // namespace rct3::simulation

@@ -4,9 +4,11 @@
 #include "core/types.hpp"
 #include "simulation/animal_care.hpp"
 #include "simulation/components.hpp"
+#include "simulation/guests.hpp"
 #include "simulation/staff/care.hpp"
 #include "simulation/staff/patrol.hpp"
 #include "simulation/systems.hpp"
+#include "strings/ascii.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -256,6 +258,8 @@ namespace rct3::simulation
 
         // The animals.
         std::vector<std::pair<glm::vec3, std::optional<i32>>> dropped; // Dung left this step, and its enclosure
+        std::vector<entt::entity> killed;                              // By predators this step
+        const auto hunters = r.view<Hunter>();
         const auto animals = r.view<Animal, Pose, Dice>();
         for (auto [e, animal, pose, dice] : animals.each())
         {
@@ -304,6 +308,59 @@ namespace rct3::simulation
                 animal.health.value = std::max(ailing ? 0.0f : most, animal.health.value - dt.value / kRates.sickening.value);
             else
                 animal.health.value = std::min(most, animal.health.value + dt.value / kRates.mending.value);
+
+            // Running from a predator after it, to the spot of a few in its enclosure farthest from it.
+            const auto chaser = std::ranges::find_if(hunters, [&](entt::entity h) { return hunters.get<Hunter>(h).quarry == e; });
+            if (chaser != hunters.end())
+            {
+                const bool arrived = animal.job == AnimalJob::Strolling && walk_towards(pose, animal.goal, kRates.flee_pace, dt, ground);
+                if (animal.job != AnimalJob::Strolling || arrived)
+                {
+                    const glm::vec3 from = r.get<Pose>(*chaser).position;
+                    const glm::vec2 away = glm::vec2(pose.position.x - from.x, pose.position.z - from.z);
+                    const glm::vec2 straight_on = glm::vec2(pose.position.x, pose.position.z) + (glm::length(away) > 0 ? glm::normalize(away) : glm::vec2(1, 0)) * kRates.roam.value;
+                    glm::vec2 best = straight_on;
+                    for (i32 i = 0; ground.somewhere && i < kRates.stroll_tries; ++i)
+                        if (const auto spot = ground.somewhere(animal.enclosure, dice.state); spot && (i == 0 || glm::distance(*spot, { from.x, from.z }) > glm::distance(best, { from.x, from.z })))
+                            best = *spot;
+                    animal.job = AnimalJob::Strolling;
+                    animal.goal = { best.x, 0.0f, best.y };
+                }
+                continue;
+            }
+            // A hungry predator goes after the nearest of its prey in its enclosure, and once it catches it, eats it.
+            if (Hunter* hunter = r.try_get<Hunter>(e); hunter != nullptr && !animal.escaped)
+            {
+                const auto huntable = [&](entt::entity o) {
+                    const Animal* other = r.valid(o) ? r.try_get<Animal>(o) : nullptr;
+                    return other != nullptr && other->enclosure == animal.enclosure && other->job != AnimalJob::Crated && !other->escaped && !std::ranges::contains(killed, o) && std::ranges::any_of(hunter->prey, [&](const std::string& p) { return strings::equals_ignoring_case(p, other->species); });
+                };
+                if (!huntable(hunter->quarry))
+                    hunter->quarry = entt::null;
+                if (hunter->quarry == entt::null && animal.hunger.value >= kRates.wants.value && (animal.job == AnimalJob::Idle || animal.job == AnimalJob::Strolling))
+                {
+                    for (const auto [o, other, at] : r.view<const Animal, const Pose>().each())
+                        if (huntable(o) && (hunter->quarry == entt::null || glm::distance(at.position, pose.position) < glm::distance(r.get<Pose>(hunter->quarry).position, pose.position)))
+                            hunter->quarry = o;
+                    if (hunter->quarry != entt::null)
+                        r.get<Animal>(hunter->quarry).job = AnimalJob::Idle; // Off what it was doing, to run
+                }
+                if (hunter->quarry != entt::null)
+                {
+                    animal.job = AnimalJob::Strolling;
+                    animal.goal = r.get<Pose>(hunter->quarry).position;
+                    walk_towards(pose, animal.goal, kRates.chase_pace, dt, ground);
+                    if (glm::distance(pose.position, animal.goal) <= kRates.pounce.value)
+                    {
+                        killed.push_back(hunter->quarry);
+                        hunter->quarry = entt::null;
+                        animal.hunger = { };
+                        animal.job = AnimalJob::Idle;
+                        animal.busy = kRates.eating;
+                    }
+                    continue;
+                }
+            }
 
             const entt::entity home = house_for(e, animal.enclosure, pose.position);
             AnimalHouse* house = home != entt::null ? &houses.get<AnimalHouse>(home) : nullptr;
@@ -383,6 +440,27 @@ namespace rct3::simulation
             r.emplace<Dung>(d, Dung { enclosure });
             r.emplace<Pose>(d, Pose { .position = at, .was = at });
         }
+        for (const entt::entity prey : killed)
+        {
+            const Animal& dead = r.get<Animal>(prey);
+            const Pose fell = r.get<Pose>(prey);
+            park::post(messages, { .text_key = std::string(kAnimalKilled), .subject_name = dead.name });
+            for (const auto [g, at, visitor, dice] : r.view<const Pose, const Visitor, const Dice>().each())
+                if (glm::distance(at.position, fell.position) < kRates.seen.value)
+                    think(r, g, ThoughtKind::AnimalKilled, entt::null, now);
+            const entt::entity body = r.create();
+            r.emplace<Carcass>(body, Carcass { .species = dead.species, .adult = dead.adult, .male = dead.male, .left = kRates.carcass });
+            r.emplace<Pose>(body, Pose { .position = fell.position, .heading = fell.heading, .was = fell.position, .was_heading = fell.heading });
+            r.destroy(prey);
+        }
+        std::vector<entt::entity> cleared;
+        for (auto [c, carcass] : r.view<Carcass>().each())
+        {
+            carcass.left.value -= dt.value;
+            if (carcass.left.value <= 0)
+                cleared.push_back(c);
+        }
+        r.destroy(cleared.begin(), cleared.end());
 
         // The keepers. Each keeps to the enclosure of their house and fills the troughs of any house in it, as
         // their tasks and patrol allow.

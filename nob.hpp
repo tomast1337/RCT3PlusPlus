@@ -127,6 +127,31 @@ namespace nob
                 line += ' ';
             line += quote_arg(a);
         }
+        // A command line holds at most 32767 characters; a link of every object file runs past that. Then the
+        // arguments go in a response file, which Clang reads with `@file`. Its paths take forward slashes, which
+        // Windows takes as well, so the file reads the same whether the tool splits it the GNU or the Windows way.
+        constexpr std::size_t kLongestLine = 30000;
+        if (line.size() > kLongestLine)
+        {
+            static std::size_t made = 0;
+            const fs::path rsp = fs::temp_directory_path() / std::format("nob-{}-{}.rsp", GetCurrentProcessId(), made++);
+            std::string body;
+            for (std::size_t i = 1; i < cmd.args.size(); ++i)
+            {
+                body += '"';
+                for (const char c : cmd.args[i])
+                    body += c == '\\' ? std::string_view("/") : c == '"' ? std::string_view("\\\"") : std::string_view(&c, 1);
+                body += "\"\n";
+            }
+            std::FILE* file = std::fopen(rsp.string().c_str(), "wb");
+            if (file == nullptr || std::fwrite(body.data(), 1, body.size(), file) != body.size() || std::fclose(file) != 0)
+            {
+                log(Level::Error, "cannot write {}", rsp.string());
+                return std::nullopt;
+            }
+            // shortcut: the response file stays in the temp folder after the tool ends; delete it in `wait` if they pile up.
+            line = quote_arg(cmd.args[0]) + ' ' + quote_arg("@" + rsp.string());
+        }
         // CreateProcess searches PATH for the first word and adds ".exe", as posix_spawnp does for a bare name. It may
         // edit the command line in place, so it gets a writable string.
         STARTUPINFOA startup { };

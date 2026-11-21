@@ -10,7 +10,7 @@
 #
 # Windows builds in MSYS2's CLANG64, whose standard library is libc++: libc++ 23 has std::optional<T&> but not yet
 # std::stacktrace, so a crash report there comes without a stack. Its job may still fail without failing the run,
-# and the release then says Windows is not available; drop continue-on-error once Windows packages have been
+# and the release then says its Windows build failed; drop continue-on-error once Windows packages have been
 # published a few times. No tests run here: ci.yml covers them on every push and pull request. macOS is not built
 # yet.
 name: release
@@ -142,10 +142,8 @@ jobs:
       - name: Write the notes
         run: |
           cp .github/release_notes.md notes.md
-          if compgen -G "dist/*windows*" > /dev/null; then
-            printf '\n**Windows:** 64-bit; unpack the .zip and run rct3pp.exe.\n' >> notes.md
-          else
-            printf '\n**Windows:** not available yet. Windows support is on its way; until then this release is for Linux only.\n' >> notes.md
+          if ! compgen -G "dist/*windows*" > /dev/null; then
+            printf '\nThe Windows build failed this time, so this release has Linux packages only.\n' >> notes.md
           fi
 
       - name: Publish the tag's release

@@ -8,8 +8,11 @@
 # actions/cache (one cache per job, so the sanitizer flags never share entries), turns that into
 # compiling only what changed. Pull requests read the caches that runs on main saved.
 #
-# Follow-ups, deliberately not covered yet: the viewer build (Vulkan, windowing), the libFuzzer
-# targets, and a Windows runner.
+# Windows builds in MSYS2's CLANG64 (Clang with libc++), as the release workflow's Windows job does
+# (docs/windows.md). That job builds the viewer too, as Windows has no other check of it.
+#
+# Follow-ups, deliberately not covered yet: the viewer build on Linux (Vulkan, windowing) and the libFuzzer
+# targets.
 name: ci
 
 on:
@@ -85,6 +88,58 @@ jobs:
 
       - name: Test
         run: ./nob test ${{ matrix.cache == 'sanitize' && '--sanitize --no-tools' || '' }}
+
+  # shortcut: no compiler cache, so every run compiles everything; upgrade (ccache from MSYS2) if the wait hurts.
+  windows:
+    name: build and test (Windows)
+    needs: format
+    runs-on: windows-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # git is for the version nob writes into the build (git describe).
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANG64
+          install: >-
+            git
+            mingw-w64-clang-x86_64-clang
+            mingw-w64-clang-x86_64-libc++
+            mingw-w64-clang-x86_64-lld
+            mingw-w64-clang-x86_64-vulkan-loader
+            unzip
+
+      # Into the MSYS2 tree: its shell does not take over the runner's PATH, so GITHUB_PATH would not reach it.
+      - name: Install slangc
+        run: |
+          curl -fsSL -o slang.zip https://github.com/shader-slang/slang/releases/download/v2026.18.2/slang-2026.18.2-windows-x86_64.zip
+          mkdir -p /opt/slang && unzip -q slang.zip -d /opt/slang
+          rm slang.zip
+
+      - name: Compiler version
+        run: clang++ -v --version
+
+      - name: Bootstrap nob
+        run: clang++ -std=c++26 -o nob nob.cpp
+
+      # The WMA and WMV decoders use Media Foundation, an optional feature on the server Windows the runner has.
+      - name: Enable Media Foundation
+        shell: pwsh
+        run: Install-WindowsFeature Server-Media-Foundation
+
+      - name: Test
+        run: ./nob test
+
+      - name: Build the viewer
+        run: |
+          export PATH="/opt/slang/bin:$PATH"
+          ./nob app
 
   # Formatting first: it takes a minute, and the build jobs wait for it, so a formatting slip fails fast instead
   # of after a full build. The tool versions are pinned (clang-format from PyPI, Prettier in nob.cpp) so the result

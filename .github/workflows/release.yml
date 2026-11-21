@@ -8,9 +8,11 @@
 # release. Each push to main replaces the packages of the `nightly` pre-release and moves its tag to the
 # commit. Both releases open with .github/release_notes.md.
 #
-# Windows does not build yet: its job may fail without failing the run, and the release then says Windows is not
-# available. It builds in MSYS2's CLANG64, whose standard library is libc++: libc++ 23 has std::optional<T&> but not
-# yet std::stacktrace, which the crash report uses (nob also links libstdc++'s -lstdc++exp for it). No tests run here: ci.yml covers them on every push and pull request. macOS is not built yet.
+# Windows builds in MSYS2's CLANG64, whose standard library is libc++: libc++ 23 has std::optional<T&> but not yet
+# std::stacktrace, so a crash report there comes without a stack. Its job may still fail without failing the run,
+# and the release then says Windows is not available; drop continue-on-error once Windows packages have been
+# published a few times. No tests run here: ci.yml covers them on every push and pull request. macOS is not built
+# yet.
 name: release
 
 on:
@@ -88,19 +90,21 @@ jobs:
           install: >-
             git
             mingw-w64-clang-x86_64-clang
+            mingw-w64-clang-x86_64-libc++
             mingw-w64-clang-x86_64-lld
             mingw-w64-clang-x86_64-vulkan-devel
             unzip
             zip
 
+      # Into the MSYS2 tree: its shell does not take over the runner's PATH, so GITHUB_PATH would not reach it.
       - name: Install slangc
         run: |
           curl -fsSL -o slang.zip https://github.com/shader-slang/slang/releases/download/v2026.18.2/slang-2026.18.2-windows-x86_64.zip
           mkdir -p /opt/slang && unzip -q slang.zip -d /opt/slang
-          echo "$(cygpath -w /opt/slang/bin)" >> "$GITHUB_PATH"
 
       - name: Package
         run: |
+          export PATH="/opt/slang/bin:$PATH"
           clang++ -std=c++26 -o nob nob.cpp
           ./nob package
           ldd build/release/rct3pp.exe

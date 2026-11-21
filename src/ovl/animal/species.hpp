@@ -53,6 +53,8 @@ namespace rct3::ovl::animal
         std::string_view shelter;          ///< Name of the shelter the species needs, as stored (any case)
         f32 fence_strength = 0;            ///< The least strength of fence that holds the species
         SpeciesCare care { };              ///< Zero where its blocks are missing or do not fit
+        /// The own names of the species its animals hunt, in any case; empty for an animal that hunts none.
+        std::vector<std::string_view> prey { };
         /// Nothing where the pointer is null or the record does not fit its block.
         std::array<std::optional<AnimalVariant>, 4> variants;
     };
@@ -67,7 +69,8 @@ namespace rct3::ovl::animal
     /// symbol name. The record holds a pointer to its own name at 0x04, its name, description and icon references from 0x08, four pointers to the animals
     /// (each with its model, motion set, description, icon and price), a pointer to the name of its shelter and the fence strength it needs. Two more
     /// pointers lead to blocks of its care: at 0x28 the middle of its animals' nature (appetite at 0x00, sociability at 0x08, both i32) and at 0x2C its
-    /// statistics (the space each animal wants, i32 at 0x0C). Views in the result point into the overlay's bytes.
+    /// statistics (the number of species it preys on, i32 at 0x00, a pointer at 0x04 to as many pointers to their own names, and the
+    /// space each animal wants, i32 at 0x0C). Views in the result point into the overlay's bytes.
     [[nodiscard]] std::vector<AnimalSpeciesItem> read_animal_species(const Overlay& overlay, const Part& part);
 
 } // namespace rct3::ovl::animal

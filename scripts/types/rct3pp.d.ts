@@ -111,7 +111,7 @@ declare namespace clipboard {
 
 declare namespace ui {
     /** The middle of the widget at `path` (such as "tools/Land/Land") and its edges, or undefined when it is not shown;
-     * `on` for a toggle button or a tick box, `text` for an edit box, a label or a button with words, `rows` for a
+     * `on` for a toggle button or a tick box, `text` for an edit box, a label, a button with words or a drop-down list's pick, `rows` for a
      * table (each row's cells as shown), `tooltip` for one with help.
      * These stay optional: they follow the widget's kind, which no field gives. */
     function find(path: string):
@@ -975,6 +975,8 @@ type StallInfo = {
     extras: { extra: string; level: number }[];
     /** Whether changes to its menu go to every stall of its kind. */
     sync: boolean;
+    /** Of a custom stall, the kind it sells as, with its tag; empty while none is picked and for other stalls. */
+    sellsAs: string;
     /** Whether the info panel shows it. */
     shown: boolean;
     /** Whether it was pulled down; it keeps its place in the list. */

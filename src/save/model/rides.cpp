@@ -291,6 +291,7 @@ namespace rct3::save::model
             constexpr std::string_view kExtraSetting = "Setting";
             constexpr std::string_view kItemExtras = "Extras";
             constexpr std::string_view kSyncStalls = "SyncStallsOfSameType";
+            constexpr std::string_view kSellsAs = "ApparentStallAIDEntry";
         } // namespace id
 
         // ---------------------------------------------------------------------------------------------------------
@@ -1190,6 +1191,9 @@ namespace rct3::save::model
                     .thoughts = read_thoughts(f),
                     .sync = f[id::kSyncStalls].boolean(),
                 };
+                std::tie(s.sells_as, s.sells_as_overlay) = asset_of(live(f[id::kSellsAs]));
+                if (!s.sells_as.empty())
+                    s.sells_as += ":sta";
                 for (const auto& item : f[id::kShopItems].items())
                 {
                     const ObjectId iid = View(item).ref();

@@ -741,6 +741,34 @@ TEST_CASE("stalls load items and extras with prices in hundredths")
     CHECK(w->model.diagnostics.unresolved_items == 1);
 }
 
+TEST_CASE("a custom stall keeps the kind it sells as; an unset one has none and nothing on sale")
+{
+    Schema schema;
+    schema.classes["StallInstance"] = { str("StallSymbolName"), attr_i32("State"), ref("ApparentStallAIDEntry"), ref_list("ShopItems") };
+    schema.classes["ShopItemInstance"] = { attr_i32("Price"), ref("Stall") };
+    schema.classes["AIDDatabaseEntry"] = { str("SYMBOLNAME"), str("OVERLAYFILENAME") };
+    Obj set { "StallInstance", 400, { } };
+    set.s("StallSymbolName", u"PlainFront:sta").i("State", 2).r("ApparentStallAIDEntry", 410).refs("ShopItems", { 401 });
+    Obj item { "ShopItemInstance", 401, { } };
+    item.i("Price", 70).r("Stall", 400);
+    Obj kind { "AIDDatabaseEntry", 410, { } };
+    kind.s("SYMBOLNAME", u"KiteStall").s("OVERLAYFILENAME", u"Style\\Themed\\Sky\\style");
+    Obj unset { "StallInstance", 420, { } };
+    unset.s("StallSymbolName", u"PlainFront:sta").i("State", 0).r("ApparentStallAIDEntry", kStale);
+    const auto w = build(schema, { set, item, kind, unset });
+    REQUIRE(w->model.stalls.size() == 2);
+    const Stall& a = w->model.stalls[0];
+    CHECK(a.sells_as == "KiteStall:sta");
+    CHECK(a.sells_as_overlay == "Style\\Themed\\Sky\\style");
+    REQUIRE(a.items.size() == 1);
+    CHECK(a.items[0].price.value == 70);
+    const Stall& b = w->model.stalls[1];
+    CHECK(b.sells_as.empty());
+    CHECK(b.sells_as_overlay.empty());
+    CHECK(b.items.empty());
+    CHECK(b.base.state == AttractionState::Closed);
+}
+
 TEST_CASE("a save without any rides loads an empty model")
 {
     Schema s;

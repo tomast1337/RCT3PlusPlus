@@ -15,6 +15,7 @@
 #include <numeric>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -68,6 +69,16 @@ namespace rct3::park::ride
         return lowest_free_name(stalls, symbol);
     }
 
+    bool same_kind(const save::model::Stall& a, const save::model::Stall& b)
+    {
+        // Overlays are kept with either kind of slash.
+        const auto same_overlay = [](std::string_view x, std::string_view y) { return std::ranges::equal(x, y, [](char p, char q) { return strings::ascii_lower(p == '\\' ? '/' : p) == strings::ascii_lower(q == '\\' ? '/' : q); }); };
+        const auto kind = [](const save::model::Stall& s) { return s.sells_as.empty() ? std::pair<std::string_view, std::string_view> { s.base.symbol, s.base.overlay_path } : std::pair<std::string_view, std::string_view> { s.sells_as, s.sells_as_overlay }; };
+        const auto [symbol, overlay] = kind(a);
+        const auto [other_symbol, other_overlay] = kind(b);
+        return strings::equals_ignoring_case(symbol, other_symbol) && same_overlay(overlay, other_overlay);
+    }
+
     void copy_menu(std::span<save::model::Stall> stalls, usize from)
     {
         if (from >= stalls.size())
@@ -76,7 +87,7 @@ namespace rct3::park::ride
         for (usize i = 0; i < stalls.size(); ++i)
         {
             save::model::Stall& to = stalls[i];
-            if (i == from || to.base.symbol != source.base.symbol || to.base.overlay_path != source.base.overlay_path)
+            if (i == from || !same_kind(to, source))
                 continue;
             std::vector<save::model::StallItem> items;
             for (const save::model::StallItem& item : source.items)

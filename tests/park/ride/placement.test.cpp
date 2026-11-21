@@ -403,6 +403,23 @@ TEST_CASE("a synchronised stall gives its menu to the other stalls of its kind")
     CHECK(stalls[2].extras[0].level == 0);
 }
 
+TEST_CASE("a custom stall is of the kind it sells as, whichever way its overlay is spelt")
+{
+    save::model::Stall kites;
+    kites.base.symbol = "KiteStall:sta";
+    kites.base.overlay_path = "Style\\Sky\\style";
+    save::model::Stall custom;
+    custom.base.symbol = "PlainFront:sta";
+    custom.base.overlay_path = "Style/Plain/style";
+    save::model::Stall unset = custom;
+    CHECK_FALSE(park::ride::same_kind(kites, custom));
+    CHECK(park::ride::same_kind(custom, unset));
+    custom.sells_as = "kitestall:sta";
+    custom.sells_as_overlay = "Style/Sky/Style";
+    CHECK(park::ride::same_kind(kites, custom));
+    CHECK_FALSE(park::ride::same_kind(custom, unset));
+}
+
 TEST_CASE("an item moved on a stall's menu takes its new place, the others closing up behind it")
 {
     save::model::Stall stall;

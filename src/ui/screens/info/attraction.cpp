@@ -788,6 +788,23 @@ namespace rct3::ui::screens::info
                 l.help = filled(filled(text(strings, "StallItemLine_Profit"), u"%NAME%", l.name), u"%PROFIT%", cost ? money_text(units.currency, item.price - units::Money { *cost }) : missing());
                 m.lines.push_back(std::move(l));
             }
+            // A custom stall sells as a kind of stall picked over its menu, till then as none.
+            if (!f.stall_kinds.empty())
+            {
+                InfoControl c;
+                c.id = control_id(AttractionControl::SellsAs);
+                c.name = "Stall_SelectType";
+                c.kind = InfoControlKind::Choice;
+                c.label = text(strings, "NumItemsBoughtCondition_ModeStallType");
+                c.items.push_back(text(strings, "Stall_SelectType"));
+                for (const AttractionFacts::StallKind& kind : f.stall_kinds)
+                {
+                    const std::u16string_view name = strings.get_ignoring_case(kind.name_key);
+                    c.items.push_back(name.empty() ? strings::to_utf16(kind.symbol) : std::u16string(name));
+                }
+                c.value = f.sells_as ? static_cast<i32>(*f.sells_as) + 1 : 0;
+                page.controls.push_back(std::move(c));
+            }
             page.menu = std::move(m);
             page.width = kMenuWidth;
             page.menu_height = kMenuHeight;

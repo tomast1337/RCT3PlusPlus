@@ -206,8 +206,18 @@ namespace rct3::ui::screens::info
         u8 graph_series = kSpeedOnly;
         /// Of a running ride, how many graph samples its first train is from the end of its lap.
         std::optional<usize> lap_to_go { };
-        /// Of a stall, the carried items its kind may sell, by symbol as `Burger:cid`.
+        /// Of a stall, the carried items its kind may sell, by symbol as `Burger:cid`; of a custom stall, those of the
+        /// kind it sells as.
         std::vector<std::string> offers { };
+        /// Of a custom stall, whose own kind sells nothing: the kinds of stall it may sell as, and which it sells as;
+        /// empty for other stalls.
+        struct StallKind
+        {
+            std::string_view name_key { };
+            std::string_view symbol { }; ///< Shown when the name key has no text
+        };
+        std::vector<StallKind> stall_kinds { };
+        std::optional<usize> sells_as { };
         /// The carried items and extras the install has, for their names, pictures and extras.
         std::span<const park::CarriedKind> carried { };
         std::span<const park::CarriedKind> carried_extras { };
@@ -268,6 +278,7 @@ namespace rct3::ui::screens::info
         FenceStyle,     ///< The look of a ride's fence, its place in StylePick::themes
         EntranceStyle,  ///< Of its entrances
         ExitStyle,      ///< Of its exits
+        SellsAs,        ///< The kind of stall a custom stall sells as: 0 none, k for AttractionFacts::stall_kinds[k - 1]
         /// Families of a stall's controls, one for each of its items, offers or extras: the first's id, the next's
         /// one more, and so on, up to kMostListed.
         ItemPrice = 64,   ///< An item's price

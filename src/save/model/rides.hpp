@@ -520,6 +520,9 @@ namespace rct3::save::model
         std::vector<StallExtra> extras { };
         /// Whether a change to its menu or extras goes to every stall of its kind.
         bool sync = false;
+        /// Of a custom stall, whose own kind sells nothing: the kind it sells as, by asset symbol as `<name>:sta`
+        /// and overlay path, the player's pick. Empty while none is picked, and for other stalls.
+        std::string sells_as { }, sells_as_overlay { };
     };
 
     /// Consistency counts gathered while loading. All are zero in sound files.

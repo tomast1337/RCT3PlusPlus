@@ -46,6 +46,8 @@ namespace rct3::park::ride
     [[nodiscard]] std::string numbered_name(std::span<const save::model::Ride> rides, std::string_view symbol);
     /// The same for a new stall, among the park's `stalls`.
     [[nodiscard]] std::string numbered_name(std::span<const save::model::Stall> stalls, std::string_view symbol);
+    /// Whether two stalls are of one kind, as synchronising goes by: a custom stall is of the kind it sells as.
+    [[nodiscard]] bool same_kind(const save::model::Stall& a, const save::model::Stall& b);
     /// Gives every other stall of the kind of `stalls[from]` its menu, as its synchronise tick does: the same
     /// items in the same order at the same prices, names, colours and extras, and the same level of each extra
     /// both offer. An item a stall already sold keeps its takings.

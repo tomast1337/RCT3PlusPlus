@@ -26,6 +26,7 @@
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 #include "simulation/vip.hpp"
+#include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
 #include "ui/extra_skins.hpp"
 #include "ui/game_style.hpp"
@@ -36,7 +37,9 @@
 #include <future>
 #include <span>
 #include <string>
+#include <string_view>
 #include <utility>
+#include <vector>
 
 namespace rct3::scene::park
 {
@@ -75,14 +78,37 @@ namespace rct3::scene::park
             return std::nullopt;
         }
 
-        /// The kind `stall` is of in the build lists, once they are read.
-        const rct3::park::BuildItem* stall_kind(const ParkScene& scene, const save::model::Stall& stall)
+        /// The kind of stall named by `symbol` (as `<name>:sta`) and `overlay` in the build lists, once they are read.
+        const rct3::park::BuildItem* stall_kind(const ParkScene& scene, std::string_view symbol, std::string_view overlay)
         {
             const auto& items = scene.build.items;
             if (!items.valid() || items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
                 return nullptr;
-            const auto kind = std::ranges::find_if(items.get(), [&](const rct3::park::BuildItem& i) { return i.stall && i.overlay == stall.base.overlay_path && std::format("{}:sta", i.symbol) == stall.base.symbol; });
+            // Saves keep overlays with either kind of slash.
+            const auto same_overlay = [](std::string_view x, std::string_view y) { return std::ranges::equal(x, y, [](char p, char q) { return strings::ascii_lower(p == '\\' ? '/' : p) == strings::ascii_lower(q == '\\' ? '/' : q); }); };
+            const auto kind = std::ranges::find_if(items.get(), [&](const rct3::park::BuildItem& i) { return i.stall && same_overlay(i.overlay, overlay) && strings::equals_ignoring_case(std::format("{}:sta", i.symbol), symbol); });
             return kind == items.get().end() ? nullptr : &*kind;
+        }
+
+        /// The kind `stall` sells as: its own, or a custom stall's pick.
+        const rct3::park::BuildItem* selling_kind(const ParkScene& scene, const save::model::Stall& stall)
+        {
+            return stall.sells_as.empty() ? stall_kind(scene, stall.base.symbol, stall.base.overlay_path) : stall_kind(scene, stall.sells_as, stall.sells_as_overlay);
+        }
+
+        /// The kinds of stall a custom stall may sell as: those the park offers that sell something, by name.
+        // shortcut: in the order of their name keys, not of the names shown; upgrade if the two differ much.
+        std::vector<const rct3::park::BuildItem*> stall_kinds(const ParkScene& scene)
+        {
+            std::vector<const rct3::park::BuildItem*> out;
+            const auto& items = scene.build.items;
+            if (!items.valid() || items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+                return out;
+            for (const rct3::park::BuildItem& i : items.get())
+                if (i.stall && !i.goods.empty() && scene.build.offer.offers(i))
+                    out.push_back(&i);
+            std::ranges::stable_sort(out, [](const rct3::park::BuildItem* a, const rct3::park::BuildItem* b) { return std::ranges::lexicographical_compare(a->name_text, b->name_text, { }, strings::ascii_lower, strings::ascii_lower); });
+            return out;
         }
 
         ui::screens::info::PersonFacts person_facts(const ParkScene& scene, usize shown)
@@ -221,9 +247,20 @@ namespace rct3::scene::park
             {
                 f.stall = &scene.rides.stalls[ref.index];
                 f.common = &f.stall->base;
-                if (const rct3::park::BuildItem* kind = stall_kind(scene, *f.stall))
+                if (const rct3::park::BuildItem* kind = selling_kind(scene, *f.stall))
                     for (const rct3::park::BuildItem::Goods& g : kind->goods)
                         f.offers.push_back(std::format("{}:cid", g.item));
+                // A custom stall's own kind sells nothing; it sells as another kind the player picks.
+                if (const rct3::park::BuildItem* own = stall_kind(scene, f.stall->base.symbol, f.stall->base.overlay_path); own != nullptr && own->goods.empty())
+                {
+                    const rct3::park::BuildItem* now = f.stall->sells_as.empty() ? nullptr : selling_kind(scene, *f.stall);
+                    for (const rct3::park::BuildItem* kind : stall_kinds(scene))
+                    {
+                        if (kind == now)
+                            f.sells_as = f.stall_kinds.size();
+                        f.stall_kinds.push_back({ .name_key = kind->name_text, .symbol = kind->symbol });
+                    }
+                }
                 f.carried = scene.carried.items;
                 f.carried_extras = scene.carried.extras;
             }
@@ -809,13 +846,27 @@ namespace rct3::scene::park
             const usize index = ref.index;
             if (change.id == ui::screens::info::control_id(SyncStalls))
                 stall->sync = change.value != 0;
+            else if (change.id == ui::screens::info::control_id(SellsAs))
+            {
+                // A custom stall picks up the kind's goods at its prices, and the extras they take afresh.
+                const std::vector<const rct3::park::BuildItem*> kinds = stall_kinds(scene);
+                if (change.value < 1 || std::cmp_greater(change.value, kinds.size()))
+                    return;
+                const rct3::park::BuildItem& kind = *kinds[static_cast<usize>(change.value - 1)];
+                stall->sells_as = std::format("{}:sta", kind.symbol);
+                stall->sells_as_overlay = kind.overlay;
+                stall->items.clear();
+                stall->extras.clear();
+                for (const rct3::park::BuildItem::Goods& g : kind.goods)
+                    stall->items.push_back({ .kind_symbol = std::format("{}:cid", g.item), .price = { g.price }, .name = "%ME%" });
+            }
             else if (const auto item = ui::screens::info::listed(change.id, ItemPrice); item && *item < stall->items.size())
                 stall->items[*item].price = { change.value };
             else if (const auto gone = ui::screens::info::listed(change.id, ItemRemove); gone && *gone < stall->items.size())
                 stall->items.erase(stall->items.begin() + static_cast<std::ptrdiff_t>(*gone));
             else if (const auto added = ui::screens::info::listed(change.id, ItemAdd))
             {
-                const rct3::park::BuildItem* kind = stall_kind(scene, *stall);
+                const rct3::park::BuildItem* kind = selling_kind(scene, *stall);
                 if (kind == nullptr || *added >= kind->goods.size())
                     return;
                 const rct3::park::BuildItem::Goods& g = kind->goods[*added];
@@ -840,7 +891,7 @@ namespace rct3::scene::park
             for (usize i = 0; i < scene.rides.stalls.size(); ++i)
             {
                 save::model::Stall& s = scene.rides.stalls[i];
-                if (i != index && !(stall->sync && s.base.symbol == stall->base.symbol && s.base.overlay_path == stall->base.overlay_path))
+                if (i != index && !(stall->sync && rct3::park::ride::same_kind(s, *stall)))
                     continue;
                 // shortcut: a stall left with nothing to sell closes; the game's way with it is not known,
                 // upgrade once it is.
@@ -849,6 +900,12 @@ namespace rct3::scene::park
                 // An item put on brings the extras it takes.
                 rct3::park::ride::offer_extras(s, scene.carried.items);
                 simulation::restock(scene.sim, s, scene.carried);
+                // One that had nothing to sell was never joined to the paths; it is once it has.
+                bool joined = false;
+                for (const auto [e, a] : scene.sim.registry.view<simulation::Attraction>().each())
+                    joined = joined || a.saved == s.base.id;
+                if (!joined && !s.items.empty() && !std::ranges::contains(scene.placing.unjoined_stalls, save::model::StallIndex { i }))
+                    scene.placing.unjoined_stalls.push_back(save::model::StallIndex { i });
             }
             // The menu's rows follow what changed; a price typed in stays as it is.
             if (!ui::screens::info::listed(change.id, ItemPrice))

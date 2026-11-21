@@ -46,6 +46,7 @@
 #include "ui/screens/management/pages.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/column_table.hpp"
+#include "ui/widgets/dropdown.hpp"
 #include "ui/widgets/edit_box.hpp"
 #include "ui/widgets/label.hpp"
 #include "ui/widgets/tickbox.hpp"
@@ -254,6 +255,8 @@ namespace rct3::scene
                 found["text"] = strings::to_utf8(e->text);
             if (const auto* l = dynamic_cast<const ui::widgets::Label*>(core::as_pointer(w)); l != nullptr)
                 found["text"] = strings::to_utf8(l->text);
+            if (const auto* d = dynamic_cast<const ui::widgets::Dropdown*>(core::as_pointer(w)); d != nullptr && d->selected() && *d->selected() < d->items.size())
+                found["text"] = strings::to_utf8(d->items[*d->selected()]);
             if (const auto* t = dynamic_cast<const ui::widgets::ColumnTable*>(core::as_pointer(w)); t != nullptr)
             {
                 Json rows = Json::array();
@@ -1134,7 +1137,7 @@ namespace rct3::scene
                 for (const save::model::StallExtra& extra : stall.extras)
                     extras.push_back({ { "extra", extra.kind_symbol }, { "level", extra.level } });
                 const bool shown = park.shown && park.shown->kind == rct3::park::AttractionRef::Kind::Stall && park.shown->index == i;
-                Json one { { "index", i }, { "name", stall.base.name }, { "symbol", stall.base.symbol }, { "overlay", stall.base.overlay_path }, { "site", spot_json(stall.base.spot) }, { "open", stall.base.state == save::model::AttractionState::Open }, { "items", std::move(items) }, { "extras", std::move(extras) }, { "sync", stall.sync }, { "shown", shown }, { "joined", false }, { "demolished", stall.base.demolished }, { "moving", false } };
+                Json one { { "index", i }, { "name", stall.base.name }, { "symbol", stall.base.symbol }, { "overlay", stall.base.overlay_path }, { "site", spot_json(stall.base.spot) }, { "open", stall.base.state == save::model::AttractionState::Open }, { "items", std::move(items) }, { "extras", std::move(extras) }, { "sync", stall.sync }, { "sellsAs", stall.sells_as }, { "shown", shown }, { "joined", false }, { "demolished", stall.base.demolished }, { "moving", false } };
                 for (const park::ParkScene::BonedRide& boned : park.boned_rides)
                     if (const auto owner = boned.object.value < park.objects.size() ? park.attractions.find(park.objects[boned.object.value].id) : park.attractions.end(); owner != park.attractions.end() && owner->second == rct3::park::AttractionRef { rct3::park::AttractionRef::Kind::Stall, i })
                         one["moving"] = true;

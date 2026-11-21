@@ -14,6 +14,7 @@
 #pragma once
 
 #include "core/types.hpp"
+#include "save/model/rides.hpp"
 #include "simulation/park/messages.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
@@ -70,6 +71,11 @@ namespace rct3::ui::screens::park_view
     /// The text of `message`: its string with the subject's name, or the award's, filled in. A name that is
     /// not known is left out along with the separator before it.
     [[nodiscard]] std::u16string message_text(const simulation::park::ParkMessage& message, const StringTable& strings);
+
+    /// Names each message about one of `rides` or `stalls` as the attraction's window names it, so a ride that
+    /// kept its default name reads as its kind and number. A message keeps the name it was posted with, unless
+    /// that is the attraction's name as stored.
+    void name_subjects(simulation::park::ParkMessages& messages, std::span<const save::model::Ride> rides, std::span<const save::model::Stall> stalls, const StringTable& strings);
 
     /// The drawer's messages, oldest first, each with the icon its kind has: an award's, a goal's, the inspector's,
     /// else the camera. Only an award's icon is clickable; the owner gives messages about an attraction theirs.

@@ -1952,11 +1952,12 @@ namespace rct3::scene::park
                     // Stalls and cash machines break with time and have no maintenance page: their messages open
                     // the window, and the window shows the state.
                     const bool stall = upkeep.break_in.has_value();
+                    // Named once shown, as the window names them.
                     const auto tell = [&](std::string_view key) {
                         if (stall)
-                            simulation::park::post(scene.park.messages, { .text_key = std::string(key), .subject = attraction.saved != 0 ? std::optional(attraction.saved) : std::nullopt, .panel = ui::screens::info::message_panel(ui::screens::info::AttractionTab::View) }); // Named once shown, as the window names it
+                            simulation::park::post(scene.park.messages, { .text_key = std::string(key), .subject = attraction.saved != 0 ? std::optional(attraction.saved) : std::nullopt, .panel = ui::screens::info::message_panel(ui::screens::info::AttractionTab::View) });
                         else
-                            simulation::park::post(scene.park.messages, { .text_key = std::string(key), .subject = index < scene.rides.rides.size() ? std::optional(scene.rides.rides[index].base.id) : std::nullopt, .subject_name = attraction.name, .panel = ui::screens::info::message_panel(ui::screens::info::AttractionTab::Maintenance), .field_key = std::string(ui::screens::info::breakdown_key(static_cast<save::model::BreakdownKind>(std::to_underlying(upkeep.kind)))) });
+                            simulation::park::post(scene.park.messages, { .text_key = std::string(key), .subject = index < scene.rides.rides.size() ? std::optional(scene.rides.rides[index].base.id) : std::nullopt, .panel = ui::screens::info::message_panel(ui::screens::info::AttractionTab::Maintenance), .field_key = std::string(ui::screens::info::breakdown_key(static_cast<save::model::BreakdownKind>(std::to_underlying(upkeep.kind)))) });
                     };
                     const auto* shop = scene.sim.registry.try_get<simulation::Shop>(e);
                     const bool cash = shop != nullptr && shop->product == simulation::Product::CashMachine;
@@ -2058,12 +2059,7 @@ namespace rct3::scene::park
         {
             // shortcut: only rides and stalls can be gone to, not people or path items; add them when a message names one.
             // Saved parks keep messages without their subject's name, so it is filled in from the attraction.
-            for (simulation::park::ParkMessage& m : scene.park.messages.list)
-            {
-                const auto ref = m.subject && m.subject_name.empty() ? attraction_with(scene, *m.subject) : std::nullopt;
-                if (ref)
-                    m.subject_name = strings::to_utf8(ui::screens::info::attraction_name(ref->kind == rct3::park::AttractionRef::Kind::Stall ? scene.rides.stalls[ref->index].base : scene.rides.rides[ref->index].base, *assets.strings));
-            }
+            ui::screens::park_view::name_subjects(scene.park.messages, scene.rides.rides, scene.rides.stalls, *assets.strings);
             std::vector<ui::screens::park_view::DrawerMessage> shown = ui::screens::park_view::drawer_messages(scene.park.messages, *assets.strings, messages->style());
             // A message about an attraction shows the attraction's own icon, the one it has in the build lists, and
             // the camera when it has none.

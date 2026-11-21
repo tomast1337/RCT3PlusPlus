@@ -2,6 +2,7 @@
 #include "simulation/holding.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "simulation/components.hpp"
 #include "simulation/crash.hpp"
 #include "simulation/guests.hpp"
@@ -262,7 +263,7 @@ namespace rct3::simulation
             {
                 const auto* visitor = r.try_get<Visitor>(e);
                 const f32 pace = (visitor != nullptr ? kTuning.walking.speed[std::to_underlying(visitor->age)] : Stride { }.speed).value * dt;
-                pose.heading.value = std::atan2(to.x, to.z);
+                pose.heading.value = math::atan2(to.x, to.z);
                 pose.position += glm::vec3 { to.x, 0, to.z } * (std::min(pace, left) / left); // Over the ground they landed on
                 continue;
             }

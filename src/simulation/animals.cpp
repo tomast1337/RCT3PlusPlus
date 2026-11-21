@@ -2,6 +2,7 @@
 #include "simulation/animals.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "simulation/animal_care.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
@@ -31,7 +32,7 @@ namespace rct3::simulation
             const f32 step = pace.value * dt.value;
             const glm::vec2 at = left <= step ? to : from + (to - from) * (step / left);
             if (left > 0)
-                pose.heading.value = std::atan2(to.x - from.x, to.y - from.y);
+                pose.heading.value = math::atan2(to.x - from.x, to.y - from.y);
             pose.position = { at.x, ground.height ? ground.height(at) : pose.position.y, at.y };
             pose.walked.value += glm::distance(from, at);
             return left <= step;
@@ -189,7 +190,7 @@ namespace rct3::simulation
             const auto share = [](f32 v) { return units::Share { std::clamp(v, 0.0f, 1.0f) }; };
             const entt::entity e = add_animal(world, { .species = z.species, .name = name(z), .adult = z.is_adult, .male = z.is_male, .enclosure = in, .hunger = share(1 - z.food), .thirst = share(1 - z.drink), .tiredness = share(z.tiredness), .loneliness = share(1 - z.social), .health = share(z.health) }, at);
             auto& r = world.registry;
-            r.get<Pose>(e).heading.value = r.get<Pose>(e).was_heading.value = std::atan2(z.world[8], z.world[10]);
+            r.get<Pose>(e).heading.value = r.get<Pose>(e).was_heading.value = math::atan2(z.world[8], z.world[10]);
             Animal& animal = r.get<Animal>(e);
             if (!z.in_crate)
             {

@@ -3,6 +3,7 @@
 
 #include "core/types.hpp"
 #include "logging/log.hpp"
+#include "math/portable.hpp"
 #include "ovl/animated_ride.hpp"
 #include "ovl/tracked_ride.hpp"
 #include "park/ground/paths.hpp"
@@ -729,7 +730,7 @@ namespace rct3::simulation
                     // Facing along the extra's length, as those on a saved park's loungers lie.
                     const auto [dc, dr] = extra.side.right().step();
                     const PoolUse use = extra.fit.lounger ? PoolUse::Lounge : extra.fit.shower ? PoolUse::Shower : PoolUse::Stand;
-                    complexes[complex_of.at(&*square)].extras.push_back({ .at = middle(extra.col, extra.row, static_cast<f32>(square->surface)) + glm::vec3 { 0, kTuning.pools.deck.value, 0 }, .heading = { std::atan2(static_cast<f32>(dc), static_cast<f32>(dr)) }, .use = use, .places = use == PoolUse::Lounge ? kTuning.pools.lounger_places : use == PoolUse::Shower ? kTuning.pools.shower_places : u8 { 1 } });
+                    complexes[complex_of.at(&*square)].extras.push_back({ .at = middle(extra.col, extra.row, static_cast<f32>(square->surface)) + glm::vec3 { 0, kTuning.pools.deck.value, 0 }, .heading = { math::atan2(static_cast<f32>(dc), static_cast<f32>(dr)) }, .use = use, .places = use == PoolUse::Lounge ? kTuning.pools.lounger_places : use == PoolUse::Shower ? kTuning.pools.shower_places : u8 { 1 } });
                 }
                 // Small diving boards stand in the water against its wall: swimmers step on from the paving just
                 // behind it. Ladders stand at the open water's edge, a quarter tile in from the square's side, the
@@ -744,10 +745,10 @@ namespace rct3::simulation
                     if (extra.fit.ladder)
                     {
                         const glm::vec3 water = middle(extra.col, extra.row, static_cast<f32>(square->surface) + rct3::park::kPoolBrim) + back * (paths.tile_size / 4);
-                        complex.ladders.push_back({ .water = water, .deck = glm::vec3 { water.x, deck * paths.level_height, water.z } + back * kTuning.pools.ladder_reach, .heading = { std::atan2(back.x, back.z) } });
+                        complex.ladders.push_back({ .water = water, .deck = glm::vec3 { water.x, deck * paths.level_height, water.z } + back * kTuning.pools.ladder_reach, .heading = { math::atan2(back.x, back.z) } });
                     }
                     else
-                        complex.boards.push_back({ .foot = foot, .heading = { std::atan2(-back.x, -back.z) }, .levels = { foot.y + kTuning.dives.small_board }, .reach = { kTuning.dives.behind.value + kTuning.dives.small_reach } });
+                        complex.boards.push_back({ .foot = foot, .heading = { math::atan2(-back.x, -back.z) }, .levels = { foot.y + kTuning.dives.small_board }, .reach = { kTuning.dives.behind.value + kTuning.dives.small_reach } });
                 }
         // A high diving board's ladder rises at the back of its tower, which stands at the front of its square; its
         // boards, one a level, reach out over the water it faces.
@@ -756,7 +757,7 @@ namespace rct3::simulation
             {
                 const auto [dc, dr] = s.side.step();
                 const glm::vec3 ahead { static_cast<f32>(dc), 0, static_cast<f32>(dr) };
-                PoolBoard board { .foot = middle(s.col, s.row, static_cast<f32>(s.surface) + kTuning.pools.deck.value / paths.level_height) + ahead * kTuning.dives.ladder_foot + glm::vec3 { -ahead.z, 0, ahead.x } * kTuning.dives.ladder_side, .heading = { std::atan2(ahead.x, ahead.z) }, .reach = { kTuning.dives.high_reach }, .high = true };
+                PoolBoard board { .foot = middle(s.col, s.row, static_cast<f32>(s.surface) + kTuning.pools.deck.value / paths.level_height) + ahead * kTuning.dives.ladder_foot + glm::vec3 { -ahead.z, 0, ahead.x } * kTuning.dives.ladder_side, .heading = { math::atan2(ahead.x, ahead.z) }, .reach = { kTuning.dives.high_reach }, .high = true };
                 for (i32 level = 0; level < std::max(s.board / rct3::park::pools::kBoardLevel, 1); ++level)
                     board.levels.push_back(static_cast<f32>(s.surface + 2 + rct3::park::pools::kBoardLevel * level) * paths.level_height + kTuning.dives.board_top.value);
                 complexes[complex_of.at(&s)].boards.push_back(std::move(board));
@@ -1750,7 +1751,7 @@ namespace rct3::simulation
         auto& r = world.registry;
         const entt::entity e = r.create();
         const glm::vec2 x = rct3::park::object::turned_x(rct3::park::ModelTurn::from(o.rotation));
-        r.emplace<PathItem>(e, PathItem { .node = *at, .kind = kind, .object = o.id, .heading = std::atan2(x.x, x.y) });
+        r.emplace<PathItem>(e, PathItem { .node = *at, .kind = kind, .object = o.id, .heading = math::atan2(x.x, x.y) });
         if (kind == PathItemKind::Bin)
             r.emplace<Bin>(e, Bin { kNewBinPieces, 0 });
         return e;
@@ -2153,7 +2154,7 @@ namespace rct3::simulation
                     s.busy.value = std::max(s.busy.value, kTickSeconds);
                 }
                 const glm::vec3 off = r.get<Pose>(g).position - r.get<Pose>(star).position;
-                r.emplace<Watching>(g, Watching { .star = star, .angle = { std::atan2(off.x, off.z) } });
+                r.emplace<Watching>(g, Watching { .star = star, .angle = { math::atan2(off.x, off.z) } });
                 ++resumed;
             }
         }

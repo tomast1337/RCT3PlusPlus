@@ -2,6 +2,7 @@
 #include "simulation/park/rating.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "simulation/awards.hpp"
 #include "simulation/park/state.hpp"
 #include "simulation/tuning.hpp"
@@ -52,11 +53,11 @@ namespace rct3::simulation::park
         }
         const auto count = static_cast<f32>(input.rides.size());
         if (tested > 0)
-            p.rides = whole(kTuning.rating.rides_share.value * appeal_sum / static_cast<f32>(tested) * (1.0f - std::exp(-count / kTuning.rating.rides_for_variety)));
+            p.rides = whole(kTuning.rating.rides_share.value * appeal_sum / static_cast<f32>(tested) * (1.0f - math::exp(-count / kTuning.rating.rides_for_variety)));
         if (!input.rides.empty())
             p.reliability = whole(kTuning.rating.reliability_share.value * up_sum / count);
 
-        p.guests = whole(kTuning.rating.guests_share.value * (1.0f - std::exp(-static_cast<f32>(std::max(input.guests, 0)) / kTuning.rating.guests_for_busy)));
+        p.guests = whole(kTuning.rating.guests_share.value * (1.0f - math::exp(-static_cast<f32>(std::max(input.guests, 0)) / kTuning.rating.guests_for_busy)));
         const auto& t = kTuning.rating;
         p.litter = -std::min(t.most_litter, t.per_litter * std::max(input.old_litter, 0));
         p.lost_guests = -std::min(t.most_lost_guests, t.per_lost_guest * std::max(input.lost_guests, 0));

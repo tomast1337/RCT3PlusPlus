@@ -2,6 +2,7 @@
 #include "simulation/crowds.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/parties.hpp"
@@ -128,7 +129,7 @@ namespace rct3::simulation
             const auto* member = r.try_get<Member>(guest);
             const std::vector<entt::entity> who = member != nullptr && !autograph ? r.get<Party>(member->party).members : std::vector { guest };
             const glm::vec2 off = flat(r.get<Pose>(guest).position) - flat(r.get<Pose>(star).position);
-            const f32 angle = std::atan2(off.x, off.y);
+            const f32 angle = math::atan2(off.x, off.y);
             for (usize k = 0; k < who.size(); ++k)
                 if (r.all_of<Stride, Pose, Mood>(who[k]) && !r.any_of<Gesture, Linger, Watching>(who[k]))
                     r.emplace<Watching>(who[k], Watching { .star = star, .angle = { angle + kTuning.shows.crowd_spread.value * (static_cast<f32>(k) - static_cast<f32>(who.size() - 1) / 2) }, .autograph = autograph });
@@ -299,7 +300,7 @@ namespace rct3::simulation
             }
             const glm::vec2 star = flat(r.get<Pose>(watching.star).position);
             const f32 ring = watching.autograph ? kTuning.fans.ring.value : kTuning.shows.ring.value;
-            const glm::vec2 want = star + ring * glm::vec2 { std::sin(watching.angle.value), std::cos(watching.angle.value) };
+            const glm::vec2 want = star + ring * glm::vec2 { math::sin(watching.angle.value), math::cos(watching.angle.value) };
             // The spot kept on the path: on whichever of their own tiles or the star's comes nearest to it.
             glm::vec2 spot = want;
             f32 best = std::numeric_limits<f32>::infinity();
@@ -327,7 +328,7 @@ namespace rct3::simulation
             place(paths, stride, pose);
             const glm::vec2 look = star - flat(pose.position);
             if (glm::dot(look, look) > 0.0001f)
-                pose.heading.value = std::atan2(look.x, look.y);
+                pose.heading.value = math::atan2(look.x, look.y);
         }
     }
 

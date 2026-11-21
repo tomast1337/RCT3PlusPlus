@@ -2,6 +2,7 @@
 #include "simulation/boat.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "park/water/fill.hpp"
 
 #include <algorithm>
@@ -36,12 +37,12 @@ namespace rct3::simulation
 
         f32 angle_between(glm::vec2 from, glm::vec2 to)
         {
-            return std::atan2(from.x * to.y - from.y * to.x, glm::dot(from, to));
+            return math::atan2(from.x * to.y - from.y * to.x, glm::dot(from, to));
         }
 
         glm::vec2 turned(glm::vec2 v, f32 angle)
         {
-            const f32 c = std::cos(angle), s = std::sin(angle);
+            const f32 c = math::cos(angle), s = math::sin(angle);
             return { v.x * c - v.y * s, v.x * s + v.y * c };
         }
 

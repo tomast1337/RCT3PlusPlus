@@ -2,6 +2,7 @@
 #include "simulation/fireworks.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/ride_walks.hpp"
@@ -63,7 +64,7 @@ namespace rct3::simulation
                 r.emplace<FireworkWatcher>(g, *watcher);
                 // Turned at once: a guest standing still is drawn between two equal headings.
                 if (glm::length(to) > 0)
-                    pose.heading = pose.was_heading = units::Radians { std::atan2(to.x, to.y) };
+                    pose.heading = pose.was_heading = units::Radians { math::atan2(to.x, to.y) };
             }
         }
 

@@ -2,6 +2,7 @@
 #include "simulation/parties.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "simulation/components.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/sim_world.hpp"
@@ -73,7 +74,7 @@ namespace rct3::simulation
             wild += ride.intensity.value * 2 - 1;
             ++rides;
         }
-        const f64 tilt = std::pow(1 + kTuning.parties.pull, rides > 0 ? wild / static_cast<f32>(rides) : 0.0f);
+        const f64 tilt = math::pow(1 + kTuning.parties.pull, f64 { rides > 0 ? wild / static_cast<f32>(rides) : 0.0f });
         // Marketing campaigns draw more parties of every kind alike (step_gates): none aims at families or teens.
         for (usize k = 0; k < kPartyKinds; ++k)
         {

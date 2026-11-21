@@ -2,6 +2,7 @@
 #include "simulation/swinging_part.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -27,8 +28,8 @@ namespace rct3::simulation
 
         // Moved on as it was turning, its swing dying down and drawn back to rest, and held within its furthest.
         angle = std::remainder(angle + rate * dt, 2 * std::numbers::pi_v<f32>);
-        rate *= std::exp(-part.damping.value * dt);
-        angle *= std::exp(-part.centring.value * dt);
+        rate *= math::exp(-part.damping.value * dt);
+        angle *= math::exp(-part.centring.value * dt);
         if (part.furthest && std::abs(angle) >= part.furthest->value)
         {
             angle = std::copysign(part.furthest->value, angle);
@@ -39,7 +40,7 @@ namespace rct3::simulation
         // Then turned by what it feels at the end of its arm: gravity, less the share of the car's acceleration it
         // feels, along the way it swings, and its spring; slowed while it turns by its bearing's friction under its
         // weight, which stops it dead rather than turning it back.
-        const glm::vec3 hang = glm::mat3(glm::rotate(glm::mat4(1.0f), angle, line)) * -rest;
+        const glm::vec3 hang = glm::mat3(math::rotation(angle, line)) * -rest;
         const glm::vec3 felt = gravity - part.pull.value * acceleration;
         const f32 held = part.friction * std::max(glm::dot(gravity, hang), 0.0f) * part.arm.value * dt;
         const f32 was = rate;

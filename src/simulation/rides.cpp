@@ -2,6 +2,7 @@
 #include "simulation/rides.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "profiling/profiler.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/coaster.hpp"
@@ -322,7 +323,7 @@ namespace rct3::simulation
                             const glm::vec2 way = glm::normalize(glm::vec2(d.x, d.z));
                             pose.position.x += -way.y * stride.side.value;
                             pose.position.z += way.x * stride.side.value;
-                            pose.heading.value = std::atan2(way.x, way.y);
+                            pose.heading.value = math::atan2(way.x, way.y);
                         }
                         pose.position.y = paths.surface(line[behind], line[ahead], { pose.position.x, pose.position.z });
                     }
@@ -456,7 +457,7 @@ namespace rct3::simulation
                         // From where their car was as the step began, as it is drawn, not still at the end for a step.
                         pose.was = track_point(*splashed, splashed->was_at);
                         pose.position = at + velocity * off_for(*splashed);
-                        pose.heading.value = std::atan2(velocity.x, velocity.z);
+                        pose.heading.value = math::atan2(velocity.x, velocity.z);
                         r.emplace<Dropped>(guest, Dropped { .ground = nearest->y, .fall = { -velocity.y }, .drift = { velocity.x, velocity.z }, .node = *node, .swimwear = true, .pool = *door, .slide = e });
                     }
                     else if (auto* swimmer = !exit_of(r, e, station) ? r.try_get<Swimmer>(guest) : nullptr; swimmer != nullptr && r.valid(swimmer->room))

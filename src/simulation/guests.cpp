@@ -2,6 +2,7 @@
 #include "simulation/guests.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "profiling/profiler.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/coaster.hpp"
@@ -328,7 +329,7 @@ namespace rct3::simulation
             const f32 n = static_cast<f32>(std::max<usize>(of, 1));
             const f32 radius = std::clamp(kTuning.walking.ring_gap.value * n / (2 * glm::pi<f32>()), kTuning.walking.huddle_radius.value, kLaneReach);
             const f32 angle = 2 * glm::pi<f32>() * static_cast<f32>(place) / n + turn.value;
-            return radius * glm::vec2(std::sin(angle), std::cos(angle));
+            return radius * glm::vec2(math::sin(angle), math::cos(angle));
         }
 
         /// The guest's place among their party's members, and how many there are.
@@ -500,7 +501,7 @@ namespace rct3::simulation
         const glm::vec2 moved { pose.position.x - pose.was.x, pose.position.z - pose.was.z };
         if (glm::dot(moved, moved) < 0.0001f)
             return;
-        const f32 turn = std::remainder(std::atan2(moved.x, moved.y) - pose.was_heading.value, 2 * glm::pi<f32>()) / 2;
+        const f32 turn = std::remainder(math::atan2(moved.x, moved.y) - pose.was_heading.value, 2 * glm::pi<f32>()) / 2;
         const f32 most = kTuning.walking.turn_rate.value * dt;
         pose.heading.value = pose.was_heading.value + std::clamp(turn, -most, most);
     }
@@ -875,7 +876,7 @@ namespace rct3::simulation
                         stride.progress.value = 1;
                         // Standing in the ring, facing its middle.
                         if (errand.kind == ErrandKind::Waiting && glm::length(stride.lane_from) > 0.01f)
-                            pose.heading.value = std::atan2(-stride.lane_from.x, -stride.lane_from.y);
+                            pose.heading.value = math::atan2(-stride.lane_from.x, -stride.lane_from.y);
                     }
                     else
                     {
@@ -1010,14 +1011,14 @@ namespace rct3::simulation
                         // In a ring round a point just ahead of the leader, facing in, the leader standing on it.
                         const Pose& leader = r.get<Pose>(party.leader);
                         const glm::vec3 middle = paths.centre(lead.to);
-                        glm::vec3 centre = leader.position + kTuning.walking.huddle_radius.value * glm::vec3(std::sin(leader.heading.value), 0.0f, std::cos(leader.heading.value));
+                        glm::vec3 centre = leader.position + kTuning.walking.huddle_radius.value * glm::vec3(math::sin(leader.heading.value), 0.0f, math::cos(leader.heading.value));
                         centre.x = std::clamp(centre.x, middle.x - kLaneReach, middle.x + kLaneReach);
                         centre.z = std::clamp(centre.z, middle.z - kLaneReach, middle.z + kLaneReach);
                         const auto place_in_ring = static_cast<f32>(std::ranges::find(party.members, followers[i]) - party.members.begin());
                         const auto leader_place = static_cast<f32>(std::ranges::find(party.members, party.leader) - party.members.begin());
-                        const f32 angle = std::atan2(leader.position.x - centre.x, leader.position.z - centre.z) + 2 * glm::pi<f32>() * (place_in_ring - leader_place) / static_cast<f32>(party.members.size());
+                        const f32 angle = math::atan2(leader.position.x - centre.x, leader.position.z - centre.z) + 2 * glm::pi<f32>() * (place_in_ring - leader_place) / static_cast<f32>(party.members.size());
                         // Stepping across to their place in the ring rather than jumping there.
-                        const glm::vec3 spot = centre + kTuning.walking.huddle_radius.value * glm::vec3(std::sin(angle), 0.0f, std::cos(angle));
+                        const glm::vec3 spot = centre + kTuning.walking.huddle_radius.value * glm::vec3(math::sin(angle), 0.0f, math::cos(angle));
                         const glm::vec3 off = spot - pose.position;
                         const f32 reach = kTuning.walking.catch_up.value * stride.speed.value * dt;
                         pose.position = glm::length(off) <= reach ? spot : pose.position + off * (reach / glm::length(off));
@@ -1144,7 +1145,7 @@ namespace rct3::simulation
                     if (stride.from == stride.to)
                         continue;
                     const f32 facing = r.get<Pose>(me.who).heading.value;
-                    const glm::vec2 side { std::cos(facing), -std::sin(facing) };
+                    const glm::vec2 side { math::cos(facing), -math::sin(facing) };
                     const f32 room = std::min(most, kTuning.walking.swerve * (r.all_of<Mood>(me.who) ? gait_pace(stride.speed, r.get<Mood>(me.who).energy, stride.gait) : stride.speed).value * dt);
                     steps[i] = side * std::clamp(glm::dot(away / glm::length(away), side) * std::min(length, most), -room, room);
                 }
@@ -1382,7 +1383,7 @@ namespace rct3::simulation
                     stride.lane_from = stride.lane_to = counter_lane(*shop, m);
                     auto& pose = r.get<Pose>(m);
                     if (glm::length(shop->counter) > 0)
-                        pose.heading.value = std::atan2(shop->counter.x, shop->counter.y);
+                        pose.heading.value = math::atan2(shop->counter.x, shop->counter.y);
                     place(paths, stride, pose);
                 };
                 // An inspector only stands at the counter a while; they judged its prices on the way.

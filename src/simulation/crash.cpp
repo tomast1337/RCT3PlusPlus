@@ -2,6 +2,7 @@
 #include "simulation/crash.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "units/units.hpp"
 
 #include <algorithm>
@@ -42,7 +43,7 @@ namespace rct3::simulation
             w.velocity.y -= kGravity.value * dt;
             w.at += w.velocity * dt;
             if (const f32 turn = glm::length(w.spin); turn > 0)
-                w.turned = glm::normalize(glm::angleAxis(turn * dt, w.spin / turn) * w.turned);
+                w.turned = glm::normalize(math::angle_axis(turn * dt, w.spin / turn) * w.turned);
             w.flying.value += dt;
             const f32 ground = around.ground ? around.ground({ w.at.x, w.at.z }) : 0.0f;
             bool blown = w.flying >= kFlightMost || (around.struck && around.struck(w.at));

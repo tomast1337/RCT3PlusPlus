@@ -2,6 +2,7 @@
 #include "simulation/wild_birds.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/systems.hpp"
 
@@ -54,17 +55,17 @@ namespace rct3::simulation
 
         glm::vec2 forward_of(f32 heading)
         {
-            return { std::sin(heading), std::cos(heading) };
+            return { math::sin(heading), math::cos(heading) };
         }
 
         glm::vec2 right_of(f32 heading)
         {
-            return { std::cos(heading), -std::sin(heading) };
+            return { math::cos(heading), -math::sin(heading) };
         }
 
         f32 heading_towards(glm::vec2 from, glm::vec2 to, f32 otherwise)
         {
-            return glm::distance(from, to) > 0.01f ? std::atan2(to.x - from.x, to.y - from.y) : otherwise;
+            return glm::distance(from, to) > 0.01f ? math::atan2(to.x - from.x, to.y - from.y) : otherwise;
         }
 
         /// A point out of the park on the compass at `angle`, at flying height.

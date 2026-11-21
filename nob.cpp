@@ -132,7 +132,9 @@ namespace
         c.cxx = cxx ? cxx : "clang++";
         // Off: braces left out around a unit wrapper (`Money { 5 }` in a larger aggregate) and designated
         // initializers that skip members, which keep their defaults; both are how this code is written.
-        c.compile_flags = { "-std=c++26", "-Wall", "-Wextra", "-Wpedantic", "-Wno-missing-braces", "-Wno-missing-designated-field-initializers", "-Isrc", "-isystem", "third_party" };
+        // -ffp-contract=off: a*b+c stays a multiply and an add, never fused into one instruction where the target
+        // has one and not where it does not, so the simulation rounds the same on every machine. Never -ffast-math.
+        c.compile_flags = { "-std=c++26", "-Wall", "-Wextra", "-Wpedantic", "-Wno-missing-braces", "-Wno-missing-designated-field-initializers", "-ffp-contract=off", "-Isrc", "-isystem", "third_party" };
 
         if (fuzz)
         {

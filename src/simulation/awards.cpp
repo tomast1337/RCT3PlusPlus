@@ -239,8 +239,13 @@ namespace rct3::simulation
                     continue;
                 const auto size = tiles_of.find(key(o.overlay) + '|' + key(std::string_view(o.symbol).substr(0, o.symbol.find(':'))));
                 for (usize i = 0; i < attractions.size(); ++i)
-                    if (std::hypot(static_cast<f32>(o.col) - attractions[i].col, static_cast<f32>(o.row) - attractions[i].row) <= kReach)
+                {
+                    // Squared, not std::hypot, whose last bit may differ from one maths library to another.
+                    const f32 across = static_cast<f32>(o.col) - attractions[i].col;
+                    const f32 down = static_cast<f32>(o.row) - attractions[i].row;
+                    if (across * across + down * down <= kReach * kReach)
                         tiles[i].tiles[theme->second] += size != tiles_of.end() ? size->second : 1;
+                }
             }
             return tiles;
         }

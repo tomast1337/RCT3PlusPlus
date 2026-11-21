@@ -2,6 +2,7 @@
 #include "simulation/swimming.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/holding.hpp"
@@ -40,7 +41,7 @@ namespace rct3::simulation
         void dive_off(const SwimPool& pool, const PoolBoard& board, Swimmer& swimmer, Pose& pose, Mood& mood, f32 walk, f32 tile, f32 dt)
         {
             const auto& k = kTuning.dives;
-            const glm::vec3 ahead { std::sin(board.heading.value), 0, std::cos(board.heading.value) };
+            const glm::vec3 ahead { math::sin(board.heading.value), 0, math::cos(board.heading.value) };
             pose.heading = board.heading;
             swimmer.diving.value += dt;
             const auto next = [&](DiveStep step) {
@@ -159,7 +160,7 @@ namespace rct3::simulation
                     f.spin = { static_cast<f32>(random::between(dice, -tuning.spin.value, tuning.spin.value)) };
                 }
                 // Carried by the current, faster paddling along it and slower paddling against it.
-                const f32 moved = (tuning.flow.value + (f.paddling ? f.paddle.value * std::cos(f.facing.value) : 0.0f)) * dt;
+                const f32 moved = (tuning.flow.value + (f.paddling ? f.paddle.value * math::cos(f.facing.value) : 0.0f)) * dt;
                 const f32 from = f.along;
                 f.along = std::fmod(std::fmod(f.along + moved, length) + length, length);
                 f.travelled += moved;
@@ -194,7 +195,7 @@ namespace rct3::simulation
                 const glm::vec3 way = track_way(river->course, f.along);
                 const glm::vec3 across = glm::length(glm::vec2 { way.x, way.z }) > 0 ? glm::normalize(glm::vec3 { way.z, 0, -way.x }) : glm::vec3 { 1, 0, 0 };
                 pose.position = track_point(river->course, f.along) + across * (f.lane * tuning.lane.value);
-                pose.heading.value = std::atan2(way.x, way.z) + f.facing.value;
+                pose.heading.value = math::atan2(way.x, way.z) + f.facing.value;
             }
         }
 
@@ -247,7 +248,7 @@ namespace rct3::simulation
                 {
                     pose.position = at;
                     if (glm::length(glm::vec2 { way.x, way.z }) > 0)
-                        pose.heading.value = std::atan2(way.x, way.z);
+                        pose.heading.value = math::atan2(way.x, way.z);
                     continue;
                 }
                 // Off the end: on as fast as they went, down into the water of the complex under it, or the one
@@ -278,7 +279,7 @@ namespace rct3::simulation
                 step_out(r, g);
                 r.remove<Errand, Stride, Linger, Gesture, Watching, RideWalk>(g);
                 pose.position = at; // On from where they were as the step began
-                pose.heading.value = std::atan2(velocity.x, velocity.z);
+                pose.heading.value = math::atan2(velocity.x, velocity.z);
                 r.emplace<Dropped>(g, Dropped { .ground = ground, .fall = { -velocity.y }, .drift = { velocity.x, velocity.z }, .node = path_to_rejoin(world.paths, at), .swimwear = true, .pool = room, .slide = from });
             }
         }
@@ -543,7 +544,7 @@ namespace rct3::simulation
                 {
                     // Away from them all; from the very spot one stands on, back from the way they face; caught between
                     // two, to the side.
-                    const glm::vec2 back = -glm::vec2 { std::sin(pose.heading.value), std::cos(pose.heading.value) };
+                    const glm::vec2 back = -glm::vec2 { math::sin(pose.heading.value), math::cos(pose.heading.value) };
                     glm::vec2 away { 0.0f };
                     for (auto o = line.begin(); o != at; ++o)
                         if (const glm::vec3 off = pose.position - r.get<Pose>(*o).position; glm::length(off) < kTuning.pools.queue_gap.value)
@@ -561,7 +562,7 @@ namespace rct3::simulation
                 if (const glm::vec3 next = pose.position + (left <= step ? to : to * (step / left)); crowding(next) != at || std::any_of(std::next(at), line.end(), [&](entt::entity o) { return glm::distance(next, r.get<Pose>(o).position) < kTuning.pools.queue_gap.value / 2; }))
                     continue;
                 if (glm::length(glm::vec2 { to.x, to.z }) > 0)
-                    pose.heading.value = std::atan2(to.x, to.z);
+                    pose.heading.value = math::atan2(to.x, to.z);
                 pose.position += left <= step ? to : to * (step / left);
                 if (left <= step && !route->via.empty())
                     route->via.pop_back();
@@ -731,7 +732,7 @@ namespace rct3::simulation
                 const f32 left = glm::length(to);
                 const f32 pace = r.get<Stride>(g).speed.value * dt;
                 if (glm::length(glm::vec2 { to.x, to.z }) > 0)
-                    pose.heading.value = std::atan2(to.x, to.z);
+                    pose.heading.value = math::atan2(to.x, to.z);
                 pose.position += left <= pace ? to : to * (pace / left);
                 if (left <= pace)
                     route->via.pop_back();
@@ -748,7 +749,7 @@ namespace rct3::simulation
             const bool there = way <= pace;
             swimmer.stayed.value = there && route->via.empty() ? swimmer.stayed.value + dt : 0;
             if (!there)
-                pose.heading.value = std::atan2(to.x, to.y);
+                pose.heading.value = math::atan2(to.x, to.y);
             const glm::vec2 at = there ? glm::vec2 { target.x, target.z } : glm::vec2 { pose.position.x, pose.position.z } + to * (pace / way);
             const f32 half = paths.tile_size / 2;
             const auto within = [&](const glm::vec3& w) { return std::abs(at.x - w.x) <= half && std::abs(at.y - w.z) <= half; };
@@ -771,7 +772,7 @@ namespace rct3::simulation
             // At the open water's edge, not on the way to a ladder: in off it, diving where they stand on the paving,
             // or out over the wall from the water. Out of a spa pool they step.
             const auto edge = [&](PoolEdge how, f32 reach, f32 height) {
-                const glm::vec3 ahead { std::sin(pose.heading.value), 0, std::cos(pose.heading.value) };
+                const glm::vec3 ahead { math::sin(pose.heading.value), 0, math::cos(pose.heading.value) };
                 swimmer.edge = how;
                 swimmer.edge_from = pose.position;
                 swimmer.edge_to = glm::vec3 { pose.position.x, height, pose.position.z } + ahead * reach;
@@ -906,7 +907,7 @@ namespace rct3::simulation
                 if (ahead > 0 || !boards_taken.insert({ door->pool, *swimmer.board }).second)
                 {
                     const f32 back = (board.high ? kTuning.dives.ladder_queue : kTuning.pools.queue_gap.value) + static_cast<f32>(ahead) * kTuning.pools.queue_gap.value;
-                    glm::vec3 place = board.foot - glm::vec3 { std::sin(board.heading.value), 0, std::cos(board.heading.value) } * back;
+                    glm::vec3 place = board.foot - glm::vec3 { math::sin(board.heading.value), 0, math::cos(board.heading.value) } * back;
                     // A line as long as the paving behind it takes no more: the rest go off to do something else.
                     const bool room = std::ranges::any_of(pool->walks, [&](const PoolWalk& w) { return !w.water && std::abs(place.x - w.at.x) <= paths.tile_size / 2 && std::abs(place.z - w.at.z) <= paths.tile_size / 2 && std::abs(place.y - w.at.y) < paths.level_height; });
                     if (room && swimmer.waited.value == 0) // At its end, behind any joining before them this moment too
@@ -972,16 +973,16 @@ namespace rct3::simulation
                     swimmer.use = spot.use;
                     swimmer.waited = { };
                     swimmer.idle = spot.use == PoolUse::Lounge ? kTuning.pools.lounging : kTuning.pools.showering;
-                    const glm::vec3 ahead { std::sin(spot.heading.value), 0, std::cos(spot.heading.value) };
+                    const glm::vec3 ahead { math::sin(spot.heading.value), 0, math::cos(spot.heading.value) };
                     const glm::vec3 side { ahead.z, 0, -ahead.x };
                     const auto& tuning = kTuning.pools;
                     // The shower's places a third of a turn apart, the last where a saved park's showering guest stood.
                     constexpr units::Radians kLastPlace { glm::radians(30.5f) }; ///< Round from the shower's front
                     const f32 turn = kLastPlace.value + 2 * std::numbers::pi_v<f32> * static_cast<f32>(free + 1 - spot.places) / static_cast<f32>(spot.places);
-                    const glm::vec3 off = spot.use == PoolUse::Lounge ? ahead * (tuning.lounger_reach.value - static_cast<f32>(spot.places - 1 - free) * tuning.lounger_gap.value) + side * tuning.lounger_side : (side * std::cos(turn) + ahead * std::sin(turn)) * tuning.shower_reach.value;
+                    const glm::vec3 off = spot.use == PoolUse::Lounge ? ahead * (tuning.lounger_reach.value - static_cast<f32>(spot.places - 1 - free) * tuning.lounger_gap.value) + side * tuning.lounger_side : (side * math::cos(turn) + ahead * math::sin(turn)) * tuning.shower_reach.value;
                     swimmer.goal = spot.at + off;
                     pose.position = swimmer.goal;
-                    pose.heading = spot.use == PoolUse::Lounge ? spot.heading : units::Radians { std::atan2(-off.x, -off.z) };
+                    pose.heading = spot.use == PoolUse::Lounge ? spot.heading : units::Radians { math::atan2(-off.x, -off.z) };
                     continue;
                 }
                 // shortcut: those waiting stand in the middle of its square together; upgrade to a line beside it.

@@ -2,6 +2,7 @@
 #include "simulation/spinning_part.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -37,7 +38,7 @@ namespace rct3::simulation
 
         if (car.ground == SpinGround::Station && part.rest == SpinRest::Settles)
         {
-            rate *= std::exp(-kSettleFaster * part.damping.value * dt);
+            rate *= math::exp(-kSettleFaster * part.damping.value * dt);
             if (std::abs(rate) < kStill.value)
             {
                 rate = 0;
@@ -67,7 +68,7 @@ namespace rct3::simulation
         }
         if (car.ground == SpinGround::Chain && part.held_on_chains)
         {
-            rate *= std::exp(-kHeldFaster * part.damping.value * dt);
+            rate *= math::exp(-kHeldFaster * part.damping.value * dt);
             if (std::abs(rate) < kStill.value)
                 rate = 0;
             return;
@@ -76,10 +77,10 @@ namespace rct3::simulation
         // Free: its spin dies down, and its weight is turned by what it feels at the end of its lever, across the
         // car's up: gravity, less the share of the car's acceleration it feels. Seen in the car's own space, where
         // up is +Y.
-        rate *= std::exp(-part.damping.value * dt);
+        rate *= math::exp(-part.damping.value * dt);
         const glm::mat3 to_car = glm::transpose(car.axes);
         const glm::vec3 felt = to_car * (glm::vec3(0, -units::kGravity.value * part.gravity.value, 0) - part.pull.value * car.acceleration);
-        const glm::vec3 lever = glm::mat3(glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0, 1, 0))) * glm::vec3(part.lever.x, 0, part.lever.z);
+        const glm::vec3 lever = glm::mat3(math::rotation(angle, glm::vec3(0, 1, 0))) * glm::vec3(part.lever.x, 0, part.lever.z);
         const f32 turned = lever.z * felt.x - lever.x * felt.z;
         // Its bearing's friction under its weight holds it back, stopping it dead rather than turning it back; and its
         // spring draws it back to face ahead.

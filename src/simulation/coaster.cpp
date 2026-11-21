@@ -2,6 +2,7 @@
 #include "simulation/coaster.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "simulation/tuning.hpp"
 #include "units/units.hpp"
 
@@ -256,9 +257,9 @@ namespace rct3::simulation
             seconds -= flown;
         }
         f.afloat->value += seconds;
-        const f32 drift = (1 - std::exp(-kWaterDrag.value * seconds)) / kWaterDrag.value;
+        const f32 drift = (1 - math::exp(-kWaterDrag.value * seconds)) / kWaterDrag.value;
         f.at += f.velocity * drift;
-        f.velocity *= std::exp(-kWaterDrag.value * seconds);
+        f.velocity *= math::exp(-kWaterDrag.value * seconds);
         stopped();
         f.at.y = f.water - kSink.value * std::max(f.off.value - (kGone.value - 1), 0.0f);
         return f.off.value < kGone.value;
@@ -274,8 +275,8 @@ namespace rct3::simulation
         const glm::vec3 nose = glm::length(fall) > 1e-3f ? glm::normalize(fall) : level;
         const glm::vec3 to = f.afloat ? glm::normalize(glm::mix(nose, level, std::min(f.afloat->value / kSettle.value, 1.0f)) + level * 1e-3f) : nose;
         const glm::vec3 axis = glm::cross(f.way, to);
-        const f32 turn = std::atan2(glm::length(axis), glm::dot(f.way, to));
-        const glm::mat4 turned = glm::length(axis) > 1e-6f ? glm::rotate(glm::mat4(1.0f), turn, glm::normalize(axis)) : glm::mat4(1.0f);
+        const f32 turn = math::atan2(glm::length(axis), glm::dot(f.way, to));
+        const glm::mat4 turned = glm::length(axis) > 1e-6f ? math::rotation(turn, glm::normalize(axis)) : glm::mat4(1.0f);
         return glm::translate(glm::mat4(1.0f), f.at) * turned * glm::translate(glm::mat4(1.0f), -f.from) * place;
     }
 
@@ -371,7 +372,7 @@ namespace rct3::simulation
                     return std::copysign(full * std::min({ 1.0f, (k + 1) / kBuildUp, (static_cast<f32>(c.passes) - k) / kBuildUp }), way);
                 case Shuttle::Tower:
                 case Shuttle::Drop:
-                    return full * std::pow(kBounce, k);
+                    return full * math::pow(kBounce, k);
                 case Shuttle::None:
                     break;
             }
@@ -801,13 +802,13 @@ namespace rct3::simulation
                 const bool steady = i < c.steady.size() && c.steady[i];
                 const glm::vec3 weight = glm::vec3(0, -kGravity.value, 0) - (steady ? glm::vec3(0) : t.pull * bend * c.speed * c.speed);
                 const f32 lean = c.lean.value;
-                const glm::vec3 hang = right * std::sin(lean) - up * std::cos(lean);
-                const glm::vec3 arc = right * std::cos(lean) + up * std::sin(lean);
+                const glm::vec3 hang = right * math::sin(lean) - up * math::cos(lean);
+                const glm::vec3 arc = right * math::cos(lean) + up * math::sin(lean);
                 // Turned by the pull along its arc times its arm, as a weight its own size.
                 f32 rate = c.lean_rate.value + glm::dot(weight, arc) * t.length.value * dt;
                 const f32 held = t.friction * std::max(glm::dot(weight, hang), 0.0f) * t.length.value * dt;
-                rate = std::abs(rate) <= held ? 0.0f : (rate - std::copysign(held, rate)) * std::exp(-t.damping.value * dt);
-                c.lean.value = (lean + rate * dt) * std::exp(-t.centring.value * dt);
+                rate = std::abs(rate) <= held ? 0.0f : (rate - std::copysign(held, rate)) * math::exp(-t.damping.value * dt);
+                c.lean.value = (lean + rate * dt) * math::exp(-t.centring.value * dt);
                 c.lean_rate.value = rate;
                 if (std::abs(c.lean.value) > kRim && !(i < c.covered.size() && c.covered[i]))
                 {

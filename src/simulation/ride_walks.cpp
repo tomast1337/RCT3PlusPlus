@@ -2,6 +2,7 @@
 #include "simulation/ride_walks.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "simulation/components.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/sim_world.hpp"
@@ -38,7 +39,7 @@ namespace rct3::simulation
                 const glm::vec3 to = walk.points[walk.next] - pose.position;
                 const f32 left = glm::length(to);
                 if (glm::length(glm::vec2(to.x, to.z)) > 0)
-                    pose.heading.value = std::atan2(to.x, to.z);
+                    pose.heading.value = math::atan2(to.x, to.z);
                 if (left > stride)
                 {
                     pose.position += to * (stride / left);

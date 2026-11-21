@@ -2,6 +2,7 @@
 #include "simulation/random_events.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -35,7 +36,7 @@ namespace rct3::simulation
     {
         if (!(rate > 0) || !(hours > 0))
             return 0;
-        return 1 - std::exp(-rate * hours);
+        return 1 - math::exp(-rate * hours);
     }
 
     std::vector<RandomEvent> roll_events(random::RandomState& gameplay, const EventRates& rates, f64 hours)

@@ -2,6 +2,7 @@
 #include "simulation/systems.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "park/terrain_mesh.hpp"
 #include "profiling/profiler.hpp"
 #include "simulation/animals.hpp"
@@ -88,7 +89,7 @@ namespace rct3::simulation
 
     std::optional<f32> cannon_turn(f32 heading, glm::vec2 way, f32 most)
     {
-        const f32 turn = std::remainder(std::atan2(way.x, way.y) - heading, 2 * glm::pi<f32>());
+        const f32 turn = std::remainder(math::atan2(way.x, way.y) - heading, 2 * glm::pi<f32>());
         if (std::abs(turn) > most)
             return std::nullopt;
         return turn;
@@ -124,7 +125,7 @@ namespace rct3::simulation
             auto& vandalism = r.ctx().emplace<Vandalism>();
             // Guests outside the park walk to the gate, and new parties come (simulation/guests.cpp).
             step_gates(world, weather);
-            vandalism.recent *= std::exp(-dt / kTuning.vandals.fade.value);
+            vandalism.recent *= math::exp(-dt / kTuning.vandals.fade.value);
             if (vandalism.since_warning)
                 vandalism.since_warning->value += dt;
 

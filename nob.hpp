@@ -134,7 +134,7 @@ namespace nob
         PROCESS_INFORMATION info { };
         if (!CreateProcessA(nullptr, line.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &startup, &info))
         {
-            log(Level::Error, "cannot start {}: {}", cmd.args[0], std::system_category().message(static_cast<int>(GetLastError())));
+            log(Level::Error, "cannot start {}: {}", cmd.args[0], std::system_category().message(static_cast<int>(GetLastError()))); // c-api
             return std::nullopt;
         }
         CloseHandle(info.hThread);

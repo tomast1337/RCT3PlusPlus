@@ -2465,7 +2465,7 @@ namespace rct3::scene::park
             if (!entrances.empty())
             {
                 const save::model::PlacedObject& o = scene.objects[entrances[scene.entrance_centred++ % entrances.size()]];
-                const glm::vec2 middle = rct3::park::object::footprint_middle(o, scene.models.at(rct3::park::object::model_ref(o)).squares);
+                const glm::vec2 middle = rct3::park::object::footprint_middle(o, scene.models.at(rct3::park::object::model_key(o)).squares);
                 scene.camera.target = { scene.grid.origin_x + middle.x * scene.grid.tile_size_x, scene.camera.target.y, scene.grid.origin_z + middle.y * scene.grid.tile_size_z };
                 scene.camera = rct3::park::on_ground(scene.camera, scene.grid);
             }

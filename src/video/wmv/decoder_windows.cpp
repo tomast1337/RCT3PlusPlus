@@ -3,13 +3,16 @@
 // The WMV3 decoder as Windows' own: the Media Foundation Windows Media Video decoder, used as a transform (MFT).
 // It gives YV12 or NV12 pictures, which are copied out as separate Y, U and V planes. It may hold the last
 // picture back until it is given an empty frame.
+#include "core/types.hpp"
 #include "video/wmv/decoder.hpp"
 
 #include <algorithm>
 #include <cstring>
 #include <vector>
 
-// Lean, so dlgs.h stays out: it defines the macro rct3, which is our namespace.
+// Lean, so dlgs.h stays out: it defines the macro rct3, which is our namespace. windows.h comes first: the
+// headers after it need its types.
+// clang-format off
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
@@ -21,6 +24,7 @@
 #include <mftransform.h>
 #include <wmcodecdsp.h>
 #include <wrl/client.h>
+// clang-format on
 
 namespace rct3::video::wmv
 {
@@ -31,12 +35,12 @@ namespace rct3::video::wmv
     {
         ComPtr<IMFTransform> mft;
         bool started = false;
-        std::uint32_t width = 0;
-        std::uint32_t height = 0;
+        u32 width = 0;
+        u32 height = 0;
         bool nv12 = false;
-        std::size_t stride = 0; ///< Bytes a row of the decoder's Y plane
-        std::array<std::vector<std::uint8_t>, 3> planes;
-        std::array<std::size_t, 3> strides { };
+        usize stride = 0; ///< Bytes a row of the decoder's Y plane
+        std::array<std::vector<u8>, 3> planes;
+        std::array<usize, 3> strides { };
 
         State()
         {
@@ -136,12 +140,12 @@ namespace rct3::video::wmv
             DWORD length = 0;
             if (FAILED(buffer->Lock(&data, nullptr, &length)))
                 return false;
-            const std::size_t cw = (width + 1) / 2;
-            const std::size_t ch = (height + 1) / 2;
-            const std::size_t rows = std::max<std::size_t>(height, length * 2 / (3 * stride));
-            const std::size_t luma = stride * rows;
-            const std::size_t chroma_stride = nv12 ? stride : stride / 2;
-            const std::size_t chroma_rows = rows / 2;
+            const usize cw = (width + 1) / 2;
+            const usize ch = (height + 1) / 2;
+            const usize rows = std::max<usize>(height, length * 2 / (3 * stride));
+            const usize luma = stride * rows;
+            const usize chroma_stride = nv12 ? stride : stride / 2;
+            const usize chroma_rows = rows / 2;
             bool ok = stride >= width && length >= luma + chroma_stride * chroma_rows && chroma_rows >= ch;
             if (ok)
             {
@@ -152,9 +156,9 @@ namespace rct3::video::wmv
                 if (nv12)
                 {
                     const BYTE* uv = data + luma;
-                    for (std::size_t y = 0; y < ch; ++y)
+                    for (usize y = 0; y < ch; ++y)
                     {
-                        for (std::size_t x = 0; x < cw; ++x)
+                        for (usize x = 0; x < cw; ++x)
                         {
                             planes[1][y * cw + x] = uv[y * stride + 2 * x];
                             planes[2][y * cw + x] = uv[y * stride + 2 * x + 1];
@@ -166,7 +170,7 @@ namespace rct3::video::wmv
                     // YV12: V first, then U
                     const BYTE* v = data + luma;
                     const BYTE* u = v + chroma_stride * chroma_rows;
-                    for (std::size_t y = 0; y < ch; ++y)
+                    for (usize y = 0; y < ch; ++y)
                     {
                         std::memcpy(&planes[2][y * cw], v + y * chroma_stride, cw);
                         std::memcpy(&planes[1][y * cw], u + y * chroma_stride, cw);
@@ -248,10 +252,10 @@ namespace rct3::video::wmv
             return std::nullopt;
 
         Picture out { .width = s.width, .height = s.height };
-        for (std::size_t i = 0; i < 3; ++i)
+        for (usize i = 0; i < 3; ++i)
         {
             out.strides[i] = s.strides[i];
-            out.planes[i] = std::span<const std::uint8_t>(s.planes[i]);
+            out.planes[i] = std::span<const u8>(s.planes[i]);
         }
         return out;
     }

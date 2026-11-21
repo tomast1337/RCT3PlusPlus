@@ -37,6 +37,7 @@
 #include <format>
 #include <fstream>
 #include <map>
+#include <ostream>
 #include <print>
 #include <set>
 #include <string>

@@ -5,6 +5,7 @@
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>

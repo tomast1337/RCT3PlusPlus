@@ -15,6 +15,9 @@
 #include <memory>
 #include <unordered_map>
 
+// <windows.h>, which the OpenGL header brings in on Windows, renames DrawState to a function of its own.
+#undef DrawState
+
 namespace rct3::render::software
 {
 

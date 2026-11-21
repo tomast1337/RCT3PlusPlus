@@ -7,6 +7,7 @@
 // would draw it. Depth is tested before the fragment stage and written after it, which a discard skips.
 #pragma once
 
+#include "core/function_ref.hpp"
 #include "core/types.hpp"
 #include "render/device.hpp"
 #include "render/shader_inputs.hpp"
@@ -16,7 +17,6 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
-#include <functional>
 #include <mutex>
 #include <optional>
 #include <span>

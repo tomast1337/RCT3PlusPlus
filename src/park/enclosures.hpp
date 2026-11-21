@@ -11,6 +11,7 @@
 // an end piece for three and a closed pen for all four; a post fills each inside corner of the area.
 #pragma once
 
+#include "core/function_ref.hpp"
 #include "core/types.hpp"
 #include "park/boundary_fence.hpp"
 #include "save/model/world.hpp"
@@ -18,7 +19,6 @@
 
 #include <array>
 #include <cstdint>
-#include <functional>
 #include <optional>
 #include <string>
 #include <string_view>

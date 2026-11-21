@@ -11,8 +11,12 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstring> // sigabbrev_np
-#include <stacktrace>
 #include <string>
+
+// libc++ (the Windows build) has no <stacktrace> yet.
+#if __has_include(<stacktrace>)
+    #include <stacktrace>
+#endif
 
 namespace rct3::logging
 {
@@ -48,7 +52,12 @@ namespace rct3::logging
             // shortcut: formats and allocates inside the handler, which is not async-signal-safe; it may hang
             // instead of reporting when the heap itself is broken. Upgrade to a pre-allocated writer if it does.
             std::signal(signal, SIG_DFL);
+#if __has_include(<stacktrace>)
             const std::string stack = std::to_string(std::stacktrace::current(1));
+#else
+            // shortcut: no stack where the standard library has no std::stacktrace; upgrade when libc++ gets it.
+            const std::string stack = "(not available in this build)";
+#endif
             const std::string_view version = core::version();
             std::fprintf(stderr, "\nrct3++ %.*s: fatal signal %d (%s); stack:\n%s\n", static_cast<int>(version.size()), version.data(), signal, signal_name(signal), stack.c_str()); // c-api
             if (!g_file.empty())

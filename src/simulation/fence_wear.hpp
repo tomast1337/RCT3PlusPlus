@@ -8,13 +8,13 @@
 // while it stays broken, and told once it is mended.
 #pragma once
 
+#include "core/function_ref.hpp"
 #include "core/types.hpp"
 #include "random/generator.hpp"
 #include "save/model/world.hpp"
 #include "simulation/park/messages.hpp"
 #include "units/units.hpp"
 
-#include <functional>
 #include <optional>
 #include <string_view>
 #include <vector>

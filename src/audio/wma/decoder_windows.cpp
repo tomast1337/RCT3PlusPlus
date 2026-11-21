@@ -3,13 +3,16 @@
 // The WMA decoder as Windows' own: the Media Foundation Windows Media Audio decoder, used as a transform (MFT).
 // It takes packets of block_align bytes and gives 16-bit or float samples, which it turns into float planes.
 #include "audio/wma/decoder.hpp"
+#include "core/types.hpp"
 
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <vector>
 
-// Lean, so dlgs.h stays out: it defines the macro rct3, which is our namespace.
+// Lean, so dlgs.h stays out: it defines the macro rct3, which is our namespace. windows.h comes first: the
+// headers after it need its types.
+// clang-format off
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
@@ -21,6 +24,7 @@
 #include <mftransform.h>
 #include <wmcodecdsp.h>
 #include <wrl/client.h>
+// clang-format on
 
 namespace rct3::audio::wma
 {
@@ -32,7 +36,7 @@ namespace rct3::audio::wma
 
         // The 0x160 and 0x161 wave format tags, as the audio subtypes MFAudioFormat_MSAudio1 and
         // MFAudioFormat_WMAudioV8 name them.
-        GUID subtype_of(int version)
+        GUID subtype_of(i32 version)
         {
             GUID g = MFAudioFormat_Base;
             g.Data1 = version == 1 ? 0x160 : 0x161;
@@ -45,10 +49,10 @@ namespace rct3::audio::wma
     {
         ComPtr<IMFTransform> mft;
         bool started = false;
-        std::uint16_t channels = 0;
+        u16 channels = 0;
         bool is_float = false;
-        std::vector<std::vector<float>> planes;
-        std::vector<const float*> plane_pointers;
+        std::vector<std::vector<f32>> planes;
+        std::vector<const f32*> plane_pointers;
 
         State()
         {
@@ -149,21 +153,21 @@ namespace rct3::audio::wma
             DWORD length = 0;
             if (FAILED(buffer->Lock(&data, nullptr, &length)))
                 return;
-            const std::size_t bytes = is_float ? 4 : 2;
-            const std::size_t frames = length / (bytes * channels);
-            for (std::size_t i = 0; i < frames; ++i)
+            const usize bytes = is_float ? 4 : 2;
+            const usize frames = length / (bytes * channels);
+            for (usize i = 0; i < frames; ++i)
             {
-                for (std::size_t ch = 0; ch < channels; ++ch)
+                for (usize ch = 0; ch < channels; ++ch)
                 {
                     const BYTE* at = data + (i * channels + ch) * bytes;
-                    float v;
+                    f32 v = 0.0f;
                     if (is_float)
                         std::memcpy(&v, at, 4);
                     else
                     {
-                        std::int16_t s;
+                        i16 s = 0;
                         std::memcpy(&s, at, 2);
-                        v = static_cast<float>(s) / 32768.0f;
+                        v = static_cast<f32>(s) / 32768.0f;
                     }
                     planes[ch].push_back(v);
                 }
@@ -218,7 +222,7 @@ namespace rct3::audio::wma
         return Decoder(std::move(s));
     }
 
-    int Decoder::decode(std::span<const std::byte> packet, const float* const*& planes)
+    i32 Decoder::decode(std::span<const std::byte> packet, const f32* const*& planes)
     {
         State& s = *state_;
         for (auto& p : s.planes)
@@ -251,14 +255,14 @@ namespace rct3::audio::wma
         }
         s.collect();
 
-        const int n = static_cast<int>(s.planes[0].size());
-        for (std::size_t ch = 0; ch < s.planes.size(); ++ch)
+        const i32 n = static_cast<i32>(s.planes[0].size());
+        for (usize ch = 0; ch < s.planes.size(); ++ch)
             s.plane_pointers[ch] = s.planes[ch].data();
         planes = s.plane_pointers.data();
         return n;
     }
 
-    int Decoder::delay() const
+    i32 Decoder::delay() const
     {
         return 0;
     }

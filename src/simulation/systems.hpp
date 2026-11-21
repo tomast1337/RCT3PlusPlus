@@ -12,8 +12,9 @@
 //
 // Followers in a party do not choose anything: after phase 2 they take their leader's step, each in a lane
 // of their own. Phases 1 and 2 and the followers' step only write each guest's own components and are shared
-// out over the workers; phases 3 to 5 change attractions and parties and run on one thread in ascending
-// entity order. Every choice draws on the guest's own
+// out over the workers; what one guest does to another there (a party's map holder looking at it) is noted
+// by the guest and done after, on one thread in ascending entity order. Phases 3 to 5 change attractions and
+// parties and run on one thread in ascending entity order. Every choice draws on the guest's own
 // Dice, so a world steps the same way however many workers it has.
 #pragma once
 

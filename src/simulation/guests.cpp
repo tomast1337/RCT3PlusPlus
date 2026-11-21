@@ -777,6 +777,9 @@ namespace rct3::simulation
         const auto movers_view = r.view<Errand, Stride, Pose, Dice, const Needs, const Mood, const Wallet>();
         const auto movers = sorted(movers_view);
         std::vector<entt::entity> arrived(movers.size(), entt::null);
+        // Of those off to a ride with a map: the guest, whose party's map holder then looks at it.
+        std::vector<entt::entity>& map_readers = world.buffers.map_readers;
+        map_readers.assign(movers.size(), entt::null);
         // Of those come to a station to ride on across the park: the rest of their way, from its exit.
         std::vector<std::vector<NodeId>> crossing(movers.size());
         if (!paths.nodes().empty())
@@ -902,14 +905,10 @@ namespace rct3::simulation
                             const bool with_map = party_map(r, movers[i]);
                             if (!goal)
                                 goal = choose(paths, at, on_offer, want, feel, wallet, dice, weather.rain && !r.all_of<Umbrella>(movers[i]), night && age_of(r, movers[i]) == AgeGroup::Teen ? kTuning.night.daring.value : 0, taste_of(r, movers[i]), weather.temperature.value, with_map, r.all_of<Ridden>(movers[i]) ? r.get<Ridden>(movers[i]).last : entt::null, r.all_of<Favourite>(movers[i]) ? r.get<Favourite>(movers[i]).ride : entt::null, world.cheats);
-                            // Off to a ride: whoever holds the party's map looks at it.
+                            // Off to a ride: whoever holds the party's map looks at it, once every guest has
+                            // stepped, as that may be another member.
                             if (goal && with_map && r.all_of<CycleRide>(goal->first))
-                            {
-                                const auto* member = r.try_get<Member>(movers[i]);
-                                for (const entt::entity m : member != nullptr && r.valid(member->party) ? std::span<const entt::entity>(r.get<Party>(member->party).members) : std::span<const entt::entity>(&movers[i], 1))
-                                    if (r.all_of<ParkMap>(m))
-                                        r.emplace_or_replace<Gesture>(m, Gesture { .kind = GestureKind::LookMap, .left = kTuning.gestures.shown });
-                            }
+                                map_readers[i] = movers[i];
                             // Nowhere to go: out of the rain under the nearest roof (in a storm even with an
                             // umbrella), or out of the sun into the nearest shade.
                             const bool rained_on = weather.rain && (!r.all_of<Umbrella>(movers[i]) || weather.storm);
@@ -978,6 +977,16 @@ namespace rct3::simulation
                     place(paths, stride, pose);
                 }
             });
+            // In entity order, on one thread: these change guests other than the one stepped.
+            for (const entt::entity reader : map_readers)
+            {
+                if (reader == entt::null)
+                    continue;
+                const auto* member = r.try_get<Member>(reader);
+                for (const entt::entity m : member != nullptr && r.valid(member->party) ? std::span<const entt::entity>(r.get<Party>(member->party).members) : std::span<const entt::entity>(&reader, 1))
+                    if (r.all_of<ParkMap>(m))
+                        r.emplace_or_replace<Gesture>(m, Gesture { .kind = GestureKind::LookMap, .left = kTuning.gestures.shown });
+            }
         }
 
         phase.emplace("Followers");

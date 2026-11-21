@@ -5,7 +5,8 @@
 //   sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--hash TICKS] [--awards] [--car-places] [--left-out]
 //
 // Brings over the save's paths, stalls, rides and guests, runs N seconds of park time (default 600) and prints
-// what each shop and ride took and how the guests are doing, with how long the run took. --profile adds the
+// what each shop and ride took and how the guests are doing, with how long the run took. --threads N steps it on N
+// threads, the main one among them (1, the default, on the main thread alone). --profile adds the
 // time each phase of a step took, as the profiler's table. --hash prints a fingerprint of the world every TICKS
 // ticks (0: only at the end) and when the run ends, to compare runs that should go the same way. --awards (with --game) adds how many rides and stalls
 // carry each theme, as the theme awards count them. --car-places (with --game) stands each car the save keeps at
@@ -123,7 +124,7 @@ int main(int argc, char** argv)
     logging::install_crash_report();
     const char* path = nullptr;
     f32 seconds = 600;
-    u32 threads = 0;
+    u32 threads = 1; // Stepping the park, the main thread among them
     u64 seed = 1;
     const char* game = nullptr;
     std::string_view weather;
@@ -596,7 +597,7 @@ int main(int argc, char** argv)
         out.info("{}", line);
     }
 
-    const auto workers = threads > 0 ? std::make_unique<simulation::Workers>(threads) : nullptr;
+    const auto workers = threads > 1 ? std::make_unique<simulation::Workers>(threads - 1) : nullptr;
     const u32 steps = simulation::ticks(seconds);
     if (profile)
         profiling::register_thread("Main");

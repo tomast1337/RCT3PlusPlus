@@ -38,8 +38,9 @@ namespace rct3::simulation
             glm::vec3 at { 0.0f };
             entt::entity who = entt::null;
         };
-        std::vector<Body> bodies { };     ///< By cell, then entity
-        std::vector<glm::vec2> steps { }; ///< Each body's step aside this tick
+        std::vector<Body> bodies { };              ///< By cell, then entity
+        std::vector<glm::vec2> steps { };          ///< Each body's step aside this tick
+        std::vector<entt::entity> map_readers { }; ///< By guest walking this tick: themselves when their party looks at its map
     };
 
     struct SimWorld

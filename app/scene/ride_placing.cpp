@@ -1109,6 +1109,7 @@ namespace rct3::scene
                     // Built closed: the game sets no state when a stall goes down, so it opens from its window.
                     stall.base.state = save::model::AttractionState::Closed;
                     stall.base.flags = save::model::AttractionCommon::kNeverOpened;
+                    stall.base.build_time = units::Seconds { scene.park.time };
                     stall.base.placement = object;
                     stall.base.spot = save::model::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<u8>(p.site->turn.value) };
                     // It serves the tile it faces.
@@ -1144,6 +1145,7 @@ namespace rct3::scene
                     // Built closed, as a stall is; it opens from its window.
                     facility.base.state = save::model::AttractionState::Closed;
                     facility.base.flags = save::model::AttractionCommon::kNeverOpened;
+                    facility.base.build_time = units::Seconds { scene.park.time };
                     facility.base.placement = object;
                     facility.base.spot = save::model::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<u8>(p.site->turn.value) };
                     facility.base.facing = static_cast<u8>(p.site->turn.value);
@@ -1168,6 +1170,7 @@ namespace rct3::scene
                 // Built closed, as in the game: the player tests it and opens it from its window.
                 ride.base.state = save::model::AttractionState::Closed;
                 ride.base.flags = save::model::AttractionCommon::kNeverOpened;
+                ride.base.build_time = units::Seconds { scene.park.time };
                 // A show ride knows the tricks the game's main file names for its kind (each has a picture there,
                 // "<trick>Skin"), and puts on the first two after its idle until its window changes
                 // them.

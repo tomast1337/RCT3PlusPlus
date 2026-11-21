@@ -255,6 +255,17 @@ namespace rct3::simulation
         units::Money running_cost { }; ///< Charged each week it is open; none for stalls and pools
     };
 
+    /// How fast an attraction takes money and customers, an hour, for its window: a running mean at first, then
+    /// smoothed over kTakingsSmoothing so it follows changes (park::step_charges).
+    struct TakingsRate
+    {
+        f32 income = 0;    ///< Hundredths an hour
+        f32 customers = 0; ///< An hour
+        units::Seconds measured { };
+        units::Money income_seen { }; ///< Attraction::income when last measured
+        u32 customers_seen = 0;
+    };
+
     /// A guest riding from one station of a ride to another on the way somewhere: what they were doing, and the
     /// rest of their way from the exit they get off at.
     struct Crossing

@@ -2,12 +2,15 @@
 #include "ui/screens/info/attraction.hpp"
 
 #include "core/types.hpp"
+#include "simulation/park/finance.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <doctest/doctest.h>
 #include <optional>
 #include <span>
 #include <utility>
+#include <vector>
 
 using namespace rct3;
 using namespace rct3::ui;
@@ -549,6 +552,81 @@ TEST_CASE("a running ride shows its riders an hour, the wait its queue now has a
     CHECK(value(attraction_page(AttractionTab::Customers, f, s, { }), u"Queue") == kMissingValue);
     f.flow->queued = 0;
     CHECK(value(attraction_page(AttractionTab::Customers, f, s, { }), u"Queue") == u"0:00");
+}
+
+TEST_CASE("a running attraction's finances and customers follow what it takes, its age and the guests' favourites")
+{
+    StringTable s = table();
+    s.add("AttractionNumberArea_PerHour", u"# an hour");
+    s.add("AttractionFinancesDialogLabel_Income", u"Income");
+    s.add("AttractionFinancesDialogLabel_ProjectedRunningCost", u"Upkeep");
+    s.add("AttractionFinancesDialogLabel_RunningCost", u"Stall upkeep");
+    s.add("AttractionFinancesDialogLabel_Profit", u"Gain");
+    s.add("AttractionCustomersDialogLabel_Customers", u"Riders");
+    s.add("AttractionCustomersDialogLabel_TotalCustomers", u"All riders");
+    s.add("AttractionCustomersDialogLabel_AgeYears", u"Built");
+    s.add("AttractionCustomersDialogLabel_FavouriteRide", u"Favourite of");
+    s.add("ZeroYearsAgo", u"This year");
+    s.add("OneYearAgo", u"# year ago");
+    s.add("ManyYearsAgo", u"# years ago");
+    const auto value = [](const InfoPage& page, std::u16string_view label) {
+        const auto line = std::ranges::find(page.lines, std::u16string(label), &InfoLine::label);
+        REQUIRE(line != page.lines.end());
+        return line->value;
+    };
+    const InfoUnits units;
+    const auto money = [&](i64 hundredths) { return money_text(units.currency, units::Money { hundredths }); };
+
+    save::model::Ride ride;
+    ride.kind = save::model::RideKind::Flat;
+    ride.base.id = 7;
+    ride.base.total_profit = { 10'000 };
+    ride.base.total_guests = 50;
+    ride.base.running_cost = { 100 }; // A week
+    ride.base.build_time = { 2 * save::model::GameClock::kUnitsPerYear + 10 };
+    ride.stations.emplace_back();
+    std::vector<save::model::Guest> guests(3);
+    guests[0].favourite_ride = { 7 };
+    guests[2].favourite_ride = { 7 };
+    AttractionFacts f { &ride.base, &ride, nullptr };
+    f.guests = guests;
+
+    // Not running: only what the save keeps, the costs an hour, and no age without a calendar.
+    InfoPage page = attraction_page(AttractionTab::Finances, f, s, units);
+    const auto weekly = static_cast<i64>(std::llround(units::kHour.value / simulation::park::kWeekSeconds.value));
+    CHECK(value(page, u"Income") == kMissingValue);
+    CHECK(value(page, u"Upkeep") == money(100 * weekly) + u" an hour");
+    CHECK(value(page, u"Gain") == kMissingValue);
+    CHECK(value(page, u"Profit") == money(10'000));
+    page = attraction_page(AttractionTab::Customers, f, s, units);
+    CHECK(value(page, u"Built") == kMissingValue);
+    CHECK(value(page, u"Favourite of") == u"2");
+
+    // Running: what it took since loaded adds to the totals, and the hour's rates fill the projections.
+    f.flow = RideFlow { .per_hour = 360 };
+    f.takings = Takings { .income = { 500 }, .customers = 5, .income_per_hour = { 3600 }, .customers_per_hour = 36 };
+    f.now = ride.base.build_time.value;
+    page = attraction_page(AttractionTab::Finances, f, s, units);
+    CHECK(value(page, u"Income") == money(3600) + u" an hour");
+    CHECK(value(page, u"Gain") == money(3600 - 100 * weekly) + u" an hour");
+    CHECK(value(page, u"Profit") == money(10'500));
+    page = attraction_page(AttractionTab::Customers, f, s, units);
+    CHECK(value(page, u"Riders") == u"360 an hour"); // A ride's as its goes leave
+    f.flow = RideFlow { };
+    CHECK(value(attraction_page(AttractionTab::Customers, f, s, units), u"Riders") == u"36 an hour"); // Not yet measured so
+    CHECK(value(page, u"All riders") == u"55");
+    CHECK(value(page, u"Built") == u"This year");
+    f.now = *f.now + save::model::GameClock::kUnitsPerYear;
+    CHECK(value(attraction_page(AttractionTab::Customers, f, s, units), u"Built") == u"1 year ago");
+    f.now = *f.now + 2.5f * save::model::GameClock::kUnitsPerYear;
+    CHECK(value(attraction_page(AttractionTab::Customers, f, s, units), u"Built") == u"3 years ago");
+
+    // A stall's customers an hour are as the park measures it taking them, and its cost is not a ride's.
+    save::model::Stall stall;
+    AttractionFacts shop { &stall.base, nullptr, &stall };
+    shop.takings = Takings { .customers_per_hour = 41.6f };
+    CHECK(value(attraction_page(AttractionTab::Customers, shop, s, units), u"Riders") == u"42 an hour");
+    CHECK(value(attraction_page(AttractionTab::Finances, shop, s, units), u"Stall upkeep") == money(0) + u" an hour");
 }
 
 TEST_CASE("saved messages name tabs by number: a breakdown opens maintenance, a long queue the operating mode")

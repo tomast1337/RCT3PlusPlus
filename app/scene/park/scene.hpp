@@ -434,7 +434,6 @@ namespace rct3::scene::park
     {
         save::model::TerrainGrid grid;
         random::Seed seed;
-        random::RandomState gameplay; ///< For the simulation; to be kept with a saved park
         rct3::park::ParkCamera camera;
         std::vector<GroundChunk> ground_chunks; ///< kGroundChunk tiles square, row by row, then the land round the park
         render::PipelineHandle ground_pipeline;

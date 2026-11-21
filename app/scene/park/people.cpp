@@ -95,7 +95,7 @@ namespace rct3::scene::park
                     homes.push_back(h);
             if (!homes.empty())
             {
-                const entt::entity home = homes[random::below(scene.looks, homes.size())];
+                const entt::entity home = homes[random::below(scene.sim.gameplay, homes.size())];
                 (void)simulation::add_keeper(scene.sim, home, r.get<const simulation::AnimalHouse>(home).troughs);
             }
             return std::nullopt;
@@ -120,7 +120,7 @@ namespace rct3::scene::park
                 walkways.push_back(simulation::NodeId { n });
         if (std::ranges::contains(worn, nullptr) || walkways.empty())
             return std::nullopt;
-        const entt::entity e = simulation::add_staff(scene.sim, role, walkways[random::below(scene.looks, walkways.size())]);
+        const entt::entity e = simulation::add_staff(scene.sim, role, walkways[random::below(scene.sim.gameplay, walkways.size())]);
         r.get<simulation::Staff>(e).training = simulation::staff::hired_training(scene.park.cash.has_value());
         scene.known_guests.insert(e);
         change_people(scene);

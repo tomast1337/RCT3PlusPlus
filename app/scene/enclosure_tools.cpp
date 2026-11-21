@@ -164,7 +164,7 @@ namespace rct3::scene
             const simulation::Animal animal {
                 .species = item.symbol,
                 .overlay = item.overlay,
-                .name = ui::new_animal_name(*assets.strings, item.symbol, item.age, scene.looks),
+                .name = ui::new_animal_name(*assets.strings, item.symbol, item.age, scene.sim.gameplay),
                 .adult = item.age == AnimalAge::AdultMale || item.age == AnimalAge::AdultFemale,
                 .male = item.age == AnimalAge::AdultMale || item.age == AnimalAge::YoungMale,
                 .enclosure = enclosure,
@@ -173,7 +173,7 @@ namespace rct3::scene
                 .flying = scene.park.speed.speed == simulation::Speed::Fastest ? units::Seconds { } : simulation::kAnimalRates.delivery,
             };
             const entt::entity added = simulation::add_animal(scene.sim, animal, at);
-            scene.sim.registry.emplace<simulation::AnimalCare>(added, simulation::care_for(item.care, item.needs, scene.looks));
+            scene.sim.registry.emplace<simulation::AnimalCare>(added, simulation::care_for(item.care, item.needs, scene.sim.gameplay));
             if (!item.prey.empty())
                 scene.sim.registry.emplace<simulation::Hunter>(added, simulation::Hunter { .prey = item.prey });
             park::float_money(scene, at, -item.price);

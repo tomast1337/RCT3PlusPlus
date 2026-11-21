@@ -38,6 +38,7 @@ namespace rct3::scene::park
             usize display = 0; ///< In `displays`
             particles::DisplayRun run { };
             glm::vec3 centre { 0.0f }; ///< Among its launchers, on the ground
+            u32 ticks_left = 0;        ///< Of the park's, before it ends and guests stop watching it
         };
 
         std::vector<particles::Display> displays;
@@ -53,7 +54,10 @@ namespace rct3::scene::park
     /// The view of the display playing from `yaw`: its launchers and the sky its shells burst in; none when no
     /// display plays or none of its launchers stands.
     std::optional<rct3::park::ParkCamera> park_display_view(const ParkScene& scene, f32 yaw);
-    /// Starts the displays that fall due and moves the one playing on by `park_time`, firing its shots.
+    /// A tick of the park's: starts the displays that fall due, and ends the one playing once its time is up, so
+    /// guests watch it for the same ticks however the frames fall.
+    void tick_park_fireworks(ParkScene& scene);
+    /// Moves the display playing on by `park_time`, firing its shots.
     void update_park_fireworks(ParkScene& scene, units::Seconds park_time);
 
 } // namespace rct3::scene::park

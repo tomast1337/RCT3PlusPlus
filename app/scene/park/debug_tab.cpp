@@ -99,7 +99,7 @@ namespace rct3::scene::park
                 return scene.research.invented.size() - had;
             }
             case DebugTool::AddGuests:
-                return simulation::add_guests(scene.sim, scene.gameplay, park_paths(scene), count);
+                return simulation::add_guests(scene.sim, scene.sim.gameplay, park_paths(scene), count);
             case DebugTool::RemoveGuests:
                 return simulation::send_guests_home(scene.sim);
             case DebugTool::RefreshGuests:
@@ -126,7 +126,7 @@ namespace rct3::scene::park
             case DebugTool::RemoveWildBirds:
                 return simulation::remove_wild_birds(scene.sim);
             case DebugTool::DropLitter:
-                return simulation::scatter_litter(scene.sim, scene.gameplay, park_paths(scene), count);
+                return simulation::scatter_litter(scene.sim, scene.sim.gameplay, park_paths(scene), count);
             case DebugTool::ClearLitter:
                 return simulation::clear_litter(scene.sim);
             case DebugTool::RebuildWaterfalls:

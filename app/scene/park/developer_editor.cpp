@@ -402,7 +402,7 @@ namespace rct3::scene::park
             const auto gates = r.view<const simulation::ParkGate>();
             if (cheat(scene, ImGui::Button("Let groups in at the gate") && !gates.empty()))
                 for (i32 k = 0; k < ed.groups; ++k)
-                    (void)simulation::admit_party(scene.sim, scene.looks, r.get<const simulation::ParkGate>(gates.front()).node);
+                    (void)simulation::admit_party(scene.sim, scene.sim.gameplay, r.get<const simulation::ParkGate>(gates.front()).node);
             ImGui::SetItemTooltip("Free of the entrance fee");
 
             ImGui::SeparatorText("Everyone at once");

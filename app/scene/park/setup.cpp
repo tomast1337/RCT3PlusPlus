@@ -1020,7 +1020,6 @@ namespace rct3::scene::park
                 load_zoo_animals(scene, install);
                 load_wild_birds(device, scene, install);
                 profiling::section("Simulation", [&] {
-                    scene.sim.seed = seed;
                     scene.sim.ratings = ratings;
                     simulation::import_paths(scene.sim, world.paths, scene.grid);
                     // The saved ones by their place in scene.people, null for those not drawn.
@@ -1338,8 +1337,9 @@ namespace rct3::scene::park
         scene.texture_detail = options.get(config::game::GameOption::TextureDetail);
         scene.grid = std::move(world->terrain);
         scene.seed = seed;
+        scene.sim.seed = seed;
+        scene.sim.gameplay = random::stream(seed, random::RandomStream::Gameplay);
         scene.file = path;
-        scene.gameplay = random::stream(seed, random::RandomStream::Gameplay);
         log.info("{}: seed {} (--seed repeats it)", path.string(), random::seed_text(seed));
         scene.camera = rct3::park::overview(scene.grid);
         scene.day_clock = park_day(*file, index, *world, options);

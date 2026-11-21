@@ -8,6 +8,7 @@
 #include "scene/park/scene.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/park/messages.hpp"
+#include "simulation/systems.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -116,7 +117,7 @@ namespace rct3::scene::park
                 sum += glm::vec3(object_place(scene, *i)[3]);
                 ++standing;
             }
-        fireworks.playing = ParkFireworks::Playing { .display = display, .run = { }, .centre = standing > 0 ? sum / static_cast<f32>(standing) : glm::vec3(0.0f) };
+        fireworks.playing = ParkFireworks::Playing { .display = display, .run = { }, .centre = standing > 0 ? sum / static_cast<f32>(standing) : glm::vec3(0.0f), .ticks_left = simulation::ticks(particles::display_seconds(d) + kAfterLastShot.value) };
         simulation::park::post(scene.park.messages, { .text_key = std::string(kDisplayMessage), .subject_name = d.name });
         logging::logger("fireworks").info("display {} starts, {} shots from {} launchers", d.name, d.shots.size(), standing);
         return true;
@@ -144,9 +145,11 @@ namespace rct3::scene::park
         scene.fireworks.playing.reset();
     }
 
-    void update_park_fireworks(ParkScene& scene, units::Seconds park_time)
+    void tick_park_fireworks(ParkScene& scene)
     {
         ParkFireworks& fireworks = scene.fireworks;
+        if (fireworks.playing && --fireworks.playing->ticks_left == 0)
+            fireworks.playing.reset();
         const f32 minutes = scene.day_clock.time * kMinutesPerDay;
         for (usize i = 0; i < fireworks.displays.size(); ++i)
         {
@@ -155,14 +158,16 @@ namespace rct3::scene::park
                 start_park_display(scene, i);
             fireworks.was_due[i] = due ? 1 : 0;
         }
+    }
+
+    void update_park_fireworks(ParkScene& scene, units::Seconds park_time)
+    {
+        ParkFireworks& fireworks = scene.fireworks;
         if (fireworks.playing)
         {
-            ParkFireworks::Playing& playing = *fireworks.playing;
-            const particles::Display& display = fireworks.displays[playing.display];
-            for (const particles::Shot& shot : particles::advance_display(playing.run, display, park_time.value))
+            const particles::Display& display = fireworks.displays[fireworks.playing->display];
+            for (const particles::Shot& shot : particles::advance_display(fireworks.playing->run, display, park_time.value))
                 fire(scene, display, shot);
-            if (playing.run.next_shot >= display.shots.size() && playing.run.seconds > particles::display_seconds(display) + kAfterLastShot.value)
-                fireworks.playing.reset();
         }
         // The show's jets shoot as their patterns say, each from its start; past its end one is let be, and stops.
         for (ParkScene::Jet& jet : scene.jets)

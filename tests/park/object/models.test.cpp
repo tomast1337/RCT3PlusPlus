@@ -86,6 +86,7 @@ TEST_CASE("a car's lengths run along the line from its rear to its front, even a
     CHECK(fit.on_track.y == doctest::Approx(0.2f));
     CHECK(fit.link_front == 0);
     CHECK(fit.link_rear == doctest::Approx(2));
+    CHECK(fit.link_height == doctest::Approx(-0.2f)); // Coupling on at its ends, under its wheels
     CHECK_FALSE(fit.link);
 }
 

@@ -929,13 +929,16 @@ type RideInfo = {
           /** Where each of its cars stands now, and the way it faces (radians round the vertical, 0 along +row).
            *  A rowing boat out on the water: the oars it rows with, both or those turning it to its left or right.
            *  A lift's car is marked `lift`. `pitch` is how steeply it climbs (radians, up positive); `partTilt`, of a car
-           *  with a part that swings, spins or is held level on it, how far that part leans from upright as drawn. */
+           *  with a part that swings, spins or is held level on it, how far that part leans from upright as drawn.
+           *  `couplesUp`, of a car of a train, is how high over the ground its links couple on, and of a link how
+           *  high its ends are. */
           cars: (MapPoint & {
               facing: number;
               stroke?: "both" | "left" | "right";
               lift?: true;
               pitch: number;
               partTilt?: number;
+              couplesUp?: WorldUnits;
           })[];
       }
     | {

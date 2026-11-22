@@ -146,7 +146,8 @@ namespace rct3::park::object
         /// "linkfront" and "linkrear", or else its front and its rear.
         f32 link_front = 0;
         f32 link_rear = 0;
-        f32 link_height = 0; ///< How high over its on_track point those bones are, on average
+        /// How high over its on_track point those points are, on average; of a link, its own ends, which meet them.
+        f32 link_height = 0;
         /// A link (kLinkSlot) between the cars either side: `length` is how far along the track it reaches from
         /// where the car ahead couples on to where the car behind does, and its on_track point stands midway.
         bool link = false;

@@ -88,17 +88,18 @@ TEST_CASE("a link couples a train's cars, reaching along the track from where on
     save::model::Train train;
     train.cars.resize(3);
     // Cars 2 long, coupling on 0.25 behind their front and 0.25 ahead of their rear, 0.5 over their wheels; a link
-    // reaching 1 between them.
+    // reaching 1 between them, its ends 0.2 over its wheels.
     const park::object::CarFit car { .length = 2, .front_wheels = 0.5f, .rear_wheels = 1.5f, .on_track = { 0, 0, 1 }, .link_front = 0.25f, .link_rear = 1.75f, .link_height = 0.5f, .link = false };
-    const park::object::CarFit link { .length = 1, .front_wheels = 0, .rear_wheels = 1, .on_track = { 0, 0, 0 }, .link_front = 0, .link_rear = 1, .link_height = 0, .link = true };
+    const park::object::CarFit link { .length = 1, .front_wheels = 0, .rear_wheels = 1, .on_track = { 0, 0, 0 }, .link_front = 0, .link_rear = 1, .link_height = 0.2f, .link = true };
     const std::array fits { car, link, car };
     park::track::stand_train(c, train, fits, 8);
-    // The link from 6.25 to 5.25 along, so the car behind's front is 0.25 further on, at 5.5.
+    // The link from 6.25 to 5.25 along, so the car behind's front is 0.25 further on, at 5.5; its ends at the height the
+    // cars couple at.
     CHECK(train.cars[1].distance.value == 6);
     CHECK(train.cars[1].length.value == doctest::Approx(0.5f));
     CHECK(train.cars[1].front_wheel_distance == doctest::Approx(6.25f));
     CHECK(train.cars[1].rear_wheel_distance == doctest::Approx(5.25f));
-    check_near({ train.cars[1].position[0], train.cars[1].position[1], train.cars[1].position[2] }, { 5.75f, 0.5f, 0 });
+    check_near({ train.cars[1].position[0], train.cars[1].position[1], train.cars[1].position[2] }, { 5.75f, 0.3f, 0 });
     CHECK(train.cars[2].distance.value == doctest::Approx(5.5f));
     CHECK(train.length.value == doctest::Approx(4.5f));
     CHECK(park::track::train_length(fits) == doctest::Approx(4.5f));

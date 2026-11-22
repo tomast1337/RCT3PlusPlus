@@ -1763,10 +1763,15 @@ namespace rct3::scene
                     one["arms"] = std::move(arms);
                     // Where its cars stand now, as map points above the ground.
                     Json cars = Json::array();
+                    const auto fits = park.car_fits.find(save::model::RideIndex { i });
+                    usize in_train = 0;
+                    std::optional<usize> last_train;
                     for (usize k = 0; k < park.car_spots.size() && k < park.car_places.size(); ++k)
                     {
                         if (park.car_spots[k].ride != save::model::RideIndex { i })
                             continue;
+                        in_train = last_train == park.car_spots[k].train ? in_train + 1 : 0;
+                        last_train = park.car_spots[k].train;
                         const glm::vec3 at = park.car_places[k][3];
                         const f32 col = (at.x - park.grid.origin_x) / park.grid.tile_size_x;
                         const f32 row = (at.z - park.grid.origin_z) / park.grid.tile_size_z;
@@ -1774,6 +1779,13 @@ namespace rct3::scene
                         Json car = { { "col", col }, { "row", row }, { "up", at.y - park.grid.height_at(at.x, at.z).value_or(0) }, { "facing", std::atan2(park.car_places[k][2].x, park.car_places[k][2].z) } };
                         if (park.car_spots[k].lift)
                             car["lift"] = true;
+                        else if (fits != park.car_fits.end() && !fits->second.empty())
+                        {
+                            // How high its links couple on, or a link's ends.
+                            const rct3::park::object::CarFit& fit = fits->second[std::min(in_train, fits->second.size() - 1)];
+                            const glm::vec3 couples { park.car_places[k] * glm::vec4(fit.on_track + glm::vec3(0, fit.link_height, 0), 1) };
+                            car["couplesUp"] = couples.y - park.grid.height_at(couples.x, couples.z).value_or(0);
+                        }
                         if (const auto boned = std::ranges::find(park.boned_cars, k, &park::ParkScene::BonedCar::car); boned != park.boned_cars.end() && boned->stroke)
                             car["stroke"] = std::array { "both", "left", "right" }[std::to_underlying(*boned->stroke)];
                         // How steeply it climbs or falls, and how far from upright the part moving on it leans as drawn.

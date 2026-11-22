@@ -7,7 +7,7 @@
 //   - Flight of the Phoenix: its cars swing out in the curves and hang straight again at the station;
 //   - Dizzymouse: its tubs spin in the turns and square up before the station;
 //   - Splash Down and Water Python: dinghies and bobsleighs sit upright at the station and swing in the turns;
-//   - Toxic Toboggan: the links between its sleds couple low between them, not up at the track over them.
+//   - Toxic Toboggan: the ends of the links between its sleds meet the sleds where they couple on.
 //
 // A screenshot of each at the moment its part shows most, of the dinghies and bobsleighs at the station too, and of
 // Toxic Toboggan's links.
@@ -229,8 +229,8 @@ for (const [design, name, least] of [
     expect(widest > least, `${design}'s ${name} swung, only ${widest.toFixed(3)} rad`);
 }
 
-// Coupled low: a bobsleigh's sleds hang well under the track their cars follow, and the links between them couple on
-// where the sleds say, down beside them.
+// Coupled where the sleds say: a bobsleigh's sleds hang well under the track their cars follow, and each link's ends
+// meet the points on the sleds either side of it where links couple on.
 {
     const ride = await lay("Toxic Toboggan");
     expect(rides.setState(ride, "testing") == null, "tested");
@@ -238,12 +238,24 @@ for (const [design, name, least] of [
     const r = tracked(rides.list()[ride], "the ride");
     expect(r.carsPerTrain > must(r.passengerCars, "passenger cars"), "Toxic Toboggan's sleds linked");
     const cars = r.cars.slice(0, r.carsPerTrain);
-    let highest = 0; // The furthest a link stands over the sleds either side of it
-    for (let k = 1; k + 1 < cars.length; k += 2)
-        highest = Math.max(highest, (cars[k].up ?? 0) - ((cars[k - 1].up ?? 0) + (cars[k + 1].up ?? 0)) / 2);
-    log("Toxic Toboggan: links stand up to", highest.toFixed(3), "over their sleds");
-    // A link up at the track the sleds hang under stands about 2.6 m over them; on their rims, under 2.
-    expect(highest < 2, `Toxic Toboggan's links low between their sleds, not ${highest.toFixed(3)} over them`);
+    // The sleds couple on low on them, under a metre over where they stand, not up at the track they hang from.
+    const sledsCouple = cars
+        .filter((_, k) => k % 2 === 0)
+        .map((c) => must(c.couplesUp, "a coupling height") - (c.up ?? 0));
+    log("Toxic Toboggan: sleds couple on", sledsCouple.map((h) => h.toFixed(3)).join(" "), "over where they stand");
+    expect(
+        sledsCouple.every((h) => h > 0 && h < 1),
+        `Toxic Toboggan's sleds coupling on low on them, not ${sledsCouple.map((h) => h.toFixed(3))} up`,
+    );
+    let furthest = 0; // The furthest a link's ends stand above or below where the sleds either side couple on
+    for (let k = 1; k + 1 < cars.length; k += 2) {
+        const [ahead, link, behind] = [cars[k - 1], cars[k], cars[k + 1]].map((c) =>
+            must(c.couplesUp, "a coupling height"),
+        );
+        furthest = Math.max(furthest, Math.abs(link - (ahead + behind) / 2));
+    }
+    log("Toxic Toboggan: links' ends stand up to", furthest.toFixed(3), "off where their sleds couple on");
+    expect(furthest < 0.05, `Toxic Toboggan's links meet their sleds, not ${furthest.toFixed(3)} off them`);
     // From just over the sleds, as the trough's walls hide them from the side.
     await ui.click("bar/Top_Pause");
     const sled = cars[2];

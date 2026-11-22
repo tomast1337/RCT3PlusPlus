@@ -480,13 +480,14 @@ namespace rct3::park::track
             glm::mat4 frame;
             if (fit.link && k > 0 && k + 1 < train.cars.size())
             {
-                // From where the car ahead couples on back along the track, lifted to the height the cars couple at.
+                // From where the car ahead couples on back along the track, its ends lifted to the height the cars
+                // couple at.
                 const object::CarFit& ahead = fit_of(k - 1);
                 const object::CarFit& behind = fit_of(k + 1);
                 car.length = { link_gap(ahead, fit, behind) };
                 car.front_wheel_distance = train.cars[k - 1].distance.value - ahead.link_rear;
                 car.rear_wheel_distance = car.front_wheel_distance - fit.length;
-                frame = glm::translate(frame_at(course, { car.front_wheel_distance, car.rear_wheel_distance }), { 0, (ahead.link_height + behind.link_height) / 2, 0 });
+                frame = glm::translate(frame_at(course, { car.front_wheel_distance, car.rear_wheel_distance }), { 0, (ahead.link_height + behind.link_height) / 2 - fit.link_height, 0 });
             }
             else
             {

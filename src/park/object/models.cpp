@@ -965,9 +965,7 @@ namespace rct3::park::object
         fit.on_track = (front_wheels + rear_wheels) / 2.0f;
         fit.link_front = points.link_front ? behind(*points.link_front) : 0;
         fit.link_rear = points.link_rear ? behind(*points.link_rear) : fit.length;
-        const i32 links = (points.link_front ? 1 : 0) + (points.link_rear ? 1 : 0);
-        if (links > 0)
-            fit.link_height = ((points.link_front ? points.link_front->y : 0) + (points.link_rear ? points.link_rear->y : 0)) / static_cast<f32>(links) - fit.on_track.y;
+        fit.link_height = (points.link_front.value_or(points.front).y + points.link_rear.value_or(points.rear).y) / 2 - fit.on_track.y;
         fit.link = points.link;
         return fit;
     }

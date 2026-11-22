@@ -1934,7 +1934,7 @@ namespace rct3::scene::park
             device.destroy_texture(scene.placing.preview_target);
         if (scene.photo_target)
             device.destroy_texture(scene.photo_target);
-        for (const render::TextureHandle t : { scene.shadow_drawings[0].still, scene.shadow_drawings[1].still, scene.shadow_map, scene.shadow_views, scene.lamp_texture })
+        for (const render::TextureHandle t : { scene.shadow_drawings[0].still, scene.shadow_drawings[1].still, scene.shadow_map, scene.shadow_map_before, scene.shadow_views, scene.lamp_texture })
         {
             if (t)
                 device.destroy_texture(t);

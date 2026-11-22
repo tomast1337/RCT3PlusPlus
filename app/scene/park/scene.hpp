@@ -886,10 +886,11 @@ namespace rct3::scene::park
         /// The shadow drawn at the sun's last kept direction, and the one before it, which fades out as the sun
         /// goes on towards its next step (rct3::park::sun_step_share).
         std::array<ShadowDrawing, 2> shadow_drawings;
-        usize shadow_now = 0;               ///< Which of them is the latest
-        render::TextureHandle shadow_map;   ///< The latest still drawing with what moves drawn over it
-        render::TextureHandle shadow_views; ///< Both drawings' views, the latest first (render::SceneLight::shadow_view)
-        f32 shadow_drawn_at = 0;            ///< `clock` when the latest still drawing was last drawn
+        usize shadow_now = 0;                    ///< Which of them is the latest
+        render::TextureHandle shadow_map;        ///< The latest still drawing with what moves drawn over it
+        render::TextureHandle shadow_map_before; ///< The same over the drawing before, while the two blend
+        render::TextureHandle shadow_views;      ///< Both drawings' views, the latest first (render::SceneLight::shadow_view)
+        f32 shadow_drawn_at = 0;                 ///< `clock` when the latest still drawing was last drawn
         /// Counts changes to what stands still in the park as the shadows draw it (Casters::Still in
         /// drawing.cpp): the ground, the objects shown and Scenery being switched. The kept shadows draw again on one.
         u32 still_changes = 0;

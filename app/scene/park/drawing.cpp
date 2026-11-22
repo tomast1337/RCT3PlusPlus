@@ -425,7 +425,7 @@ namespace rct3::scene::park
         /// each frame. It lags the sun by a step.
         ///
         /// What stands still is drawn into each drawing's own map and kept until the sun steps, the view leaves
-        /// its step (rct3::park::sun_view), or the park changes; what moves is drawn over a copy of the latest.
+        /// its step (rct3::park::sun_view), or the park changes; what moves is drawn over a copy of each.
         void draw_shadow_map(render::Device& device, ParkScene& scene)
         {
             scene.light.shadow_map = { };
@@ -434,7 +434,7 @@ namespace rct3::scene::park
             scene.light.shadow_before = 0;
             if (!scene.shadows || scene.light.sun_direction.y <= kShadowSunHeight)
                 return;
-            if (!make_shadow_target(device, scene.shadow_map) || !make_shadow_target(device, scene.shadow_drawings[0].still) || !make_shadow_target(device, scene.shadow_drawings[1].still))
+            if (!make_shadow_target(device, scene.shadow_map) || !make_shadow_target(device, scene.shadow_drawings[0].still) || !make_shadow_target(device, scene.shadow_drawings[1].still) || (scene.blend_shadows && !make_shadow_target(device, scene.shadow_map_before)))
             {
                 scene.shadows = 0;
                 return;
@@ -478,13 +478,15 @@ namespace rct3::scene::park
             const bool moving_now = scene.shadows > 1 || still_now;
             scene.light.shadow_map = device.depth_texture(scene.shadow_map);
             scene.light.shadow_view = scene.shadow_views;
+            // What moves is in both maps: in the latest alone, its shadow would vanish at each step of the sun
+            // and fade back in as the step's share grows, a blink every second or so.
+            const bool moving_before = blend && (moving_now || still_before);
             if (blend)
             {
-                // Its still drawing alone: what moves leaves the fading shadow.
-                scene.light.shadow_map_before = device.depth_texture(before.still);
+                scene.light.shadow_map_before = device.depth_texture(scene.shadow_map_before);
                 scene.light.shadow_before = 1 - rct3::park::sun_step_share(now->sun, to_sun, step);
             }
-            if (!moving_now && !still_before)
+            if (!moving_now && !moving_before)
                 return;
             if (timed)
                 scene.shadow_drawn_at = scene.clock;
@@ -503,6 +505,8 @@ namespace rct3::scene::park
                 profiling::section("Before", [&] { draw_still(before, sun_before); });
             if (moving_now)
                 profiling::section("Moving", [&] { draw_shadow(device, scene, { .target = scene.shadow_map, .depth_from = now->still }, sun.view_projection, Casters::Moving); });
+            if (moving_before)
+                profiling::section("MovingBefore", [&] { draw_shadow(device, scene, { .target = scene.shadow_map_before, .depth_from = before.still }, sun_before.view_projection, Casters::Moving); });
             // A step swaps which drawing is the latest, and it is always drawn then, so the rows follow here.
             std::array<f32, 40> views { };
             std::ranges::copy(now->view, views.begin());

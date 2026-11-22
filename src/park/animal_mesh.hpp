@@ -7,10 +7,13 @@
 #include "core/types.hpp"
 #include "park/animal_models.hpp"
 #include "park/object/mesh.hpp"
+#include "park/object/models.hpp"
 #include "units/units.hpp"
 
+#include <array>
 #include <cstddef>
 #include <map>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -39,6 +42,14 @@ namespace rct3::park
     /// Those of every picture, by picture. Kept by a caller that builds mesh after mesh, so the lists' memory
     /// is reused.
     using AnimalRuns = std::map<std::string, AnimalRun, std::less<>>;
+
+    /// How far away animals are drawn at each level of detail, finest first; beyond the last they are not.
+    inline constexpr std::array kAnimalDistances { 60.0f, 160.0f, 500.0f }; ///< Chosen by eye: a little nearer than people, as the zoo's are few and big
+
+    /// The level of detail an animal `distance` away is drawn at, with the animals' detail and draw distance options
+    /// `scale` (detail for the finer levels, draw distance for the last), as objects' levels are scaled. Nothing
+    /// when it is too far to draw.
+    [[nodiscard]] std::optional<usize> animal_level(f32 distance, object::LevelScale scale);
 
     /// The mesh of `animals`, gathered in `runs`, which is emptied first. Batches come opaque first, then
     /// cut-out, then see-through.

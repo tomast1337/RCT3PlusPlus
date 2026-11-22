@@ -141,6 +141,7 @@ namespace rct3::scene::park
             .reflect_terrain = options.flag(GameOption::ReflectTerrain),
             .reflect_scenery = options.flag(GameOption::ReflectScenery),
             .reflect_people = options.flag(GameOption::ReflectPeople),
+            .reflect_animals = options.flag(GameOption::ReflectAnimals),
         };
     }
 

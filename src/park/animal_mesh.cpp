@@ -3,8 +3,19 @@
 
 #include "core/types.hpp"
 
+#include <algorithm>
+
 namespace rct3::park
 {
+
+    std::optional<usize> animal_level(f32 distance, object::LevelScale scale)
+    {
+        const f32 last = kAnimalDistances.back() * scale.distance;
+        for (usize k = 0; k < kAnimalDistances.size(); ++k)
+            if (distance <= (k + 1 < kAnimalDistances.size() ? std::min(kAnimalDistances[k] * scale.detail, last) : last))
+                return k;
+        return std::nullopt;
+    }
 
     object::ObjectMesh animal_mesh(std::span<const PlacedAnimal> animals, AnimalRuns& runs)
     {

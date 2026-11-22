@@ -51,7 +51,8 @@ namespace rct3::scene
     /// model must be loaded.
     void animals_changed(render::Device& device, park::ParkScene& scene);
 
-    /// Poses the animals and their crates as they are now, at the park's clock.
-    void place_animals(park::ParkScene& scene);
+    /// Poses the animals and their crates as they are now, at the park's clock, each animal at the level of detail
+    /// its distance from `eye` calls for.
+    void place_animals(park::ParkScene& scene, const glm::vec3& eye);
 
 } // namespace rct3::scene

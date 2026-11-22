@@ -41,13 +41,16 @@ namespace rct3::config
             O::ReflectTerrain,
             O::ReflectScenery,
             O::ReflectPeople,
+            O::ReflectAnimals,
             O::WaterBumps,
             O::Refraction,
             O::Shadows,
             O::BlendShadows,
             O::DetailBlendBand, // Scenery between levels of detail
-            O::PeopleDetail,    // How far each kind's levels reach (not animals: none are drawn yet)
+            O::PeopleDetail,    // How far each kind's levels reach
             O::PeopleDistance,
+            O::AnimalDetail,
+            O::AnimalDistance,
             O::VegetationDetail,
             O::VegetationDistance,
             O::FenceDetail,

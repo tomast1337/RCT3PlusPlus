@@ -113,7 +113,8 @@ namespace rct3::scene::park
             bool terrain = true;
             bool scenery = true;
             bool people = true;
-            bool guests = true; ///< Of the people, the park's guests and staff; a photo draws its own
+            bool guests = true;  ///< Of the people, the park's guests and staff; a photo draws its own
+            bool animals = true; ///< The zoo's
             bool water = true;
             bool see_through = true;   ///< Blended parts, such as glass
             bool shaded_water = false; ///< With the water shader, seen from `eye`
@@ -273,7 +274,7 @@ namespace rct3::scene::park
                     if (scene.simulate)
                         draw_transient(device, scene, scene.frame_uploads, scene.riders.mesh, scene.people_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
                 });
-            if (parts.people && moving)
+            if (parts.animals && moving)
                 profiling::section("ZooAnimals", [&] { draw_transient(device, scene, scene.frame_uploads, scene.drawn_animals.mesh, scene.drawn_animals.textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; }); });
             if (parts.people && moving)
                 profiling::section("WildBirds", [&] { draw_transient(device, scene, scene.frame_uploads, scene.drawn_birds.mesh, scene.drawn_birds.textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; }); });
@@ -797,7 +798,7 @@ namespace rct3::scene::park
             const WaterLook& look = scene.water.look;
             // Seen from the eye mirrored in the water's level, as the transform mirrors the world.
             prepare_park_water(device, scene.water, view_projection, eye, scene.horizon, [&](const glm::mat4& transform, f32 level) {
-                draw_world(device, scene, transform, scene.light, { .background = look.reflect_background, .terrain = look.reflect_terrain, .scenery = look.reflect_scenery, .people = look.reflect_people, .water = false, .mirrored = true, .eye = { eye.x, 2 * level - eye.y, eye.z } });
+                draw_world(device, scene, transform, scene.light, { .background = look.reflect_background, .terrain = look.reflect_terrain, .scenery = look.reflect_scenery, .people = look.reflect_people, .animals = look.reflect_animals, .water = false, .mirrored = true, .eye = { eye.x, 2 * level - eye.y, eye.z } });
                 // Bursts and fire shine in the water too.
                 draw_park_particles(device, scene.particles, transform, { eye.x, 2 * level - eye.y, eye.z }, { scene.camera.target.x, 2 * level - scene.camera.target.y, scene.camera.target.z }, scene.light);
             });

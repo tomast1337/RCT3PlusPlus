@@ -102,3 +102,16 @@ TEST_CASE("an animal's mesh is skinned, placed and batched by picture")
     CHECK(mesh.indices.size() == 6);
     CHECK(mesh.indices[3] == 3);
 }
+
+TEST_CASE("an animal's level of detail follows the animal detail and draw distance options")
+{
+    CHECK(animal_level(1, { }) == 0);
+    CHECK(animal_level(kAnimalDistances[0] + 1, { }) == 1);
+    CHECK(animal_level(kAnimalDistances.back() + 1, { }) == std::nullopt);
+    // Less detail: the coarser levels come nearer; farther draw distance: drawn farther, the finest levels kept.
+    CHECK(animal_level(kAnimalDistances[0] - 1, { .detail = 0.5f }) == 1);
+    CHECK(animal_level(kAnimalDistances.back() + 1, { .distance = 2 }) == kAnimalDistances.size() - 1);
+    CHECK(animal_level(1, { .distance = 2 }) == 0);
+    // No distance at all, none drawn.
+    CHECK(animal_level(1, { .distance = 0 }) == std::nullopt);
+}

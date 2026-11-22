@@ -1164,7 +1164,7 @@ namespace rct3::scene::park
             advance_park_lens(scene.lens, around, options.flag(config::game::GameOption::WaterDroplets) && options.flag(config::game::GameOption::Refraction) && !software, elapsed);
         });
         profiling::section("People", [&] { refresh_people(scene, viewer, rct3::park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across), elapsed); });
-        profiling::section("ZooAnimals", [&] { place_animals(scene); });
+        profiling::section("ZooAnimals", [&] { place_animals(scene, viewer); });
         profiling::section("WildBirds", [&] { place_wild_birds(scene); });
         auto bar = desktop.root().find_as<ui::screens::park_view::ParkBar>(kBarName);
         if (bar)

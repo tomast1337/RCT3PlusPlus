@@ -51,6 +51,7 @@ namespace rct3::scene::park
         bool reflect_terrain = true;
         bool reflect_scenery = true;
         bool reflect_people = false;
+        bool reflect_animals = false;
     };
 
     [[nodiscard]] WaterLook water_look(const config::game::GameOptions& options);

@@ -3,6 +3,8 @@
 
 #include "core/types.hpp"
 #include "logging/log.hpp"
+#include "park/camera.hpp"
+#include "park/item_category.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/setup.hpp"
 #include "simulation/animals.hpp"
@@ -116,10 +118,10 @@ namespace rct3::scene
         }
         drawn.crated.clear();
         drawn.crates = { };
-        place_animals(scene);
+        place_animals(scene, rct3::park::eye(scene.camera, scene.seat));
     }
 
-    void place_animals(park::ParkScene& scene)
+    void place_animals(park::ParkScene& scene, const glm::vec3& eye)
     {
         DrawnAnimals& drawn = scene.drawn_animals;
         const auto& r = scene.sim.registry;
@@ -180,9 +182,19 @@ namespace rct3::scene
         }
         crate_places.insert(crate_places.end(), helicopter_places.begin(), helicopter_places.end());
         rct3::park::move_meshes(drawn.crates, crate_places);
-        // shortcut: every animal is posed on the frame's thread at its finest level, every frame; fine for the
-        // few dozen a zoo holds, move to a worker and pick levels by distance as people do once parks hold more.
-        drawn.mesh = rct3::park::animal_mesh(drawn.placed, drawn.runs);
+        // Each at the level of detail its distance from `eye` calls for, by the animal options; too far, it is not
+        // drawn, though it is still placed, to be clicked and followed.
+        // shortcut: every animal near enough is posed on the frame's thread, every frame; fine for the few dozen a
+        // zoo holds, move to a worker once parks hold more.
+        const rct3::park::object::LevelScale scale = scene.level_scales[static_cast<usize>(rct3::park::DetailKind::Animals)];
+        std::vector<rct3::park::PlacedAnimal> near;
+        for (rct3::park::PlacedAnimal& animal : drawn.placed)
+            if (const auto level = rct3::park::animal_level(glm::distance(eye, glm::vec3(animal.world[3])), scale))
+            {
+                animal.level = *level;
+                near.push_back(animal);
+            }
+        drawn.mesh = rct3::park::animal_mesh(near, drawn.runs);
     }
 
 } // namespace rct3::scene

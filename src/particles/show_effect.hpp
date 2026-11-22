@@ -81,6 +81,14 @@ namespace rct3::particles
         std::vector<LaserDrawing> drawings { };
     };
 
+    /// How far round laser `laser` has turned `seconds` into its run, radians: its spin summed over that time.
+    [[nodiscard]] f32 laser_turn(const Laser& laser, f32 seconds) noexcept;
+    /// The ways the beams of a cone or fan laser point `seconds` into its run, as unit vectors in its tube's frame:
+    /// y along the tube, z its front. A cone's beams stand evenly round the tube at its elevation; a fan's lie in one
+    /// plane through the tube, from its elevation on one side over to the same on the other. Both turn round the
+    /// tube as the laser spins. Replaces what `ways` held; a drawing laser has none.
+    void laser_beams(const Laser& laser, f32 seconds, std::vector<glm::vec3>& ways);
+
     enum class ShowEffectError : u8
     {
         Container, ///< Not a readable save container

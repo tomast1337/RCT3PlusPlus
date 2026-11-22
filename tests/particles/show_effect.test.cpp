@@ -5,6 +5,7 @@
 #include "particles/display.hpp"
 #include "save/save_file.hpp"
 
+#include <cmath>
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <string>
@@ -263,4 +264,61 @@ TEST_CASE("a park's laser shot carries its laser, and the display runs until the
     REQUIRE(shot.laser.has_value());
     CHECK(shot.laser->name == "Sweep");
     CHECK(display_seconds(displays->front()) == doctest::Approx(11));
+}
+
+TEST_CASE("a laser turns by its spin summed over its run")
+{
+    Laser laser { .seconds = 4 };
+    SUBCASE("without spin it stays")
+    {
+        CHECK(laser_turn(laser, 3) == 0);
+    }
+    SUBCASE("a steady spin")
+    {
+        laser.spin = { .times = { 0.5f }, .values = { 2 } };
+        CHECK(laser_turn(laser, 3) == doctest::Approx(6));
+    }
+    SUBCASE("a spin speeding up from still, held after its last point")
+    {
+        laser.spin = { .times = { 0, 0.5f }, .values = { 0, 2 } };
+        CHECK(laser_turn(laser, 2) == doctest::Approx(2));
+        CHECK(laser_turn(laser, 4) == doctest::Approx(6));
+        CHECK(laser_turn(laser, -1) == 0);
+    }
+}
+
+TEST_CASE("a laser's beams point round a cone or across a fan")
+{
+    std::vector<glm::vec3> ways;
+    const auto near = [](glm::vec3 a, glm::vec3 b) { return glm::distance(a, b) < 1e-5f; };
+    SUBCASE("a level cone of four, a quarter turn apart round the tube")
+    {
+        laser_beams({ .seconds = 1, .look = LaserLook::Cone, .beams = 4 }, 0, ways);
+        REQUIRE(ways.size() == 4);
+        CHECK(near(ways[0], { 0, 0, 1 }));
+        CHECK(near(ways[1], { 1, 0, 0 }));
+        CHECK(near(ways[2], { 0, 0, -1 }));
+        CHECK(near(ways[3], { -1, 0, 0 }));
+    }
+    SUBCASE("a cone raised and turned")
+    {
+        laser_beams({ .seconds = 2, .look = LaserLook::Cone, .beams = 2, .elevation = { .times = { 0 }, .values = { 0.5f } }, .spin = { .times = { 0 }, .values = { 0.25f } } }, 2, ways);
+        REQUIRE(ways.size() == 2);
+        CHECK(near(ways[0], { std::cos(0.5f) * std::sin(0.5f), std::sin(0.5f), std::cos(0.5f) * std::cos(0.5f) }));
+        CHECK(near(ways[1], { -ways[0].x, ways[0].y, -ways[0].z }));
+    }
+    SUBCASE("a level fan of three: front, up the tube, back")
+    {
+        laser_beams({ .seconds = 1, .look = LaserLook::Plane, .beams = 3 }, 0, ways);
+        REQUIRE(ways.size() == 3);
+        CHECK(near(ways[0], { 0, 0, 1 }));
+        CHECK(near(ways[1], { 0, 1, 0 }));
+        CHECK(near(ways[2], { 0, 0, -1 }));
+    }
+    SUBCASE("a drawing laser has no beams of these")
+    {
+        ways.push_back({ });
+        laser_beams({ .seconds = 1, .look = LaserLook::Drawing, .beams = 1 }, 0, ways);
+        CHECK(ways.empty());
+    }
 }

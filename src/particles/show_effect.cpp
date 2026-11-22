@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <numbers>
 #include <string_view>
 #include <utility>
 
@@ -229,6 +230,47 @@ namespace rct3::particles
         if (!jet)
             return std::unexpected(ShowEffectError::BadObject);
         return std::move(*jet);
+    }
+
+    f32 laser_turn(const Laser& laser, f32 seconds) noexcept
+    {
+        const Curve& spin = laser.spin;
+        if (spin.values.empty() || laser.seconds <= 0)
+            return 0;
+        // The area under the spin curve, held flat before its first point and after its last: exact by trapezoids,
+        // as it runs straight between points.
+        const f32 end = std::max(seconds / laser.seconds, 0.0f);
+        f32 area = 0;
+        f32 from = 0;
+        for (const f32 time : spin.times)
+        {
+            const f32 to = std::min(time, end);
+            if (to > from)
+                area += (to - from) * (spin.at(from) + spin.at(to)) / 2;
+            from = std::max(from, to);
+        }
+        if (end > from)
+            area += (end - from) * spin.values.back();
+        return area * laser.seconds;
+    }
+
+    void laser_beams(const Laser& laser, f32 seconds, std::vector<glm::vec3>& ways)
+    {
+        ways.clear();
+        if (laser.look == LaserLook::Drawing || laser.beams <= 0)
+            return;
+        const f32 t = laser.seconds > 0 ? seconds / laser.seconds : 0.0f;
+        const f32 elevation = laser.elevation.values.empty() ? 0.0f : laser.elevation.at(t);
+        const f32 turn = laser_turn(laser, seconds);
+        const auto count = static_cast<usize>(laser.beams);
+        const bool cone = laser.look == LaserLook::Cone;
+        for (usize i = 0; i < count; ++i)
+        {
+            const f32 share = static_cast<f32>(i) / static_cast<f32>(count);
+            const f32 round = cone ? turn + share * 2 * std::numbers::pi_v<f32> : turn;
+            const f32 up = cone || count == 1 ? elevation : elevation + (std::numbers::pi_v<f32> - 2 * elevation) * static_cast<f32>(i) / static_cast<f32>(count - 1);
+            ways.push_back({ std::cos(up) * std::sin(round), std::sin(up), std::cos(up) * std::cos(round) });
+        }
     }
 
     std::expected<Laser, ShowEffectError> read_laser(std::span<const std::byte> data)

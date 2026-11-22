@@ -760,7 +760,22 @@ namespace rct3::scene
                 const particles::Display& d = fireworks.displays[i];
                 const bool playing = fireworks.playing && fireworks.playing->display == i;
                 const particles::ShotKind kind = particles::main_kind(d);
-                out.push_back({ { "name", d.name }, { "kind", kind == particles::ShotKind::WaterJet ? "water" : kind == particles::ShotKind::Laser ? "lasers" : "fireworks" }, { "length", particles::display_seconds(d) }, { "music", d.music_file }, { "months", d.months }, { "start", d.start_minutes }, { "launchers", d.launchers.size() }, { "shots", d.shots.size() }, { "playing", playing }, { "seconds", playing ? fireworks.playing->run.seconds : 0.0f } });
+                out.push_back(
+                    { { "name", d.name },
+                      { "kind",
+                        kind == particles::ShotKind::WaterJet    ? "water"
+                            : kind == particles::ShotKind::Laser ? "lasers"
+                                                                 : "fireworks" },
+                      { "length", particles::display_seconds(d) },
+                      { "music", d.music_file },
+                      { "months", d.months },
+                      { "start", d.start_minutes },
+                      { "launchers", d.launchers.size() },
+                      { "shots", d.shots.size() },
+                      { "lasers", std::ranges::count(d.shots, particles::ShotKind::Laser, &particles::Shot::kind) },
+                      { "playing", playing },
+                      { "seconds", playing ? fireworks.playing->run.seconds : 0.0f },
+                      { "shining", playing ? fireworks.lasers.size() : 0 } });
                 if (playing)
                 {
                     const save::model::TerrainGrid& g = grid_of(park_);

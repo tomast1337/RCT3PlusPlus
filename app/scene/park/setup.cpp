@@ -1763,7 +1763,7 @@ namespace rct3::scene::park
             // Listed style by style, as the music folder's list of styles gives them.
             const auto styles = config::read_text_file(install.root() / "Music" / "MusicGenre.txt");
             scene.tune_labels = audio::order_by_style(scene.tunes, styles && *styles ? **styles : std::string { });
-            load_park_fireworks(scene.fireworks, *file);
+            load_park_fireworks(device, scene.fireworks, *file);
             show_park_particles(scene.particles, rct3::park::object::object_effects(scene.objects, scene.models, scene.grid, scene.fitted, scene.places.transforms, scene.places.models));
             const render::VertexLayout crossing_layout { sizeof(CrossingVertex), kCrossingAttributes };
             for (auto [pipeline, desc] : { std::pair { &scene.object_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .label = "objects" } }, std::pair { &scene.cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCutout, .layout = ground_layout, .label = "object cut-outs" } },
@@ -1955,6 +1955,7 @@ namespace rct3::scene::park
         destroy_park_glow(device, scene.glow);
         destroy_park_lens(device, scene.lens);
         destroy_park_particles(device, scene.particles);
+        destroy_park_fireworks(device, scene.fireworks);
         destroy_park_rain(device, scene.rain);
         destroy_park_occlusion(device, scene.occlusion);
         destroy_save_browser(device, scene.saves);

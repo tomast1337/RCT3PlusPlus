@@ -50,13 +50,13 @@ One object of class `LaserDesc` or `LaserBaseDesc` (the two names have the same 
 | `Duration` | float32 | Length of one run, seconds |
 | `RenderType` | int32 | 0 a cone of beams, 1 a flat fan of beams, 2 one beam tracing the drawings |
 | `NumBeams` | int32 | How many beams; the shipped lasers use 1 to 50 |
-| `Power` | float32 | Read as how far the beams reach, meters; 20 to 500 in the shipped lasers |
+| `Power` | float32 | Read as how far the beams reach, meters; 20 to 500 in the shipped lasers, the short ones broad or many-beamed |
 | `TrailDuration` | float32 | How long a moving beam leaves a glow behind it, seconds |
 | `ImageSpread` | float32 | How large the drawings are thrown |
 | `ColourBlender` | reference | Colour timeline |
-| `ElevationBlender` | reference | Angle of the beams up from level, radians; the shipped values stay between 0 and just under a quarter turn |
+| `ElevationBlender` | reference | Angle of the beams up from level (the plane across the launcher's tube), radians; the shipped values stay between 0 and just under a quarter turn. Measured from level, not from the tube: shipped cones of many beams spin fast at 0, which would put every beam in one line up the tube |
 | `RotVelBlender` | reference | How fast the beams turn round the base, radians a second; below 0 the other way |
-| `SpreadBlender` | reference | How wide each beam spreads |
+| `SpreadBlender` | reference | How wide each beam spreads: about 1 for a thin beam, up to about 1.6 for a broad searchlight |
 | `LaserWord` | reference | The drawings, as a `LaserWritingWord` |
 
 A laser kept in a park has one more field, `DoCentre` (int32), whether its drawing is thrown centred.

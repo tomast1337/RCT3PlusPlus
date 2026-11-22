@@ -801,6 +801,7 @@ namespace rct3::scene::park
                 draw_world(device, scene, transform, scene.light, { .background = look.reflect_background, .terrain = look.reflect_terrain, .scenery = look.reflect_scenery, .people = look.reflect_people, .animals = look.reflect_animals, .water = false, .mirrored = true, .eye = { eye.x, 2 * level - eye.y, eye.z } });
                 // Bursts and fire shine in the water too.
                 draw_park_particles(device, scene.particles, transform, { eye.x, 2 * level - eye.y, eye.z }, { scene.camera.target.x, 2 * level - scene.camera.target.y, scene.camera.target.z }, scene.light);
+                draw_park_lasers(device, scene, transform, { eye.x, 2 * level - eye.y, eye.z });
             });
         });
         profiling::section("World", [&] {
@@ -813,7 +814,10 @@ namespace rct3::scene::park
         else
             scene.occlusion.before = false;
         if (scene.show_scenery)
+        {
             profiling::section("Particles", [&] { draw_park_particles(device, scene.particles, view_projection, eye, scene.camera.target, scene.light); });
+            profiling::section("Lasers", [&] { draw_park_lasers(device, scene, view_projection, eye); });
+        }
         if (scene.weather_look.rain > 0 && !scene.water.eye_in)
         {
             const f32 lit = std::max({ scene.light.sky.r, scene.light.sky.g, scene.light.sky.b });

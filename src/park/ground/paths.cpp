@@ -240,7 +240,8 @@ namespace rct3::park::ground
             look.direction = save::model::kNoDirection;
             for (const save::model::Tile tile : paving.tiles)
             {
-                if (!grid.contains(tile.col, tile.row) || std::ranges::any_of(paths, [&](const save::model::PathTile& p) { return p.col == tile.col && p.row == tile.row; }))
+                // A path at another height, such as one on the ground under a raised door, leaves room for it.
+                if (!grid.contains(tile.col, tile.row) || std::ranges::any_of(paths, [&](const save::model::PathTile& p) { return p.col == tile.col && p.row == tile.row && lies_at(p, paving.height, grid); }))
                     continue;
                 save::model::PathTile laid = look;
                 laid.col = static_cast<u8>(tile.col);
@@ -278,7 +279,9 @@ namespace rct3::park::ground
         for (const PavedTile& t : laid)
         {
             const auto at = index({ t.path.col, t.path.row });
-            if (!at || t.paving >= pavings.size())
+            // Raised paving is a deck of its own: a ground path under it joins as if it were not there.
+            const bool raised = t.path.elevation && t.path.elevation->slope != save::model::kSlopeOnGround;
+            if (!at || t.paving >= pavings.size() || raised)
                 continue;
             map.pavings[*at] = static_cast<u16>(std::min<usize>(t.paving + 1, std::numeric_limits<u16>::max()));
             for (const save::model::Tile link : pavings[t.paving].links)

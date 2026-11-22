@@ -344,6 +344,29 @@ TEST_CASE("paving off level ground is raised at its height, and tiles holding a 
     CHECK(laid[1].path.elevation->slope == 0);
 }
 
+TEST_CASE("a raised door keeps its paving over a ground path under it, and the path runs on beneath")
+{
+    const save::model::TerrainGrid g = flat_grid(6, 6);
+    // A door 4 units up at (2, 2); a park path runs along row 2 on the ground, under it.
+    const Paving door { .tiles = { { 2, 2 } }, .height = 4, .source = save::model::Tile { 2, 1 }, .links = { { 2, 1 } } };
+    std::vector<save::model::PathTile> paths { ground_tile(1, 2), ground_tile(2, 2), ground_tile(3, 2) };
+    const std::vector<PavedTile> laid = lay_pavings(paths, std::span(&door, 1), g);
+    REQUIRE(laid.size() == 1);
+    REQUIRE(laid[0].path.elevation);
+    CHECK(laid[0].path.elevation->quantised_height == 4);
+    for (const PavedTile& t : laid)
+        paths.push_back(t.path);
+    GroundPathMap map = ground_path_map(paths, g);
+    seal_pavings(map, laid, std::span(&door, 1));
+    CHECK(path_continues(map, g, { 1, 2 }, 1, 0));
+    CHECK(path_continues(map, g, { 2, 2 }, 1, 0));
+
+    // A path at the door's height on its tile is kept instead.
+    save::model::PathTile level = ground_tile(2, 2);
+    level.elevation = save::model::PathElevation { .quantised_height = 4 };
+    CHECK(lay_pavings(std::array { level }, std::span(&door, 1), g).empty());
+}
+
 TEST_CASE("paving joins only itself and its links, never a path beside it, fence or not")
 {
     const save::model::TerrainGrid g = flat_grid(6, 6);

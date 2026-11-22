@@ -146,7 +146,7 @@ namespace rct3::park::ground
         usize paving = 0;
     };
 
-    /// The paths `pavings` lay: one per tile that holds no path of `paths` yet. A tile whose ground lies level at
+    /// The paths `pavings` lay: one per tile that holds no path of `paths` at its height yet. A tile whose ground lies level at
     /// the paving's height gets a ground path (or a ground queue running straight in); any other a flat raised one.
     [[nodiscard]] std::vector<PavedTile> lay_pavings(std::span<const save::model::PathTile> paths, std::span<const Paving> pavings, const save::model::TerrainGrid& grid);
 

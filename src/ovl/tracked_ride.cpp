@@ -2,6 +2,7 @@
 #include "ovl/tracked_ride.hpp"
 
 #include "core/types.hpp"
+#include "ovl/track_section.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -12,7 +13,6 @@ namespace rct3::ovl
     namespace
     {
 
-        constexpr std::string_view kTag = "trr";
         constexpr usize kHeaderSize = 0x28; // the no-stream fields shared by all attractions
         constexpr usize kLaterSize = 0x130; // up to and including the pointer to the attraction fields
         constexpr detail::AttractionLayout kFields { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20, .addon = 0x38 };
@@ -93,7 +93,7 @@ namespace rct3::ovl
             const auto list = count == 0 ? std::nullopt : ItemRecord::open(space, refs, r->read_u32(0x04), usize { count } * 4);
             for (u32 i = 0; list && i < count; ++i)
             {
-                if (const std::string_view name = list->ref(i * 4, "tks"); !name.empty())
+                if (const std::string_view name = list->ref(i * 4, kTrackSectionTag); !name.empty())
                     out.push_back(name);
             }
             return out;
@@ -106,7 +106,7 @@ namespace rct3::ovl
             const u32 word = entry.read_u32(at);
             PieceTest t;
             t.kind = static_cast<u8>(word & 0xFF);
-            t.name = t.kind == 0 ? entry.text(at + 4) : t.kind == 1 ? entry.ref(at + 4, "tks") : std::string_view { };
+            t.name = t.kind == 0 ? entry.text(at + 4) : t.kind == 1 ? entry.ref(at + 4, kTrackSectionTag) : std::string_view { };
             const u32 f = word >> 8;
             t.negate = (f & 0x1) != 0;
             t.forward = (f & 0x2) != 0;
@@ -169,7 +169,7 @@ namespace rct3::ovl
             if (!symbol.is_pointer)
                 continue;
             const SymbolName parts = split_symbol_name(symbol.name);
-            if (parts.tag != kTag)
+            if (parts.tag != kTrackedRideTag)
                 continue;
 
             TrackedRideItem item { parts.name, std::nullopt };
@@ -190,7 +190,7 @@ namespace rct3::ovl
                 TrackedRide ride;
                 for (usize i = 0; i < ride.track_sections.size(); ++i)
                 {
-                    ride.track_sections[i] = record->ref(0xD4 + i * 4, "tks");
+                    ride.track_sections[i] = record->ref(0xD4 + i * 4, kTrackSectionTag);
                     ride.splines[i] = record->ref(0x114 + i * 4, "spl");
                 }
                 const u32 fields = record->read_u32(0x12C);

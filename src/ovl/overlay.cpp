@@ -3,7 +3,9 @@
 
 #include "core/types.hpp"
 
+#include <algorithm>
 #include <fstream>
+#include <span>
 #include <string>
 #include <system_error>
 
@@ -137,6 +139,17 @@ namespace rct3::ovl
         if (unique_)
             space.add(unique_->file, unique_->bytes, unique_->base);
         return space;
+    }
+
+    bool lists_loader(const std::filesystem::path& file, std::string_view tag)
+    {
+        constexpr usize kHeaderBytes = 64 * 1024; ///< Ample for an OVL header and its loader table
+        std::ifstream in(file, std::ios::binary);
+        std::vector<char> head(kHeaderBytes);
+        in.read(head.data(), static_cast<std::streamsize>(head.size()));
+        head.resize(static_cast<usize>(in.gcount()));
+        const auto header = parse_header(std::as_bytes(std::span(head)));
+        return header && std::ranges::contains(header->loaders, tag, &Loader::tag);
     }
 
 } // namespace rct3::ovl

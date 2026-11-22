@@ -12,6 +12,7 @@
 #include <expected>
 #include <filesystem>
 #include <optional>
+#include <string_view>
 #include <vector>
 
 namespace rct3::ovl
@@ -63,5 +64,9 @@ namespace rct3::ovl
         Part common_;
         std::optional<Part> unique_;
     };
+
+    /// Whether the header of the OVL file at `file` lists a loader tagged `tag` ("trr", "tks"), which tells what
+    /// kind of items the file holds without reading the rest. False when it cannot be read.
+    [[nodiscard]] bool lists_loader(const std::filesystem::path& file, std::string_view tag);
 
 } // namespace rct3::ovl

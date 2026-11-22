@@ -7,6 +7,7 @@
 #include "ovl/animated_ride.hpp"
 #include "ovl/enclosure_fence.hpp"
 #include "ovl/integer_value.hpp"
+#include "ovl/overlay.hpp"
 #include "ovl/piece_set.hpp"
 #include "ovl/room_type.hpp"
 #include "ovl/scenery_item.hpp"
@@ -608,31 +609,22 @@ namespace rct3::park
             for (const auto& file : files)
                 read_file(root, file, items);
         }
+        // Every file that holds a tracked ride, at any depth: a downloaded set may keep several rides in one folder,
+        // under names of its own, beside the many files of its track sections.
         for (const std::string_view folder : kRideFolders)
         {
             const auto rides = find(root, folder);
             if (!rides)
                 continue;
-            std::vector<std::filesystem::path> dirs;
-            for (const auto& entry : std::filesystem::directory_iterator(*rides, ec))
+            std::vector<std::filesystem::path> files;
+            for (auto it = std::filesystem::recursive_directory_iterator(*rides, ec); !ec && it != std::filesystem::recursive_directory_iterator(); it.increment(ec))
             {
-                if (entry.is_directory(ec))
-                    dirs.push_back(entry.path());
+                if (it->is_regular_file(ec) && is_common(it->path()) && ovl::lists_loader(it->path(), ovl::kTrackedRideTag))
+                    files.push_back(it->path());
             }
-            std::ranges::sort(dirs);
-            for (const auto& dir : dirs)
-            {
-                std::vector<std::filesystem::path> files;
-                for (const auto& entry : std::filesystem::directory_iterator(dir, ec))
-                {
-                    if (entry.is_regular_file(ec) && is_common(entry.path()))
-                        files.push_back(entry.path());
-                }
-                if (files.size() == 1)
-                    read_file(root, files.front(), items);
-                else if (const auto named = std::ranges::find_if(files, [&](const auto& f) { return strings::equals_ignoring_case(stem_of(f), dir.filename().string()); }); named != files.end())
-                    read_file(root, *named, items);
-            }
+            std::ranges::sort(files);
+            for (const auto& file : files)
+                read_file(root, file, items);
         }
         if (const auto fences = find(root, kFenceFolder))
         {

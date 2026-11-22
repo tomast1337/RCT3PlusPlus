@@ -124,6 +124,9 @@ namespace rct3::ovl
         std::optional<TrackSection> section; ///< Nothing when the record does not fit its block
     };
 
+    /// The tag of a track section's symbols and loader.
+    inline constexpr std::string_view kTrackSectionTag = "tks";
+
     /// Track sections of one part of an overlay: pointer symbols tagged "tks". Views in the result point
     /// into the overlay's bytes.
     [[nodiscard]] std::vector<TrackSectionItem> read_track_sections(const Overlay& overlay, const Part& part);

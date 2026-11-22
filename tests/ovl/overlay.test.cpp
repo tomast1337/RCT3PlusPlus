@@ -135,3 +135,30 @@ TEST_CASE("load tolerates a missing unique file but not a missing common file")
     CHECK(Overlay::load(dir.path / "orphan.unique.ovl").error() == Error::MissingFile);
     CHECK(Overlay::load(dir.path / "nothing").error() == Error::MissingFile);
 }
+
+TEST_CASE("a file's header tells which kinds of items it holds")
+{
+    TempDir dir;
+    // The header of a file whose loaders have the tags `tags`.
+    const auto header = [](std::initializer_list<std::string> tags) {
+        Builder b;
+        b.raw("FGRK", 4);
+        b.put_u8(0x02), b.put_u8(0), b.put_u8(0), b.put_u8(0);
+        b.put_u32(5), b.put_u32(0x10);
+        b.put_u16(0), b.put_u16(0); // No stream block
+        b.put_u32(0), b.put_u32(0); // No references
+        b.put_u32(static_cast<u32>(tags.size()));
+        for (const std::string& tag : tags)
+            b.str("RCT3"), b.str("Loader"), b.put_u32(1), b.str(tag);
+        for (usize i = 0; i < tags.size(); ++i)
+            b.put_u32(static_cast<u32>(i)), b.put_u32(1); // Symbol count by loader
+        return b.bytes;
+    };
+    write(dir.path / "Ride.common.ovl", header({ "ftx", "trr" }));
+    write(dir.path / "Bend_data.common.ovl", header({ "tks" }));
+    write(dir.path / "Broken.common.ovl", { std::byte { 'N' }, std::byte { 'O' } });
+    CHECK(rct3::ovl::lists_loader(dir.path / "Ride.common.ovl", "trr"));
+    CHECK_FALSE(rct3::ovl::lists_loader(dir.path / "Bend_data.common.ovl", "trr"));
+    CHECK_FALSE(rct3::ovl::lists_loader(dir.path / "Broken.common.ovl", "trr"));
+    CHECK_FALSE(rct3::ovl::lists_loader(dir.path / "Missing.common.ovl", "trr"));
+}

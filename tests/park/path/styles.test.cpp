@@ -56,15 +56,6 @@ TEST_CASE("the longer layout's capped pieces follow the base ones")
     CHECK(p.pieces[20] == "SlopeCapped");
 }
 
-TEST_CASE("style overlays are told by their ending, whatever its case")
-{
-    CHECK(is_style_overlay("Gravel_Stub.common.ovl"));
-    CHECK(is_style_overlay("gravel_STUB.Common.OVL"));
-    CHECK_FALSE(is_style_overlay("_Stub.common.ovl"));
-    CHECK_FALSE(is_style_overlay("Gravel_Stub.unique.ovl"));
-    CHECK_FALSE(is_style_overlay("Gravel_Flat.common.ovl"));
-}
-
 TEST_CASE("a style's support set is the first one its pieces name")
 {
     ovl::PathType path;

@@ -14,8 +14,6 @@ namespace rct3::park::path
     namespace
     {
 
-        constexpr std::string_view kStubEnding = "_stub.common.ovl";
-
         constexpr usize kGroundNames = 2;
         constexpr usize kNamesPerPiece = 4;
         constexpr usize kPieces = 19;
@@ -89,11 +87,6 @@ namespace rct3::park::path
         return paths;
     }
 
-    bool is_style_overlay(std::string_view file)
-    {
-        return file.size() > kStubEnding.size() && strings::equals_ignoring_case(file.substr(file.size() - kStubEnding.size()), kStubEnding);
-    }
-
     std::vector<PathStyle> folder_path_styles(const std::filesystem::path& folder)
     {
         std::vector<std::filesystem::path> folders;
@@ -107,14 +100,23 @@ namespace rct3::park::path
         std::vector<PathStyle> styles;
         for (const std::filesystem::path& style : folders)
         {
+            // Told by what the files hold, not by their names: a downloaded set may keep several styles in one
+            // folder, under names of its own.
+            std::vector<std::filesystem::path> files;
             for (const auto& entry : std::filesystem::directory_iterator(style, error))
             {
-                if (!is_style_overlay(entry.path().filename().string()))
-                    continue;
-                if (const auto overlay = ovl::Overlay::load(entry.path()))
+                const std::string name = entry.path().filename().string();
+                const bool common = name.size() > kCommonEnding.size() && strings::equals_ignoring_case(std::string_view(name).substr(name.size() - kCommonEnding.size()), kCommonEnding);
+                if (common && (ovl::lists_loader(entry.path(), ovl::kPathTypeTag) || ovl::lists_loader(entry.path(), ovl::kQueueTypeTag)))
+                    files.push_back(entry.path());
+            }
+            std::ranges::sort(files);
+            for (const std::filesystem::path& path : files)
+            {
+                if (const auto overlay = ovl::Overlay::load(path))
                 {
                     std::vector<PathStyle> found = path_styles(*overlay);
-                    std::string file = entry.path().filename().string();
+                    std::string file = path.filename().string();
                     file.resize(file.size() - kCommonEnding.size());
                     for (PathStyle& s : found)
                     {
@@ -124,7 +126,6 @@ namespace rct3::park::path
                     }
                     styles.insert(styles.end(), std::make_move_iterator(found.begin()), std::make_move_iterator(found.end()));
                 }
-                break;
             }
         }
         return styles;

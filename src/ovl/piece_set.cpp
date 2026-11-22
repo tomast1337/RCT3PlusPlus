@@ -10,8 +10,6 @@ namespace rct3::ovl
     namespace
     {
 
-        constexpr std::string_view kPathTag = "ptd";
-        constexpr std::string_view kQueueTag = "qtd";
         constexpr std::string_view kPoolTag = "pty";
         constexpr std::string_view kEnclosureTag = "enc";
         constexpr std::string_view kTextTag = "txt";
@@ -218,7 +216,7 @@ namespace rct3::ovl
             if (!symbol.is_pointer)
                 continue;
             const SymbolName parts = split_symbol_name(symbol.name);
-            if (parts.tag == kPathTag)
+            if (parts.tag == kPathTypeTag)
                 out.push_back({ parts.name, read_path(ctx, symbol.data) });
         }
         return out;
@@ -233,7 +231,7 @@ namespace rct3::ovl
             if (!symbol.is_pointer)
                 continue;
             const SymbolName parts = split_symbol_name(symbol.name);
-            if (parts.tag == kQueueTag)
+            if (parts.tag == kQueueTypeTag)
                 out.push_back({ parts.name, read_queue(ctx, symbol.data) });
         }
         return out;

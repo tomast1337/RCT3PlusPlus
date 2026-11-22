@@ -107,6 +107,10 @@ namespace rct3::ovl
         std::optional<EnclosureType> enclosure;
     };
 
+    /// The tags of path types' and queue types' symbols and loaders.
+    inline constexpr std::string_view kPathTypeTag = "ptd";
+    inline constexpr std::string_view kQueueTypeTag = "qtd";
+
     /// Path types of one part of an overlay: pointer symbols tagged "ptd". Views point into the overlay.
     [[nodiscard]] std::vector<PathTypeEntry> read_path_types(const Overlay& overlay, const Part& part);
     /// Queue types: pointer symbols tagged "qtd".

@@ -17,7 +17,6 @@
 #include <cmath>
 #include <cstdint>
 #include <format>
-#include <fstream>
 #include <iterator>
 #include <limits>
 #include <map>
@@ -211,7 +210,6 @@ namespace rct3::park::track
     std::vector<std::filesystem::path> piece_files_beside(const std::filesystem::path& file)
     {
         constexpr std::string_view kCommon = ".common.ovl";
-        constexpr usize kHeaderBytes = 64 * 1024; ///< Ample for an OVL header and its loader table
         std::vector<std::filesystem::path> beside;
         std::error_code error;
         for (auto it = std::filesystem::directory_iterator(file.parent_path(), error); !error && it != std::filesystem::directory_iterator(); it.increment(error))
@@ -219,12 +217,7 @@ namespace rct3::park::track
             const std::string name = it->path().filename().string();
             if (it->path() == file || name.size() <= kCommon.size() || !strings::equals_ignoring_case(std::string_view(name).substr(name.size() - kCommon.size()), kCommon))
                 continue;
-            std::ifstream in(it->path(), std::ios::binary);
-            std::vector<char> head(kHeaderBytes);
-            in.read(head.data(), static_cast<std::streamsize>(head.size()));
-            head.resize(static_cast<usize>(in.gcount()));
-            const auto header = ovl::parse_header(std::as_bytes(std::span(head)));
-            if (header && std::ranges::any_of(header->loaders, [](const ovl::Loader& l) { return l.tag == "tks"; }))
+            if (ovl::lists_loader(it->path(), ovl::kTrackSectionTag))
                 beside.push_back(it->path());
         }
         std::ranges::sort(beside);

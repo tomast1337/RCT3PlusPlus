@@ -54,12 +54,9 @@ namespace rct3::park::path
     /// The path styles, then the queue styles, that the overlay describes; unreadable ones are left out.
     [[nodiscard]] std::vector<PathStyle> path_styles(const ovl::Overlay& overlay);
 
-    /// Whether `file` is the name of a style's describing overlay: its common file, ending in "_Stub", in
-    /// any case.
-    [[nodiscard]] bool is_style_overlay(std::string_view file);
-
-    /// The styles described in the folders under `folder` (the install's path or queue folder), by folder
-    /// name. Folders without a readable description are skipped.
+    /// The styles described in the folders under `folder` (the install's path or queue folder): by every common
+    /// file in each folder whose loaders include path or queue types, in name order. Folders without a readable
+    /// description are skipped.
     [[nodiscard]] std::vector<PathStyle> folder_path_styles(const std::filesystem::path& folder);
 
 } // namespace rct3::park::path

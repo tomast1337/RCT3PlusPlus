@@ -11,8 +11,6 @@ namespace rct3::ovl
     namespace
     {
 
-        constexpr std::string_view kTag = "tks";
-
         // Bytes in one track piece record, per file layout: later layouts add fields at the end.
         constexpr usize kNoStreamSize = 228;
         constexpr usize kOneStreamSize = 364;
@@ -56,7 +54,7 @@ namespace rct3::ovl
             if (!symbol.is_pointer)
                 continue;
             const SymbolName parts = split_symbol_name(symbol.name);
-            if (parts.tag != kTag)
+            if (parts.tag != kTrackSectionTag)
                 continue;
 
             TrackSectionItem item { parts.name, std::nullopt };
@@ -119,7 +117,7 @@ namespace rct3::ovl
                 if (record_layout >= 3)
                 {
                     s.side = record->read_u32(0x16C);
-                    s.partner = record->ref(0x170, kTag);
+                    s.partner = record->ref(0x170, kTrackSectionTag);
                 }
                 s.references = record->references(static_cast<u32>(size));
                 s.record = record->bytes();

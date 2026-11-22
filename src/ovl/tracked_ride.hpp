@@ -127,6 +127,9 @@ namespace rct3::ovl
         std::optional<TrackedRide> ride; ///< Nothing when the start of the record does not fit its block
     };
 
+    /// The tag of a tracked ride's symbols and loader.
+    inline constexpr std::string_view kTrackedRideTag = "trr";
+
     /// Tracked rides of one part of an overlay: pointer symbols tagged "trr". The start of each item, its
     /// operating defaults, the guests it makes room for and its track rules are read; the rest of its ride
     /// parameters are not interpreted yet. Views in the result

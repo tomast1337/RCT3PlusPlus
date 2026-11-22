@@ -6,9 +6,11 @@
 //   - Green Meanies: its tubs stay upright while their bases climb straight up and loop;
 //   - Flight of the Phoenix: its cars swing out in the curves and hang straight again at the station;
 //   - Dizzymouse: its tubs spin in the turns and square up before the station;
-//   - Splash Down and Water Python: dinghies and bobsleighs sit upright at the station and swing in the turns.
+//   - Splash Down and Water Python: dinghies and bobsleighs sit upright at the station and swing in the turns;
+//   - Toxic Toboggan: the links between its sleds couple low between them, not up at the track over them.
 //
-// A screenshot of each at the moment its part shows most, and of the dinghies and bobsleighs at the station too.
+// A screenshot of each at the moment its part shows most, of the dinghies and bobsleighs at the station too, and of
+// Toxic Toboggan's links.
 //
 //   ./nob script scripts/tests/car_parts.ts -- --no-audio
 
@@ -225,4 +227,28 @@ for (const [design, name, least] of [
     });
     log(`${design}: swung up to`, widest.toFixed(3), "rad");
     expect(widest > least, `${design}'s ${name} swung, only ${widest.toFixed(3)} rad`);
+}
+
+// Coupled low: a bobsleigh's sleds hang well under the track their cars follow, and the links between them couple on
+// where the sleds say, down beside them.
+{
+    const ride = await lay("Toxic Toboggan");
+    expect(rides.setState(ride, "testing") == null, "tested");
+    await park.advance(0.5);
+    const r = tracked(rides.list()[ride], "the ride");
+    expect(r.carsPerTrain > must(r.passengerCars, "passenger cars"), "Toxic Toboggan's sleds linked");
+    const cars = r.cars.slice(0, r.carsPerTrain);
+    let highest = 0; // The furthest a link stands over the sleds either side of it
+    for (let k = 1; k + 1 < cars.length; k += 2)
+        highest = Math.max(highest, (cars[k].up ?? 0) - ((cars[k - 1].up ?? 0) + (cars[k + 1].up ?? 0)) / 2);
+    log("Toxic Toboggan: links stand up to", highest.toFixed(3), "over their sleds");
+    // A link up at the track the sleds hang under stands about 2.6 m over them; on their rims, under 2.
+    expect(highest < 2, `Toxic Toboggan's links low between their sleds, not ${highest.toFixed(3)} over them`);
+    // From just over the sleds, as the trough's walls hide them from the side.
+    await ui.click("bar/Top_Pause");
+    const sled = cars[2];
+    camera.look(sled, { col: sled.col + 0.3, row: sled.row + 0.3, up: (sled.up ?? 0) + 2.5 });
+    await frames(5);
+    await screenshot("car_parts_bobsleigh_links");
+    await ui.click("bar/Top_Pause");
 }

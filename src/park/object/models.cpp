@@ -1174,10 +1174,15 @@ namespace rct3::park::object
                 if (found > 0)
                     points.wheels[i] = sum / static_cast<f32>(found);
             }
-            if (const auto link = bone_of(car->visual, "linkfront"))
-                points.link_front = glm::vec3((*link)[3]);
-            if (const auto link = bone_of(car->visual, "linkrear"))
-                points.link_rear = glm::vec3((*link)[3]);
+            // Where the cars couple on: the part's bones first, at its place on the car, as a bobsleigh's sled hangs
+            // well under the track its car follows; else the car's own.
+            const auto link_point = [&](std::string_view bone) -> std::optional<glm::vec3> {
+                if (const auto on_part = bone_of(car->part, bone))
+                    return glm::vec3(part_place * (*on_part)[3]);
+                return bone_of(car->visual, bone).transform([](const glm::mat4& m) { return glm::vec3(m[3]); });
+            };
+            points.link_front = link_point("linkfront");
+            points.link_rear = link_point("linkrear");
             model.car_fit = fit_car(points);
         }
         else if (slot == kLinkSlot && !model.levels.empty())

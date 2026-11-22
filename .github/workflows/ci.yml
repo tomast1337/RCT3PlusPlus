@@ -11,6 +11,10 @@
 # Windows builds in MSYS2's CLANG64 (Clang with libc++), as the release workflow's Windows job does
 # (docs/windows.md). That job builds the viewer too, as Windows has no other check of it.
 #
+# The simulation must give the same bits on every platform. A unit test runs a park built in code and, with
+# RCT3PP_FINGERPRINTS set, writes its fingerprints along the run to that file; the Linux and Windows jobs upload
+# theirs (both from the same debug build), and the fingerprints job compares them.
+#
 # Follow-ups, deliberately not covered yet: the viewer build on Linux (Vulkan, windowing) and the libFuzzer
 # targets.
 name: ci
@@ -88,6 +92,17 @@ jobs:
 
       - name: Test
         run: ./nob test ${{ matrix.cache == 'sanitize' && '--sanitize --no-tools' || '' }}
+        env:
+          RCT3PP_FINGERPRINTS: fingerprints.txt
+
+      - name: Upload the fingerprints
+        if: matrix.cache == 'plain'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fingerprints-linux
+          path: fingerprints.txt
+          if-no-files-found: error
+          retention-days: 7
 
   # ccache as on Linux: copies of ccache.exe named clang++.exe and clang.exe come first on the path (a copy, as
   # MSYS2 symlinks are not real ones for Windows programs), and ccache then runs the next ones, Clang's.
@@ -150,15 +165,53 @@ jobs:
 
       - name: Test
         run: |
-          export PATH="/opt/ccache:$PATH" CCACHE_DIR="$PWD/.ccache" CCACHE_MAXSIZE=400M
+          export PATH="/opt/ccache:$PATH" CCACHE_DIR="$PWD/.ccache" CCACHE_MAXSIZE=400M RCT3PP_FINGERPRINTS=fingerprints.txt
           ccache --zero-stats
           ./nob test
+
+      - name: Upload the fingerprints
+        uses: actions/upload-artifact@v4
+        with:
+          name: fingerprints-windows
+          path: fingerprints.txt
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Build the viewer
         run: |
           export PATH="/opt/ccache:/opt/slang/bin:$PATH" CCACHE_DIR="$PWD/.ccache" CCACHE_MAXSIZE=400M
           ./nob app
           ccache --show-stats
+
+  # The park the fingerprint test runs, stepped on Linux (libstdc++) and on Windows (libc++), must go the same way
+  # to the bit. The first line that differs shows about when the two runs parted.
+  fingerprints:
+    name: same simulation on Linux and Windows
+    needs: [build-and-test, windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: fingerprints-*
+
+      - name: Compare
+        run: |
+          linux=fingerprints-linux/fingerprints.txt windows=fingerprints-windows/fingerprints.txt
+          if [ ! -s "$linux" ] || [ ! -s "$windows" ]; then
+            echo "::error::A fingerprint file is missing or empty"
+            exit 1
+          fi
+          awk '
+            NR == FNR { linux[FNR] = $0; lines = FNR; next }
+            linux[FNR] != $0 {
+              printf "::error::The simulation went another way on Windows than on Linux, first at line %d: Linux \"%s\", Windows \"%s\"\n", FNR, linux[FNR], $0
+              failed = 1
+              exit 1
+            }
+            END { if (!failed && FNR != lines) { printf "::error::Linux wrote %d fingerprint lines, Windows %d\n", lines, FNR; exit 1 } }
+          ' "$linux" "$windows"
+          echo "The same $(wc -l < "$linux") fingerprints on Linux and Windows"
 
   # Formatting first: it takes a minute, and the build jobs wait for it, so a formatting slip fails fast instead
   # of after a full build. The tool versions are pinned (clang-format from PyPI, Prettier in nob.cpp) so the result

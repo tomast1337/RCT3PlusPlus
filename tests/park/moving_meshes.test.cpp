@@ -189,3 +189,33 @@ TEST_CASE("a car's swinging part is drawn swung from level by its angle, about i
     sprung.moves.spring = 100;
     CHECK(part_move(sprung, banked) == glm::mat4(1.0f));
 }
+
+TEST_CASE("a swinging part made in its car's frame rests upright and swings about the car's forward, its pivot bones turned")
+{
+    // The car's pivot bone is turned a third round the diagonal, its up the car's sideways line, and the part's own
+    // half round its up, as some cars' bones are; the part is made upright in the car's frame all the same.
+    const glm::mat4 car_pivot { glm::vec4(0, 0, 1, 0), glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 1.8f, 0, 1) };
+    const ovl::PartMoves swings { .motion = ovl::PartMotion::SwingsSideways };
+    const object::CarPartRest rest = object::car_part_rest(swings, car_pivot, { 0, 1.6f, 0 });
+    REQUIRE(rest.moving);
+    // Its pivot on the car's, its up the car's up.
+    CHECK(glm::distance(glm::vec3(rest.place * glm::vec4(0, 1.6f, 0, 1)), glm::vec3(0, 1.8f, 0)) == doctest::Approx(0).epsilon(1e-5));
+    CHECK(glm::distance(glm::mat3(rest.place) * glm::vec3(0, 1, 0), glm::vec3(0, 1, 0)) == doctest::Approx(0).epsilon(1e-5));
+    // Standing level, it rests upright; swung, it leans to the side about the car's forward through its pivot.
+    const glm::mat4 level = glm::rotate(glm::translate(glm::mat4(1.0f), { 5, 2, 3 }), 0.7f, { 0, 1, 0 });
+    for (const f32 swung : { 0.0f, 0.4f })
+    {
+        CAPTURE(swung);
+        const glm::mat4 drawn = level * part_move(*rest.moving, level, units::Radians { swung }) * rest.place;
+        const glm::vec3 up = glm::mat3(drawn) * glm::vec3(0, 1, 0);
+        CHECK(up.y == doctest::Approx(std::cos(swung)));
+        const glm::vec3 ahead = glm::mat3(drawn) * glm::vec3(0, 0, 1);
+        CHECK(ahead.x == doctest::Approx(std::sin(0.7f)));
+        CHECK(ahead.z == doctest::Approx(std::cos(0.7f)));
+        CHECK(glm::distance(glm::vec3(drawn * glm::vec4(0, 1.6f, 0, 1)), glm::vec3(level * glm::vec4(0, 1.8f, 0, 1))) == doctest::Approx(0).epsilon(1e-5));
+    }
+    // Held level instead, it is made in the pivot bone's frame.
+    ovl::PartMoves held = swings;
+    held.furthest = units::Radians { 0 };
+    CHECK(object::car_part_rest(held, car_pivot, { 0, 1.6f, 0 }).moving->pivot == car_pivot);
+}

@@ -164,6 +164,18 @@ namespace rct3::park::object
         bool link = false; ///< A link (kLinkSlot)
     };
 
+    /// A car's moving part as it rests on its car: where its shape goes on the car's, and, for one drawn apart (it
+    /// swings, is held level or spins), how it moves there.
+    struct CarPartRest
+    {
+        glm::mat4 place { 1.0f };
+        std::optional<CarPart> moving { };
+    };
+
+    /// How a part moving as `moves` says rests on its car: `car_pivot` is the car shape's bone named "pivot", and
+    /// `part_pivot` the point of the part's own bone of that name, which the two line up by.
+    [[nodiscard]] CarPartRest car_part_rest(const std::optional<ovl::PartMoves>& moves, const glm::mat4& car_pivot, const glm::vec3& part_pivot);
+
     /// How a car with these points sits on its track, its lengths taken along the line from its rear to its front.
     [[nodiscard]] CarFit fit_car(const CarPoints& points);
 

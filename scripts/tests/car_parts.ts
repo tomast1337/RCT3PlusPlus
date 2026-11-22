@@ -5,15 +5,17 @@
 //
 //   - Green Meanies: its tubs stay upright while their bases climb straight up and loop;
 //   - Flight of the Phoenix: its cars swing out in the curves and hang straight again at the station;
-//   - Dizzymouse: its tubs spin in the turns and square up before the station.
+//   - Dizzymouse: its tubs spin in the turns and square up before the station;
+//   - Splash Down and Water Python: dinghies and bobsleighs sit upright at the station and swing in the turns.
 //
-// A screenshot of each at the moment its part shows most.
+// A screenshot of each at the moment its part shows most, and of the dinghies and bobsleighs at the station too.
 //
 //   ./nob script scripts/tests/car_parts.ts -- --no-audio
 
 export {};
 
-/** Lays the saved design whose file holds `name` on a new blank landscape, and gives its place in rides.list(). */
+/** Lays the saved design whose file holds `name` (its kind in brackets first, where another kind has a design of
+ * that name) on a new blank landscape, and gives its place in rides.list(). */
 async function lay(name: string): Promise<RideIndex> {
     await park.open("Campaigns/Base/BlankLandscape.dat");
     await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "tools");
@@ -25,7 +27,7 @@ async function lay(name: string): Promise<RideIndex> {
     expect(build.pick(must(d.overlay, `${name}'s ride`), d.symbol, "designs"), `${name}'s kind to build`);
     await until(() => ui.find("design_browser") !== undefined, 600, "the designs window");
     await frames(3);
-    const row = build.construction()!.designs.findIndex((f) => f.includes(name));
+    const row = build.construction()!.designs.findIndex((f) => f.includes(name.replace(/^\[.*\]/, "")));
     expect(row >= 0, `${name} among ${build.construction()!.designs.join(", ")}`);
     const list = must(ui.find("design_browser/content/list"), "design_browser/content/list shown");
     const button = must(ui.find("design_browser/content/build"), "design_browser/content/build shown");
@@ -83,13 +85,14 @@ async function watchTest(
     }
 }
 
-/** Looks at `car` from close by its side, paused so it stays there, and saves a screenshot named `name`. */
-async function shoot(car: MapPoint, name: string): Promise<void> {
+/** Looks at `car` from close by its side, `rise` metres above it (higher to see into a trough), paused so it stays
+ * there, and saves a screenshot named `name`. */
+async function shoot(car: MapPoint, name: string, rise = 2): Promise<void> {
     await ui.click("bar/Top_Pause");
     // The camera looks at a point on the ground: one past the car on the line from the eye through it.
     const up = car.up ?? 0;
-    const eye = { col: car.col + 2, row: car.row + 3, up: up + 2 };
-    const past = up / 2;
+    const eye = { col: car.col + 2, row: car.row + 3, up: up + rise };
+    const past = up / rise;
     camera.look({ col: car.col - 2 * past, row: car.row - 3 * past, up: 0 }, eye);
     await frames(5);
     await screenshot(name);
@@ -187,4 +190,39 @@ async function shoot(car: MapPoint, name: string): Promise<void> {
     expect(off < 0.02, `Dizzymouse tubs squared up at the station, not ${off.toFixed(3)} rad off`);
     const car = tracked(rides.list()[ride], "the ride").cars[0];
     await shoot(car, "car_parts_squared_up");
+}
+
+// Swinging in the car's own frame, whichever way its pivot bones are turned: upright at the station, swung in the turns,
+// at least `least` radians. A dinghy rides up its trough's walls whole, so its own swing stays small.
+for (const [design, name, least] of [
+    ["[Dingy]Splash Down", "dinghies", 0.06],
+    ["Water Python", "bobsleighs", 0.2],
+] as const) {
+    const ride = await lay(design);
+    expect(rides.setState(ride, "testing") == null, "tested");
+    await park.advance(0.5);
+    // Those with a part, on level track: a part swinging about its car's forward leans back with its car on a slope.
+    const waiting = tracked(rides.list()[ride], "the ride").cars.filter(
+        (c) => c.partTilt !== undefined && Math.abs(c.pitch) < 0.05,
+    );
+    expect(waiting.length > 0, `${design}'s ${name} on level track`);
+    const leant = Math.max(...waiting.map((c) => c.partTilt!));
+    log(`${design} on level track: parts leant up to`, leant.toFixed(3), "rad");
+    expect(leant < 0.05, `${design}'s ${name} upright on level track, not leaning ${leant.toFixed(3)} rad`);
+    await shoot(waiting[0], `car_parts_${name}_at_the_station`);
+    let widest = 0;
+    let shot = false;
+    await watchTest(ride, 90, async (cars, trains) => {
+        for (const [t, train] of trains.entries())
+            for (const [k, swing] of train.swings.entries()) {
+                widest = Math.max(widest, Math.abs(swing));
+                const car = cars[t * train.swings.length + k];
+                if (!shot && Math.abs(swing) > least && car !== undefined) {
+                    shot = true;
+                    await shoot(car, `car_parts_${name}_swung`, 12);
+                }
+            }
+    });
+    log(`${design}: swung up to`, widest.toFixed(3), "rad");
+    expect(widest > least, `${design}'s ${name} swung, only ${widest.toFixed(3)} rad`);
 }

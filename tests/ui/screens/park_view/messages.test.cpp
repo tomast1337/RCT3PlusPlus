@@ -79,6 +79,21 @@ TEST_CASE("a message's text fills in its subject's name, or leaves the name out"
     CHECK(message_text(m, strings) == u"100% fun");
 }
 
+TEST_CASE("a firework display that keeps its default name is called by it")
+{
+    StringTable strings;
+    strings.add("FireworkDisplay_AboutToStart", u"Show: %NAME% begins.");
+    strings.add("FireworkDisplayDefaultName", u"Night Show");
+    simulation::park::ParkMessage m;
+    m.text_key = "FireworkDisplay_AboutToStart";
+    m.subject_name = "%ME%";
+    CHECK(message_text(m, strings) == u"Show: Night Show begins.");
+    m.subject_name = "%ME% 2";
+    CHECK(message_text(m, strings) == u"Show: Night Show 2 begins.");
+    m.subject_name = "Finale";
+    CHECK(message_text(m, strings) == u"Show: Finale begins.");
+}
+
 TEST_CASE("a message about a ride or stall with its default name names its kind and number")
 {
     StringTable strings;

@@ -26,6 +26,10 @@ namespace rct3::ui::screens::park_view
         // The text keys of the scenario goals' messages and of the park inspector's reports start so.
         constexpr std::string_view kGoalKeys = "ObjectiveMessage_";
         constexpr std::string_view kInspectorKeys = "Thought_PI_";
+        constexpr std::string_view kDisplayKeys = "FireworkDisplay";
+        /// How a firework display keeps the name it has not been given: the default name, then any number.
+        constexpr std::u16string_view kOwnName = u"%ME%";
+        constexpr std::string_view kDisplayDefaultName = "FireworkDisplayDefaultName";
 
         // Where things sit, in units from the drawer's left and bottom edges.
         constexpr f32 kLipHeight = 39;
@@ -72,7 +76,9 @@ namespace rct3::ui::screens::park_view
     {
         std::u16string text(strings.get(message.text_key));
         // An award's message is named by the award.
-        const std::u16string name = message.award ? std::u16string(strings.get(simulation::award_name(*message.award))) : strings::to_utf16(message.subject_name);
+        std::u16string name = message.award ? std::u16string(strings.get(simulation::award_name(*message.award))) : strings::to_utf16(message.subject_name);
+        if (message.text_key.starts_with(kDisplayKeys) && name.starts_with(kOwnName))
+            name.replace(0, kOwnName.size(), strings.get(kDisplayDefaultName));
         if (const auto at = text.find(u"%d"); message.number && at != std::u16string::npos)
             text.replace(at, 2, strings::to_utf16(std::to_string(*message.number)));
         // Fields are words between percent signs. The subject's name fills %NAME%, the field key any other.

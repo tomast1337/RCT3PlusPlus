@@ -8,6 +8,7 @@
 //   save-dump --paths PATH...    (raised paths and queues grouped by stored slope, with their pieces and heights)
 //   save-dump --effect PATH...   (particle effects: emitters, particles, the pictures they use and the most alive at once)
 //   save-dump --display PATH...  (firework displays: launchers, shots and how long they run)
+//   save-dump --show-effect PATH... (laser, water jet and laser drawing files: their settings and timelines)
 //   save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] PATH
 //   save-dump [--classes] [--objects] [--values CLASS] [--object ID] [--check] [--rides] PATH
 //
@@ -20,6 +21,7 @@
 #include "logging/log.hpp"
 #include "particles/display.hpp"
 #include "particles/effect.hpp"
+#include "particles/show_effect.hpp"
 #include "particles/simulation.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
@@ -452,6 +454,75 @@ int main(int argc, char** argv)
                 peak = std::max(peak, run.particles().count());
             }
             out.info("{}: life {:.2f}, {:d} roots, {:d} emitters, {:d} particles, peak {:d} live:{}", argv[i], static_cast<f64>(effect->lifetime), effect->roots.size(), effect->emitters.size(), effect->particles.size(), peak, skins.c_str());
+        }
+        return bad == 0 ? 0 : 1;
+    }
+
+    // `save-dump --show-effect FILE...`: each laser, water jet or laser drawing file, by its extension.
+    if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--show-effect") == 0; }))
+    {
+        const auto points = [](const rct3::particles::Curve& c) {
+            std::string text;
+            for (usize i = 0; i < c.times.size(); ++i)
+                text += std::format(" {:.2f}:{:.3f}", c.times[i], c.values[i]);
+            return text;
+        };
+        i32 bad = 0;
+        for (i32 i = 1; i < argc; ++i)
+        {
+            if (std::strncmp(argv[i], "--", 2) == 0)
+                continue;
+            std::ifstream in(argv[i], std::ios::binary);
+            std::vector<char> chars((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            const auto bytes = std::as_bytes(std::span(chars));
+            const std::string path = argv[i];
+            const std::string extension = path.substr(std::min(path.rfind('.'), path.size()));
+            if (extension == ".wjt")
+            {
+                const auto jet = rct3::particles::read_water_jet(bytes);
+                if (!jet)
+                {
+                    out.info("{}: {}", path, rct3::particles::to_string(jet.error()));
+                    ++bad;
+                    continue;
+                }
+                out.info("{}: water jet \"{}\", {:.2f} s", path, jet->name, jet->seconds);
+                out.info("  pressure{}", points(jet->pressure));
+                out.info("  elevation{}", points(jet->elevation));
+                out.info("  widening{}", points(jet->widening));
+                out.info("  opacity{}", points(jet->colour[3]));
+            }
+            else if (extension == ".lwr")
+            {
+                const auto drawing = rct3::particles::read_laser_drawing(bytes);
+                if (!drawing)
+                {
+                    out.info("{}: {}", path, rct3::particles::to_string(drawing.error()));
+                    ++bad;
+                    continue;
+                }
+                const auto lit = std::ranges::count(drawing->points, true, &rct3::particles::LaserPoint::lit);
+                out.info("{}: laser drawing, {:.2f} s, {:d} points, {:d} lit", path, drawing->seconds, drawing->points.size(), lit);
+            }
+            else
+            {
+                const auto laser = rct3::particles::read_laser(bytes);
+                if (!laser)
+                {
+                    out.info("{}: {}", path, rct3::particles::to_string(laser.error()));
+                    ++bad;
+                    continue;
+                }
+                usize drawn = 0;
+                for (const auto& d : laser->drawings)
+                    drawn += d.points.size();
+                out.info("{}: laser \"{}\", {:.2f} s, look {:d}, {:d} beams, power {:.1f}, trail {:.3f} s, drawing scale {:.1f}, {:d} drawings of {:d} points", path, laser->name, laser->seconds, static_cast<i32>(laser->look), laser->beams, laser->power, laser->trail_seconds, laser->drawing_scale, laser->drawings.size(), drawn);
+                out.info("  red{}", points(laser->colour[0]));
+                out.info("  opacity{}", points(laser->colour[3]));
+                out.info("  elevation{}", points(laser->elevation));
+                out.info("  spin{}", points(laser->spin));
+                out.info("  width{}", points(laser->width));
+            }
         }
         return bad == 0 ? 0 : 1;
     }

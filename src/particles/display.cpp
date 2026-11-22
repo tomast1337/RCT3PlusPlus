@@ -110,49 +110,21 @@ namespace rct3::particles
             return o.class_index < file.classes.size() && file.classes[o.class_index].name == name;
         }
 
-        /// The fields of the object `parent`'s reference `name` points to; none when it points nowhere.
-        std::optional<save::Value> referred(const save::SaveFile& file, const save::ObjectIndex& index, const save::Value& parent, std::string_view name)
+        /// The object id of the description a park's laser or water jet shot `entry` keeps: its source names it by
+        /// reference `field`.
+        std::optional<u64> described(const save::SaveFile& file, const save::ObjectIndex& index, const save::Value& entry, std::string_view field)
         {
-            const auto ref = parent.field(name);
+            const auto ref = entry.field("ParticleSourceRef");
             if (!ref || ref->kind() != save::ValueKind::Reference)
                 return std::nullopt;
             const auto o = index.find(ref->as_reference());
             if (!o)
                 return std::nullopt;
-            auto decoded = save::decode_object(file, *o);
-            if (!decoded)
+            const auto source = save::decode_object(file, *o);
+            const auto desc = source ? source->fields.field(field) : std::nullopt;
+            if (!desc || desc->kind() != save::ValueKind::Reference)
                 return std::nullopt;
-            return std::move(decoded->fields);
-        }
-
-        /// A blender of numbers: its first points, each a time up to its greatest and a number, as a curve over 0 to 1.
-        Curve blended(const save::SaveFile& file, const save::ObjectIndex& index, const save::Value& blender)
-        {
-            const f32 longest = number(blender, "MaxTime");
-            const auto points = list(blender, "FixedPts");
-            const usize used = static_cast<usize>(std::clamp<i64>(whole(blender, "NumPts"), 0, static_cast<i64>(points.size())));
-            Curve c;
-            for (const save::Value& point : points.first(used))
-                if (const auto element = referred(file, index, point, "BlenderElement"))
-                {
-                    c.times.push_back(longest > 0 ? number(point, "PointTime") / longest : 0.0f);
-                    c.values.push_back(number(*element, "Float"));
-                }
-            return c;
-        }
-
-        /// The pattern of a park's water jet shot: from the jet source the shot made, its description.
-        std::optional<JetPattern> jet_pattern(const save::SaveFile& file, const save::ObjectIndex& index, const save::Value& entry)
-        {
-            const auto source = referred(file, index, entry, "ParticleSourceRef");
-            const auto desc = source ? referred(file, index, *source, "WaterJetBaseDesc") : std::nullopt;
-            if (!desc)
-                return std::nullopt;
-            const auto curve = [&](std::string_view name) {
-                const auto blender = referred(file, index, *desc, name);
-                return blender ? blended(file, index, *blender) : Curve { };
-            };
-            return JetPattern { .seconds = number(*desc, "Duration"), .pressure = curve("PressureBlender"), .elevation = curve("ElevationBlender"), .widening = curve("DiameterDeltaBlender") };
+            return desc->as_reference();
         }
 
     } // namespace
@@ -229,8 +201,10 @@ namespace rct3::particles
                 if (launcher == display.launchers.end())
                     launcher = display.launchers.insert(launcher, Launcher { .placed = id });
                 Shot& shot = display.shots.emplace_back(shot_of(entry, static_cast<usize>(launcher - display.launchers.begin())));
-                if (shot.kind == ShotKind::WaterJet)
-                    shot.jet = jet_pattern(file, index, entry);
+                if (const auto jet = shot.kind == ShotKind::WaterJet ? described(file, index, entry, "WaterJetBaseDesc") : std::nullopt)
+                    shot.jet = water_jet_in(file, index, *jet);
+                if (const auto laser = shot.kind == ShotKind::Laser ? described(file, index, entry, "LaserBaseDesc") : std::nullopt)
+                    shot.laser = laser_in(file, index, *laser);
             }
             std::ranges::stable_sort(display.shots, { }, &Shot::seconds);
             displays.push_back(std::move(display));
@@ -250,7 +224,7 @@ namespace rct3::particles
     {
         f32 last = 0;
         for (const Shot& shot : display.shots)
-            last = std::max(last, shot.seconds + (shot.jet ? shot.jet->seconds : 0.0f));
+            last = std::max(last, shot.seconds + (shot.jet ? shot.jet->seconds : shot.laser ? shot.laser->seconds : 0.0f));
         return last;
     }
 

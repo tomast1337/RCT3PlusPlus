@@ -11,8 +11,8 @@
 // ride's, not one the park schedules.
 //
 // A shot is a firework, a laser or a water jet, and a display mostly of water jets is a fountain show. In a park, a
-// water jet shot carries its pattern: how hard the jet shoots, how far it leans and how much it widens over its
-// time.
+// laser or water jet shot carries its whole description (particles/show_effect.hpp), so the park does not need the
+// file the shot names.
 //
 // A display starts on a day of a month it runs in, as the time of day reaches its start, and runs its shots at
 // their times from then on.
@@ -20,6 +20,7 @@
 
 #include "core/types.hpp"
 #include "particles/effect.hpp"
+#include "particles/show_effect.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -55,15 +56,6 @@ namespace rct3::particles
         WaterJet = 2,
     };
 
-    /// A water jet shot's pattern. Its curves run over its time, 0 at the start to 1 at the end.
-    struct JetPattern
-    {
-        f32 seconds = 0;
-        Curve pressure { };  ///< The speed the water leaves at, meters a second
-        Curve elevation { }; ///< Lean from straight up, radians, toward the launcher's front
-        Curve widening { };  ///< What the stream's width is multiplied by each second it flies
-    };
-
     struct Shot
     {
         ShotKind kind = ShotKind::Firework;
@@ -73,6 +65,7 @@ namespace rct3::particles
         f32 seconds = 0;                   ///< From the start of the show
         i32 lane = 0;                      ///< The timeline row it sits on in the editor
         std::optional<JetPattern> jet { }; ///< Of a water jet shot in a park
+        std::optional<Laser> laser { };    ///< Of a laser shot in a park
     };
 
     struct Display
@@ -105,7 +98,7 @@ namespace rct3::particles
     /// What most of `display`'s shots are; fireworks when it has none.
     [[nodiscard]] ShotKind main_kind(const Display& display);
 
-    /// Seconds from a display's start to its last shot's end: a water jet's pattern runs on past its shot.
+    /// Seconds from a display's start to its last shot's end: a water jet or a laser runs on past its shot.
     [[nodiscard]] f32 display_seconds(const Display& display);
 
     /// Game minutes after its start time during which a display due that day still starts, so a clock run fast or

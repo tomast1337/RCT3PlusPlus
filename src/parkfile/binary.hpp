@@ -396,7 +396,11 @@ namespace rct3::parkfile::detail
         {
             w.number(static_cast<u32>(value.size()));
             for (const auto& item : value)
-                put(w, item);
+                // A std::vector<bool> element is a proxy class in some standard libraries, not a bool.
+                if constexpr (std::same_as<T, std::vector<bool>>)
+                    put(w, static_cast<bool>(item));
+                else
+                    put(w, item);
         }
         else if constexpr (IsOptional<T>::value)
         {

@@ -131,6 +131,16 @@ namespace rct3::park
         return seat * glm::rotate(glm::mat4(1.0f), turn.x, glm::vec3(0, 1, 0)) * glm::rotate(glm::mat4(1.0f), -turn.y, glm::vec3(1, 0, 0));
     }
 
+    glm::mat4 seat_looking(glm::vec3 from, glm::vec3 at)
+    {
+        const glm::vec3 look = at - from;
+        const glm::vec3 z = glm::length(look) > 0 ? glm::normalize(look) : glm::vec3(0, 0, 1);
+        const glm::vec3 side = glm::cross(glm::vec3(0, 1, 0), z);
+        const glm::vec3 x = glm::length(side) > 1e-4f ? glm::normalize(side) : glm::vec3(1, 0, 0);
+        const glm::vec3 y = glm::cross(z, x);
+        return { glm::vec4(x, 0), glm::vec4(y, 0), glm::vec4(z, 0), glm::vec4(from, 1) };
+    }
+
     glm::vec2 look_round_limited(glm::vec2 turn)
     {
         return { std::remainder(turn.x, glm::two_pi<f32>()), std::clamp(turn.y, -kRideLookMostPitch, kRideLookMostPitch) };

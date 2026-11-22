@@ -949,7 +949,12 @@ namespace rct3::scene
         engine_.define("camera.riding", [this](const Json&) -> Json {
             const park::ParkScene& park = park_of(park_);
             Json out;
-            if (park.riding_person)
+            if (park.riding_animal)
+            {
+                constexpr std::array<std::string_view, 3> kViews { "follow", "static", "head" };
+                out = { { "ride", -1 }, { "car", -1 }, { "animal", entt::to_integral(*park.riding_animal) }, { "kind", kViews[std::to_underlying(park.animal_eye)] } };
+            }
+            else if (park.riding_person)
                 out = { { "ride", -1 }, { "car", *park.riding_person }, { "kind", park.person_behind ? "behind" : "guest" } };
             else if (park.riding_flat)
                 out = { { "ride", park.riding_flat->first.value }, { "car", park.riding_flat->second }, { "kind", park.flat_eye == park::FlatEye::Fixed ? "fixed" : "seat" } };

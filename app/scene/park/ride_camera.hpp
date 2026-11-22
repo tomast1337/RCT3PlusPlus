@@ -8,6 +8,7 @@
 #include "core/types.hpp"
 #include "park/object/models.hpp"
 #include "save/model/rides.hpp"
+#include "simulation/entt.hpp"
 #include "ui/interface_assets.hpp"
 #include "ui/screens/park_view/ride_camera.hpp"
 
@@ -18,6 +19,7 @@ namespace rct3::scene::park
 {
 
     struct ParkScene;
+    enum class AnimalEye : u8;
 
     /// Of the cars of ride `ride`, those with a camera of kind `eye`, in the order the park keeps them.
     [[nodiscard]] std::vector<usize> ride_seats(const ParkScene& scene, save::model::RideIndex ride, rct3::park::object::RideEye eye);
@@ -26,6 +28,10 @@ namespace rct3::scene::park
     /// ride_along does in a car; the train buttons go from person to person, the type button changes between
     /// the two views.
     void ride_person(ParkScene& scene, const ui::InterfaceAssets& assets, usize person, bool behind);
+
+    /// AnimalCam: goes with zoo animal `animal`, out of its crate, looking at it as `eye` says, as ride_along does
+    /// in a car; the type button goes round the three views, the train buttons go from animal to animal.
+    void ride_animal(ParkScene& scene, const ui::InterfaceAssets& assets, entt::entity animal, AnimalEye eye);
 
     /// Rides along on ride `ride`: a flat ride from its first rider seat; a tracked ride
     /// from the first front seat camera of a train under way, else of the first train, the rear or nose

@@ -544,7 +544,7 @@ namespace rct3::scene::park
             if (!over_interface)
                 scene.ride_pull = std::clamp(scene.ride_pull - input.pointer.wheel.y * kRidePullPerNotch, 0.0f, kRidePullMost);
             scene.last_pointer = input.pointer.position;
-            if (scene.riding_person && *scene.riding_person >= scene.shown_people.size())
+            if ((scene.riding_person && *scene.riding_person >= scene.shown_people.size()) || (scene.riding_animal && !std::ranges::contains(scene.drawn_animals.placed_animals, *scene.riding_animal)))
                 stop_riding(scene);
             if (const auto action = panel->take_action())
                 ride_action(scene, assets, *action);
@@ -569,9 +569,13 @@ namespace rct3::scene::park
         {
             const profiling::Scope zone("InfoPanel");
             mark_train(scene, *info);
-            // A double click on a ride's round view rides along on it, as the ride camera key does.
-            if (info->take_view_double_click() && !scene.riding_along() && scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride)
+            // A double click on a ride's round view rides along on it, as the ride camera key does; on an
+            // animal's, AnimalCam goes with it.
+            const bool view_double = info->take_view_double_click() && !scene.riding_along();
+            if (view_double && scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride)
                 ride_cam(scene, assets, scene.shown->ride());
+            else if (view_double && scene.shown_animal)
+                ride_animal(scene, assets, *scene.shown_animal, AnimalEye::Follow);
             // Pressing the park puts open colours away without picking.
             if ((pointer.down || input.right) && !over && info->painting())
                 info->close_palette();
@@ -930,6 +934,8 @@ namespace rct3::scene::park
                 }
                 else if (change->id == ui::screens::info::animal_control(ui::screens::info::AnimalControl::Locate))
                     scene.camera.target = scene.sim.registry.get<simulation::Pose>(*scene.shown_animal).position;
+                else if (change->id == ui::screens::info::animal_control(ui::screens::info::AnimalControl::Camera))
+                    ride_animal(scene, assets, *scene.shown_animal, AnimalEye::Follow);
             }
             else if (change && !scene.shown_party.empty())
             {

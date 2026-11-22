@@ -496,9 +496,10 @@ declare namespace camera {
     /** The water on the camera's lens: its drops and its sheets of water. */
     function lens(): { drops: number; sheets: number };
     /** Riding along: in a car of a ride with a track (its place in rides.list() and the car's), on a flat ride (the
-     *  seat or its fixed camera), or going with a person (their place in people.list(); ride is -1). Once it is seen
-     *  from (a frame or so after it starts, which no field tells), the rider's eyes in world units and the way they
-     *  look. Undefined while the view is overhead. */
+     *  seat or its fixed camera), going with a person (their place in people.list(); ride is -1), or AnimalCam with
+     *  an animal (its id in animals.list(); ride and car are -1). Once it is seen from (a frame or so after it
+     *  starts, which no field tells), the rider's eyes in world units and the way they look. Undefined while the
+     *  view is overhead. */
     function riding():
         | ({
               turn: [number, number];
@@ -508,6 +509,7 @@ declare namespace camera {
               | { kind: "nose" | "front" | "rear"; ride: RideIndex; car: number }
               | { kind: "seat" | "fixed"; ride: RideIndex; car: number }
               | { kind: "guest" | "behind"; ride: -1; car: PersonIndex }
+              | { kind: "follow" | "static" | "head"; ride: -1; car: -1; animal: number }
           ))
         | undefined;
 }

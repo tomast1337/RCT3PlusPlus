@@ -59,6 +59,7 @@ TEST_CASE("an animal's details name it, give its kind and say what it is doing")
     REQUIRE(doing != page.controls.end());
     CHECK(doing->label == u"Munching");
     CHECK(std::ranges::contains(page.controls, animal_control(AnimalControl::Locate), &InfoControl::id));
+    CHECK(std::ranges::contains(page.controls, animal_control(AnimalControl::Camera), &InfoControl::id));
 }
 
 TEST_CASE("an animal's stats are six bars, its enclosure's dung making it less clean")

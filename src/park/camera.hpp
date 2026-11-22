@@ -72,6 +72,9 @@ namespace rct3::park
     [[nodiscard]] glm::vec2 look_round_limited(glm::vec2 turn);
 
     [[nodiscard]] glm::mat4 ride_look(RideView& view, const glm::mat4& eye, std::optional<glm::vec3> ahead, bool sways, const ovl::RideCameraTuning& tuning, f32 elapsed, glm::vec2 dice);
+    /// A rider's eyes at `from` looking at `at`, kept upright: +Z towards `at`, +Y as near up as that allows. Straight
+    /// up or down, it faces along +Z of the park.
+    [[nodiscard]] glm::mat4 seat_looking(glm::vec3 from, glm::vec3 at);
     /// The camera with its eye at `from` looking at `at`, within the tilt's and distance's limits.
     [[nodiscard]] ParkCamera looking(glm::vec3 from, glm::vec3 at);
 

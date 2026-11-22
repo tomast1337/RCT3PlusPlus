@@ -73,6 +73,7 @@ namespace rct3::ui::screens::info
             page.controls.push_back({ .id = animal_control(AnimalControl::Name), .name = "AnimalName", .kind = InfoControlKind::Text, .maximum = kLongestName, .text = strings::to_utf16(a.name), .width = kNameWidth });
             page.controls.push_back({ .name = "AnimalDoing", .kind = InfoControlKind::Words, .label = text(strings, doing(a)) });
             page.controls.push_back({ .id = animal_control(AnimalControl::Locate), .name = "CenterInViewIcon", .kind = InfoControlKind::Button, .icon = "CenterInViewIcon", .help = text(strings, "TT_AttractionDialogIconFocusCameraButton") });
+            page.controls.push_back({ .id = animal_control(AnimalControl::Camera), .name = "AnimalCam", .kind = InfoControlKind::Button, .icon = "RideCamGUI_Enabled", .beside = true, .help = text(strings, "AnimalCamButtonTT") });
         }
 
         void stats(InfoPage& page, const AnimalFacts& f, const simulation::Animal& a, const StringTable& strings)

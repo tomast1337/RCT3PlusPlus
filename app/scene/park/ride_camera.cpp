@@ -5,6 +5,7 @@
 #include "scene/park/refresh.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/setup.hpp"
+#include "simulation/animals.hpp"
 #include "simulation/rides.hpp"
 #include "strings/unicode.hpp"
 #include "ui/game_style.hpp"
@@ -108,6 +109,7 @@ namespace rct3::scene::park
             }
             scene.riding.reset();
             scene.riding_person.reset();
+            scene.riding_animal.reset();
             scene.riding_flat = { ride, at };
             scene.flat_eye = eye;
             const ui::StringTable& strings = *assets.strings;
@@ -134,6 +136,7 @@ namespace rct3::scene::park
             }
             scene.riding_flat.reset();
             scene.riding_person.reset();
+            scene.riding_animal.reset();
             scene.riding = car;
             scene.riding_eye = eye;
             // Named as the game names them: the ride, then the train and the car counting from 1.
@@ -176,6 +179,7 @@ namespace rct3::scene::park
         }
         scene.riding.reset();
         scene.riding_flat.reset();
+        scene.riding_animal.reset();
         scene.riding_person = person;
         scene.person_behind = behind;
         const ShownPerson& p = scene.shown_people[person];
@@ -184,6 +188,35 @@ namespace rct3::scene::park
         constexpr std::array<std::string_view, 2> kNames { "RidecamGUI_TypePeep", "RidecamGUI_TypeStatic" };
         if (auto panel = scene.desktop->root().find_as<ui::screens::park_view::RideCameraPanel>(kRideCameraName))
             panel->show(saved != nullptr ? strings::to_utf16(saved->name) : std::u16string { }, { .trains = scene.shown_people.size() > 1 }, { }, behind ? ui::screens::park_view::kFlatSeatType : ui::screens::park_view::kFlatFixedType, strings.get(kNames[!behind]));
+    }
+
+    void ride_animal(ParkScene& scene, const ui::InterfaceAssets& assets, entt::entity animal, AnimalEye eye)
+    {
+        const auto* a = scene.sim.registry.try_get<simulation::Animal>(animal);
+        if (a == nullptr || !std::ranges::contains(scene.drawn_animals.placed_animals, animal))
+            return;
+        start_riding(scene, assets);
+        if (scene.riding_animal != animal || scene.animal_eye != eye)
+        {
+            scene.ride_turn = { };
+            scene.ride_pull = 0;
+            scene.animal_spot.reset();
+        }
+        scene.riding.reset();
+        scene.riding_flat.reset();
+        scene.riding_person.reset();
+        scene.riding_animal = animal;
+        scene.animal_eye = eye;
+        const ui::StringTable& strings = *assets.strings;
+        constexpr std::array<std::string_view, 3> kNames { "AnimalCam_FollowCam", "AnimalCam_StaticCam", "AnimalCam_HeadCam" };
+        // By AnimalEye, the ride camera panel's type icon that shows it best: behind, a fixed camera, the eyes.
+        constexpr std::array<usize, 3> kIcons { std::to_underlying(rct3::park::object::RideEye::Rear), ui::screens::park_view::kFlatFixedType, std::to_underlying(rct3::park::object::RideEye::Front) };
+        const auto next = static_cast<AnimalEye>((std::to_underlying(eye) + 1) % kNames.size());
+        if (auto panel = scene.desktop->root().find_as<ui::screens::park_view::RideCameraPanel>(kRideCameraName))
+        {
+            panel->show(strings::to_utf16(a->name) + u"  " + std::u16string(strings.get(kNames[std::to_underlying(eye)])), { .trains = scene.drawn_animals.placed_animals.size() > 1 }, { }, kIcons[std::to_underlying(next)], strings.get(kNames[std::to_underlying(next)]));
+            panel->button(ui::screens::park_view::RideCameraAction::Leave).tooltip = strings.get("RidecamGUI_AnimalCamExit");
+        }
     }
 
     void ride_cam(ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride)
@@ -214,6 +247,16 @@ namespace rct3::scene::park
         }
         const bool next = action == NextCamera || action == NextTrain;
         const auto step = [&](usize at, usize count) { return (at + (next ? 1 : count - 1)) % count; };
+        // With an animal, the type goes round its views, and the trains are the park's other animals out of their crates.
+        if (scene.riding_animal)
+        {
+            const std::vector<entt::entity>& animals = scene.drawn_animals.placed_animals;
+            if (action == ChangeType)
+                ride_animal(scene, assets, *scene.riding_animal, static_cast<AnimalEye>((std::to_underlying(scene.animal_eye) + 1) % 3));
+            else if (const auto at = std::ranges::find(animals, *scene.riding_animal); (action == PreviousTrain || action == NextTrain) && at != animals.end())
+                ride_animal(scene, assets, animals[step(static_cast<usize>(at - animals.begin()), animals.size())], scene.animal_eye);
+            return;
+        }
         // With a person, the type changes between their eyes and behind them, and the trains are the other people.
         if (scene.riding_person)
         {
@@ -289,6 +332,7 @@ namespace rct3::scene::park
         scene.riding.reset();
         scene.riding_flat.reset();
         scene.riding_person.reset();
+        scene.riding_animal.reset();
         scene.seat.reset();
     }
 

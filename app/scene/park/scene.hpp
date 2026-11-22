@@ -134,6 +134,14 @@ namespace rct3::scene::park
         Fixed, ///< One of the ride's own fixed cameras
     };
 
+    /// How AnimalCam looks at its animal, in the order its type button goes round them.
+    enum class AnimalEye : u8
+    {
+        Follow, ///< From behind and over it, turning as it turns
+        Static, ///< From a fixed spot near it, turning to keep it in view
+        Head,   ///< From its head, looking where it looks
+    };
+
     /// The pointer and the keys that act for as long as they are held, in framebuffer pixels.
     struct ParkInput
     {
@@ -635,7 +643,11 @@ namespace rct3::scene::park
         /// `riding` or `riding_flat`.
         std::optional<usize> riding_person;
         bool person_behind = false; ///< Following the person from behind rather than from their eyes
-        f32 ride_pull = 0;          ///< How far the wheel has pulled the view back off its mount, in notches
+        /// The zoo animal AnimalCam goes with, out of its crate; never with the other kinds of riding along.
+        std::optional<entt::entity> riding_animal;
+        AnimalEye animal_eye = AnimalEye::Follow;
+        std::optional<glm::vec3> animal_spot; ///< Where the static AnimalCam stands, once placed
+        f32 ride_pull = 0;                    ///< How far the wheel has pulled the view back off its mount, in notches
         /// Of a person in `shown_people`, a new name asked by a script, given as the name box gives one.
         std::optional<std::pair<usize, std::u16string>> rename_requested;
         std::optional<usize> person_requested;                                       ///< Of a person in `shown_people`, their window asked by a script
@@ -827,10 +839,10 @@ namespace rct3::scene::park
         std::set<std::tuple<entt::entity, usize, usize>> wrecks_blown; ///< By ride, train and car: wrecks shown blowing up
         /// The attraction whose construction tab was pressed, for the construction window to take; the panel only asks.
         std::optional<rct3::park::AttractionRef> construct_requested;
-        /// Whether the view rides along in a car, on a flat ride or with a person.
+        /// Whether the view rides along in a car, on a flat ride, with a person or with an animal.
         [[nodiscard]] bool riding_along() const
         {
-            return riding || riding_flat || riding_person;
+            return riding || riding_flat || riding_person || riding_animal;
         }
         std::optional<save::model::RideIndex> doors_requested;                           ///< A tracked ride whose circuit closed, to place its doors next
         std::optional<rct3::park::AttractionRef> info_requested;                         ///< Asked by a script or a finished building, opened as a click on it does

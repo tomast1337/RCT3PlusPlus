@@ -972,11 +972,55 @@ namespace rct3::scene::park
             else
                 scene.seat = rct3::park::looked_round(glm::translate(place, glm::vec3(0, kEyeHeight, 0)), scene.ride_turn);
         }
-        // The wheel pulls the view back off its mount, the farther the more it is turned. Pulled back, it stays
-        // over the ground, unless the mount itself is under it, as in a tunnel.
         constexpr f32 kOverGround = 0.5f; ///< The least a pulled back view keeps over the ground
         constexpr f32 kGroundLook = 1000; ///< How far up and down the ground is looked for
-        if (const f32 back = scene.ride_pull * scene.ride_pull + (scene.riding_person && scene.person_behind ? kBehindDistance : 0); scene.seat && back > 0)
+        // AnimalCam, by the animal's box at rest; animals are modelled facing +Z with +Y up, as people are. Following,
+        // from over its back and behind it, looking down a little; from a fixed spot ahead and to one side of where it
+        // was, placed again once it wanders off; or from its head, just in front of its face.
+        // shortcut: the head view sits where the box puts the head, not on the head as it moves; follow the head's
+        // bone once the poses give bones' places to the scene.
+        constexpr f32 kFollowUp = 1;                    ///< Chosen by eye: over the animal's back
+        constexpr f32 kFollowBack = 3;                  ///< Chosen by eye: back from its tail
+        constexpr units::Radians kFollowPitch { 0.3f }; ///< Chosen by eye: how far down that view looks
+        constexpr glm::vec3 kStaticOff { 4, 1.5f, 6 };  ///< Chosen by eye: the static spot, to its side, up and ahead of its nose
+        constexpr f32 kStaticReach = 25;                ///< Chosen by eye: farther off than this, the spot is placed again
+        constexpr f32 kHeadHigh = 0.85f;                ///< Of its height, where its eyes are
+        f32 animal_back = 0;
+        const auto& animals = scene.drawn_animals;
+        if (const auto at = scene.riding_animal ? std::ranges::find(animals.placed_animals, *scene.riding_animal) : animals.placed_animals.end(); at != animals.placed_animals.end())
+        {
+            const rct3::park::PlacedAnimal& animal = animals.placed[static_cast<usize>(at - animals.placed_animals.begin())];
+            const glm::vec3 low = animal.body->low;
+            const glm::vec3 high = animal.body->high;
+            const glm::vec3 middle(animal.world * glm::vec4((low + high) / 2.0f, 1));
+            scene.seat_across = rct3::park::kRideWideView;
+            switch (scene.animal_eye)
+            {
+                case AnimalEye::Follow:
+                    scene.seat = rct3::park::looked_round(glm::rotate(glm::translate(animal.world, glm::vec3(0, high.y + kFollowUp, (low.z + high.z) / 2)), kFollowPitch.value, glm::vec3(1, 0, 0)), scene.ride_turn);
+                    animal_back = (high.z - low.z) / 2 + kFollowBack;
+                    break;
+                case AnimalEye::Static:
+                {
+                    if (!scene.animal_spot || glm::distance(*scene.animal_spot, middle) > kStaticReach)
+                    {
+                        glm::vec3 spot(animal.world * glm::vec4(kStaticOff.x, high.y + kStaticOff.y, high.z + kStaticOff.z, 1));
+                        if (const auto under = rct3::park::object::ground_hit(rct3::park::Ray { glm::vec3(spot.x, spot.y + kGroundLook / 2, spot.z), glm::vec3(0, -1, 0) }, scene.grid, kGroundLook))
+                            spot.y = std::max(spot.y, spot.y + kGroundLook / 2 - *under + kStaticOff.y);
+                        scene.animal_spot = spot;
+                    }
+                    scene.seat = rct3::park::looked_round(rct3::park::seat_looking(*scene.animal_spot, middle), scene.ride_turn);
+                    break;
+                }
+                case AnimalEye::Head:
+                    scene.seat = rct3::park::looked_round(glm::translate(animal.world, glm::vec3(0, high.y * kHeadHigh, high.z)), scene.ride_turn);
+                    scene.seat_across = rct3::park::kRideNarrowView;
+                    break;
+            }
+        }
+        // The wheel pulls the view back off its mount, the farther the more it is turned. Pulled back, it stays
+        // over the ground, unless the mount itself is under it, as in a tunnel.
+        if (const f32 back = scene.ride_pull * scene.ride_pull + (scene.riding_person && scene.person_behind ? kBehindDistance : 0) + animal_back; scene.seat && back > 0)
         {
             const glm::vec3 mount((*scene.seat)[3]);
             scene.seat = glm::translate(*scene.seat, glm::vec3(0, 0, -back));

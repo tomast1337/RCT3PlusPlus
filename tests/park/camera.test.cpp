@@ -374,3 +374,17 @@ TEST_CASE("a box is in view unless wholly beyond one side of it or behind the ey
     CHECK(box_in_view(sun, { 8, 0, 8 }, { 12, 5, 12 }));
     CHECK_FALSE(box_in_view(sun, { 11, 0, 0 }, { 15, 5, 2 }));
 }
+
+TEST_CASE("a seat looking at a point faces it, upright, and still faces somewhere looking straight down")
+{
+    const glm::mat4 seat = seat_looking({ 0, 10, 0 }, { 10, 0, 0 });
+    const glm::vec3 ahead(seat[2]);
+    CHECK(ahead.x == doctest::Approx(std::sqrt(0.5f)));
+    CHECK(ahead.y == doctest::Approx(-std::sqrt(0.5f)));
+    CHECK(glm::vec3(seat[0]).y == doctest::Approx(0)); // Not rolled
+    CHECK(glm::vec3(seat[1]).y > 0);
+    CHECK(glm::vec3(seat[3]) == glm::vec3(0, 10, 0));
+    const glm::mat4 down = seat_looking({ 0, 10, 0 }, { 0, 0, 0 });
+    CHECK(glm::length(glm::vec3(down[0])) == doctest::Approx(1));
+    CHECK(glm::length(glm::vec3(down[1])) == doctest::Approx(1));
+}

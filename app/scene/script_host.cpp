@@ -13,6 +13,7 @@
 #include "random/generator.hpp"
 #include "scene/enclosure_tools.hpp"
 #include "scene/front_end_scene.hpp"
+#include "scene/park/animal_sale.hpp"
 #include "scene/park/attraction_state.hpp"
 #include "scene/park/debug_tab.hpp"
 #include "scene/park/info_panel.hpp"
@@ -1648,6 +1649,14 @@ namespace rct3::scene
             if (!park.sim.registry.valid(e) || !park.sim.registry.all_of<simulation::Animal>(e))
                 throw std::invalid_argument("animals.release takes an animal's id from animals.list()");
             return Json(park::release_animal(park, e));
+        });
+        engine_.define("animals.sell", [this](const Json& a) -> Json {
+            park::ParkScene& park = park_of(park_);
+            const entt::entity e = a.at(0).is_number_unsigned() ? entt::entity { a[0].get<entt::id_type>() } : entt::null;
+            if (!park.sim.registry.valid(e) || !park.sim.registry.all_of<simulation::Animal>(e))
+                throw std::invalid_argument("animals.sell takes an animal's id from animals.list()");
+            const std::optional<units::Money> got = park::sell_animal(park, front_->assets, e);
+            return got ? Json(got->value) : Json(nullptr);
         });
         engine_.define("animals.shown", [this](const Json&) -> Json {
             const park::ParkScene& park = park_of(park_);

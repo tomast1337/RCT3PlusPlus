@@ -1300,6 +1300,9 @@ declare namespace animals {
     /** Sets the animal `id` (as animals.list() gives it) free in the wild, as the player answering yes to its window's
      *  question does; one not grown or under 95% healthy is refused, the player told why. Returns whether it went. */
     function release(id: number): boolean;
+    /** Sells the animal `id` (as animals.list() gives it), as a yes to its window's question does: what it fetched,
+     *  in hundredths, or null for one still in its crate. */
+    function sell(id: number): Money | null;
     /** The animal whose window is open, and its open tab by its help's string key; undefined when none is. */
     function shown(): { id: number; tab: string } | undefined;
     /** The animal houses, each with a number of its own, its placed object and its keeper's hut's (0 for none), the

@@ -6,6 +6,7 @@
 #include "simulation/park/state.hpp"
 #include "simulation/research.hpp"
 #include "simulation/tuning.hpp"
+#include "simulation/zoo_goals.hpp"
 #include "units/units.hpp"
 
 #include <algorithm>
@@ -98,7 +99,7 @@ namespace rct3::simulation
         /// Goals on last month's takings already cover a month, so they hold for one month less.
         bool counts_last_month(save::model::ConditionKind kind) noexcept
         {
-            return kind == save::model::ConditionKind::RideIncome || kind == save::model::ConditionKind::ShopProfit || kind == save::model::ConditionKind::PoolIncome;
+            return kind == save::model::ConditionKind::RideIncome || kind == save::model::ConditionKind::ShopProfit || kind == save::model::ConditionKind::PoolIncome || kind == save::model::ConditionKind::GalleryIncome;
         }
     } // namespace
 
@@ -124,10 +125,7 @@ namespace rct3::simulation
             case SceneryItems:
                 return true;
             default:
-                // shortcut: goals about things the simulation does not have yet (animals of a species, galleries,
-                // animal sales and releases, escaped animals) are never met, so a level that sets one cannot be won;
-                // judge them as those parts arrive.
-                return false;
+                return zoo_goal(kind);
         }
     }
 
@@ -172,7 +170,7 @@ namespace rct3::simulation
             case save::model::ConditionKind::ThemedAttractions:
                 return c.theme && *c.theme >= 0 ? compare(std::cmp_less(*c.theme, f.themed.size()) ? f.themed[static_cast<usize>(*c.theme)] : 0) : GoalReading { };
             default:
-                return { };
+                return zoo_goal(c.kind) ? read_zoo_goal(c, f) : GoalReading { };
         }
     }
 

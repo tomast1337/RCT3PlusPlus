@@ -49,6 +49,13 @@ namespace rct3::simulation
         const save::model::Ride* ride = nullptr;
     };
 
+    /// An animal, as the goals on a species' animals count it.
+    struct GoalAnimal
+    {
+        std::string_view species { }; ///< The symbol of its species
+        bool born_here = false;       ///< Born in the park rather than bought
+    };
+
     /// How the park stands, in the units the goals' targets are kept in.
     struct ParkFigures
     {
@@ -67,6 +74,13 @@ namespace rct3::simulation
         i32 pool_guests = 0; ///< In the busiest pool complex whose water is clean
         /// Trees, shrubs and flowers standing in the park, in the order scenery goals number them.
         std::array<i32, 3> plants { };
+        std::span<const GoalAnimal> animals { }; ///< Every animal in the park, crated ones too
+        /// The ledger's month so far and its total over the months before, for the goal on profit from selling a
+        /// species' animals, which counts every month the park has had.
+        save::model::LedgerPeriod this_month { };
+        save::model::LedgerPeriod months_before { };
+        i32 galleries = 0;        ///< Viewing galleries built
+        i64 gallery_visitors = 0; ///< Visitors the viewing galleries have had, at those since pulled down too
     };
 
     /// How a goal stands against the park's figures.

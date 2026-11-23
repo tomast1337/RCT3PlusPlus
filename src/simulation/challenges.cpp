@@ -24,8 +24,9 @@ namespace rct3::simulation
         {
             const auto own = [&](const Condition& g) { return g.challenge == c.challenge_id; };
             // shortcut: a challenge asking for scenery of a kind, escaped animals caught or animals set free is never
-            // offered; offer it once the simulation counts those.
-            return std::ranges::any_of(set.conditions, own) && std::ranges::none_of(set.conditions, [&](const Condition& g) { return own(g) && !judged(g.kind); });
+            // offered, as the player cannot let animals out for it or set them free; offer it once they can.
+            const auto doable = [](save::model::ConditionKind kind) { return judged(kind) && kind != save::model::ConditionKind::EscapedAnimals && kind != save::model::ConditionKind::AnimalsReleased; };
+            return std::ranges::any_of(set.conditions, own) && std::ranges::none_of(set.conditions, [&](const Condition& g) { return own(g) && !doable(g.kind); });
         }
 
         /// Whether the scenario's level `start_condition` names (1 apprentice to 3 tycoon) has been won; 0 names none.

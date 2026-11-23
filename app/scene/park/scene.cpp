@@ -1572,10 +1572,14 @@ namespace rct3::scene::park
                             goal_rides.push_back({ scene.ride_groups[i], &scene.rides.rides[i] });
                     f32 health = 0;
                     i32 animals = 0;
+                    std::vector<simulation::GoalAnimal> goal_animals;
                     for (const auto [e, animal] : scene.sim.registry.view<const simulation::Animal>().each())
                     {
                         health += animal.health.value;
                         ++animals;
+                        // shortcut: every animal counts as bought, as none is born in the park yet; mark those born
+                        // here once animals breed.
+                        goal_animals.push_back({ .species = animal.species });
                     }
                     // The ledger moved on to this month, so that the period before it is last month's.
                     save::model::Finance& money = scene.park_model.finance;
@@ -1636,6 +1640,9 @@ namespace rct3::scene::park
                         .themed = themed,
                         .pool_guests = pool_guests,
                         .plants = plants,
+                        .animals = goal_animals,
+                        .this_month = money.ledger.empty() ? save::model::LedgerPeriod { } : money.ledger.front(),
+                        .months_before = money.cumulative.value_or(save::model::LedgerPeriod { }),
                     };
                     scene.goal_readings.clear();
                     for (const save::model::Condition& c : scene.park_model.objectives.conditions)

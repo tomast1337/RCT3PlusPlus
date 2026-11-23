@@ -56,9 +56,9 @@ TEST_CASE("a goal the simulation cannot judge is never met, so its level is not 
 {
     save::model::ObjectiveSet set;
     set.objectives = { { .difficulty = 0 } };
-    set.conditions = { goal(0, save::model::ConditionKind::ParkGuests, 0), goal(0, save::model::ConditionKind::PoolGuests, 0) };
+    set.conditions = { goal(0, save::model::ConditionKind::ParkGuests, 0), goal(0, save::model::ConditionKind::Other, 0) };
     CHECK(simulation::judged(save::model::ConditionKind::ParkGuests));
-    CHECK_FALSE(simulation::judged(save::model::ConditionKind::PoolGuests));
+    CHECK_FALSE(simulation::judged(save::model::ConditionKind::Other));
     CHECK(simulation::judged(save::model::ConditionKind::Vip));
     CHECK_FALSE(simulation::check_goals(set, { .guests = 10 }, 0));
     CHECK(set.conditions[0].completed);
@@ -232,11 +232,31 @@ TEST_CASE("a goal reads where the park stands on it and whether that meets it")
     const simulation::GoalReading loan = simulation::read_goal({ .kind = save::model::ConditionKind::RepayLoan }, f);
     CHECK(loan.now == 500);
     CHECK_FALSE(loan.met);
-    const simulation::GoalReading pool = simulation::read_goal(goal(0, save::model::ConditionKind::PoolGuests, 0), f);
-    CHECK_FALSE(pool.now);
-    CHECK_FALSE(pool.met);
     CHECK(simulation::judged(save::model::ConditionKind::AnimalHealth));
     CHECK_FALSE(simulation::judged(save::model::ConditionKind::AnimalsOfSpecies));
+}
+
+TEST_CASE("pool goals read the busiest clean pool and last month's pool tickets, scenery goals the plants of a kind")
+{
+    const simulation::ParkFigures f { .last_month = { .pool_tickets = -800 }, .pool_guests = 40, .plants = { 3, 0, 120 } };
+    const simulation::GoalReading swimmers = simulation::read_goal(goal(0, save::model::ConditionKind::PoolGuests, 30), f);
+    CHECK(swimmers.now == 40);
+    CHECK(swimmers.met);
+    CHECK(simulation::read_goal(goal(0, save::model::ConditionKind::PoolIncome, 800), f).met);
+    CHECK_FALSE(simulation::read_goal(goal(0, save::model::ConditionKind::PoolIncome, 801), f).met);
+    CHECK(simulation::read_goal(goal(0, save::model::ConditionKind::PoolIncome, 1), { }).now == 0); // No pool before a month has ended
+    save::model::Condition flowers = goal(0, save::model::ConditionKind::SceneryItems, 100);
+    flowers.classification = 2;
+    CHECK(simulation::read_goal(flowers, f).now == 120);
+    CHECK(simulation::read_goal(flowers, f).met);
+    save::model::Condition trees = flowers;
+    trees.classification = 0;
+    CHECK_FALSE(simulation::read_goal(trees, f).met);
+    trees.classification = 3; // No such kind
+    CHECK_FALSE(simulation::read_goal(trees, f).now);
+    CHECK(simulation::judged(save::model::ConditionKind::PoolGuests));
+    CHECK(simulation::judged(save::model::ConditionKind::PoolIncome));
+    CHECK(simulation::judged(save::model::ConditionKind::SceneryItems));
 }
 
 TEST_CASE("the rating prize lifts the rating at once and each week's score while it fades")

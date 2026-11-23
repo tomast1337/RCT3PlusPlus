@@ -1595,6 +1595,35 @@ namespace rct3::scene::park
                                 themed[static_cast<usize>(*item.style_index)] = n->second;
                             }
                     }
+                    // The pools' swimmers, each counted at the complex whose room let them in; only clean water counts.
+                    const auto& reg = scene.sim.registry;
+                    std::map<entt::entity, i32> swimming;
+                    for (const auto [g, swimmer, errand] : reg.view<const simulation::Swimmer, const simulation::Errand>().each())
+                        if (reg.valid(errand.target) && reg.all_of<simulation::PoolDoor>(errand.target))
+                            ++swimming[reg.get<simulation::PoolDoor>(errand.target).pool];
+                    i32 pool_guests = 0;
+                    for (const auto [pool, n] : swimming)
+                        if (const auto* water = reg.valid(pool) ? reg.try_get<simulation::SwimPool>(pool) : nullptr; water != nullptr && simulation::dirt_step(*water) == 0)
+                            pool_guests = std::max(pool_guests, n);
+                    // The plants standing in the park, counted only while a goal asks for them.
+                    std::array<i32, 3> plants { };
+                    if (std::ranges::contains(goals.conditions, save::model::ConditionKind::SceneryItems, &save::model::Condition::kind))
+                        for (const save::model::PlacedObject& o : scene.objects)
+                            if (const auto model = scene.models.find(rct3::park::object::model_ref(o)); !o.hidden && scene.grid.contains(o.col, o.row) && model != scene.models.end())
+                                switch (static_cast<rct3::park::ItemCategory>(model->second.category))
+                                {
+                                    case rct3::park::ItemCategory::Tree:
+                                        ++plants[0];
+                                        break;
+                                    case rct3::park::ItemCategory::Shrub:
+                                        ++plants[1];
+                                        break;
+                                    case rct3::park::ItemCategory::Flowers:
+                                        ++plants[2];
+                                        break;
+                                    default:
+                                        break;
+                                }
                     const simulation::ParkFigures figures {
                         .park_value = { simulation::park::park_value(scene.park.guests, scene.rides).value },
                         .guests = scene.park.guests,
@@ -1605,6 +1634,8 @@ namespace rct3::scene::park
                         .dung = static_cast<i32>(scene.sim.registry.view<const simulation::Dung>().size()),
                         .rides = goal_rides,
                         .themed = themed,
+                        .pool_guests = pool_guests,
+                        .plants = plants,
                     };
                     scene.goal_readings.clear();
                     for (const save::model::Condition& c : scene.park_model.objectives.conditions)

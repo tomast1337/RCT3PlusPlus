@@ -443,6 +443,7 @@ namespace rct3::save::model
         std::optional<VipTarget> vip { };         ///< VIP conditions only
         std::optional<ItemsTarget> items { };     ///< Items-bought conditions only
         std::optional<i32> theme { };             ///< Themed-attraction conditions: the theme, as the build catalogue numbers them
+        std::optional<i32> classification { };    ///< Scenery conditions: the plants counted, 0 trees, 1 shrubs, 2 flowers
         std::optional<i32> challenge { };         ///< The challenge (Challenge::challenge_id) it belongs to; none for a scenario goal
 
         [[nodiscard]] bool has(ConditionFlag f) const noexcept

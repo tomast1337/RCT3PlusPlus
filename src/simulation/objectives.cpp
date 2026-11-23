@@ -119,11 +119,14 @@ namespace rct3::simulation
             case Dung:
             case ItemsBought:
             case ThemedAttractions:
+            case PoolGuests:
+            case PoolIncome:
+            case SceneryItems:
                 return true;
             default:
-                // shortcut: goals about things the simulation does not have yet (pools, animals of a species, galleries,
-                // animal sales and releases, scenery of a kind, escaped animals) are never met, so a level that sets one
-                // cannot be won; judge them as those parts arrive.
+                // shortcut: goals about things the simulation does not have yet (animals of a species, galleries,
+                // animal sales and releases, escaped animals) are never met, so a level that sets one cannot be won;
+                // judge them as those parts arrive.
                 return false;
         }
     }
@@ -143,6 +146,12 @@ namespace rct3::simulation
                 return compare(-i64 { f.last_month.ride_tickets }); // Income is kept below nought
             case save::model::ConditionKind::ShopProfit:
                 return compare(-(i64 { f.last_month.shop_sales } + f.last_month.food_drink_sales + f.last_month.shop_stock + f.last_month.food_drink_stock));
+            case save::model::ConditionKind::PoolIncome:
+                return compare(-i64 { f.last_month.pool_tickets.value_or(0) });
+            case save::model::ConditionKind::PoolGuests:
+                return compare(f.pool_guests);
+            case save::model::ConditionKind::SceneryItems:
+                return c.classification && *c.classification >= 0 && std::cmp_less(*c.classification, f.plants.size()) ? compare(f.plants[static_cast<usize>(*c.classification)]) : GoalReading { };
             case save::model::ConditionKind::AnimalHealth:
                 return compare(f.animal_health);
             case save::model::ConditionKind::Dung:

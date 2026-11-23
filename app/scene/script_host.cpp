@@ -916,6 +916,18 @@ namespace rct3::scene
             }
             return out;
         });
+        engine_.define("park.goals", [this](const Json&) {
+            const park::ParkScene& park = park_of(park_);
+            Json out = Json::array();
+            const auto& goals = park.park_model.objectives.conditions;
+            for (usize i = 0; i < goals.size(); ++i)
+            {
+                const save::model::Condition& c = goals[i];
+                const simulation::GoalReading reading = i < park.goal_readings.size() ? park.goal_readings[i] : simulation::GoalReading { };
+                out.push_back({ { "level", c.difficulty }, { "kind", simulation::condition_name(c.kind) }, { "challenge", c.challenge ? Json(*c.challenge) : Json(nullptr) }, { "target", c.value ? Json(*c.value) : Json(nullptr) }, { "species", c.animals ? c.animals->species : std::string { } }, { "judged", simulation::judged(c.kind) }, { "now", reading.now ? Json(*reading.now) : Json(nullptr) }, { "met", reading.met }, { "completed", c.completed } });
+            }
+            return out;
+        });
         engine_.define("park.vips", [this](const Json&) {
             const park::ParkScene& park = park_of(park_);
             const auto& r = park.sim.registry;

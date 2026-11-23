@@ -151,7 +151,7 @@ namespace rct3::save::model
 
     /// Counters of one accounting period. All are integers in the money unit of the save. Members of the second
     /// group exist only in newer generations and stay nullopt when the file has no such attribute. Of the animal
-    /// lines only that a park has them is loaded, not what they hold.
+    /// lines the purchases and sales count together.
     struct LedgerPeriod
     {
         i32 food_drink_sales = 0;
@@ -424,6 +424,26 @@ namespace rct3::save::model
         i64 bought = 0;        ///< Counted since its challenge was taken on
     };
 
+    /// What an animal goal names, as the file keeps it: animals of a species kept, sold, set free, or escaped
+    /// animals caught again.
+    struct AnimalTarget
+    {
+        /// The species as the file numbers it: its place among the park's species sorted by name, ignoring case;
+        /// -1 for none.
+        i32 species_number = -1;
+        std::string species { };  ///< Its symbol, found from that number; empty when the number names none
+        bool bought_count = true; ///< Animals kept: those bought count too, not only those born in the park
+        i64 done = 0;             ///< Animals set free so far, or escaped animals caught so far
+        bool started = false;     ///< Escaped animals: they have got out, which taking the challenge on makes them do
+    };
+
+    /// What a viewing gallery goal keeps, as the file keeps it.
+    struct GalleryTarget
+    {
+        f32 min_excitement = 0; ///< Galleries built: set in the scenario editor; the count takes every gallery whatever its excitement
+        i64 visitors = 0;       ///< Visitors: those the galleries had had when the goal last looked, summed
+    };
+
     struct Condition
     {
         ConditionKind kind = ConditionKind::Other;
@@ -444,6 +464,8 @@ namespace rct3::save::model
         std::optional<ItemsTarget> items { };     ///< Items-bought conditions only
         std::optional<i32> theme { };             ///< Themed-attraction conditions: the theme, as the build catalogue numbers them
         std::optional<i32> classification { };    ///< Scenery conditions: the plants counted, 0 trees, 1 shrubs, 2 flowers
+        std::optional<AnimalTarget> animals { };  ///< Goals on a species' animals, and on escaped animals
+        std::optional<GalleryTarget> gallery { }; ///< Goals on galleries built and their visitors
         std::optional<i32> challenge { };         ///< The challenge (Challenge::challenge_id) it belongs to; none for a scenario goal
 
         [[nodiscard]] bool has(ConditionFlag f) const noexcept

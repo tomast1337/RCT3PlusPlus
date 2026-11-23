@@ -669,6 +669,35 @@ TEST_CASE("park: a challenge's goals keep their challenge, the item and stall ki
     CHECK(l->model.objectives.challenges.at(0).state == rct3::save::model::ChallengeState::Running);
 }
 
+TEST_CASE("park: zoo goals name their species by the park's species in name order, whatever the case")
+{
+    const auto l = load(
+        {
+            { "WASDatabaseEntry", 1, { fstr("OVERLAYFILENAME", "Zoo\\Made"), fstr("SYMBOLNAME", "pelican") } },
+            { "WASDatabaseEntry", 2, { fstr("OVERLAYFILENAME", "Zoo\\Made"), fstr("SYMBOLNAME", "Alpaca") } },
+            { "WASDatabaseEntry", 3, { fstr("OVERLAYFILENAME", "Zoo\\Made"), fstr("SYMBOLNAME", "Ocelot") } },
+            { "NumAnimalsOfSpeciesCondition", 4, { fint("ObjectiveId", 0), fint("ConditionId", 0), fint("Species", 2), fint("AllowBought", 0), fint("Value", 8) } },
+            { "ReleaseAnimalsCondition", 5, { fint("ObjectiveId", 0), fint("ConditionId", 1), fint("Species", 0), fint("NumReleased", 3), fint("Value", 6) } },
+            { "AnimalSalesProfitCondition", 6, { fint("ObjectiveId", 0), fint("ConditionId", 2), fint("Species", 7), fint("Value", 100) } },
+            { "EscapedAnimalsCondition", 7, { fint("ObjectiveId", 0), fint("ConditionId", 3), fint("NumCaptured", 2), fbool("Started", true), fint("Value", 5) } },
+            { "EnclosureVisitorsCondition", 8, { fint("ObjectiveId", 0), fint("ConditionId", 4), fledger("VGsExisting", { "Count", "Other" }, { { 40, 0 }, { 15, 0 } }), fint("Value", 50) } },
+            { "ViewingGalleriesCondition", 9, { fint("ObjectiveId", 0), fint("ConditionId", 5), ffloat("MinVGExcitement", 2.5f), fint("Value", 3) } },
+        });
+    const auto& c = l->model.objectives.conditions;
+    REQUIRE(c.size() == 6);
+    REQUIRE(c[0].animals);
+    CHECK(c[0].animals->species == "pelican");
+    CHECK_FALSE(c[0].animals->bought_count);
+    CHECK(c[1].animals->species == "Alpaca");
+    CHECK(c[1].animals->done == 3);
+    CHECK(c[2].animals->species.empty()); // Past the list
+    CHECK(c[3].animals->done == 2);
+    CHECK(c[3].animals->started);
+    REQUIRE(c[4].gallery);
+    CHECK(c[4].gallery->visitors == 55);
+    CHECK(c[5].gallery->min_excitement == 2.5f);
+}
+
 TEST_CASE("park: validation reports broken invariants")
 {
     const auto l = load(

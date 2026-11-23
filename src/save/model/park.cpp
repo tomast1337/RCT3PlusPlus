@@ -2,6 +2,7 @@
 #include "save/model/park.hpp"
 
 #include "core/types.hpp"
+#include "strings/ascii.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -10,6 +11,7 @@
 #include <format>
 #include <set>
 #include <system_error>
+#include <utility>
 
 namespace rct3::save::model
 {
@@ -95,7 +97,14 @@ namespace rct3::save::model
             constexpr std::string_view kAdultAnimals = "AllowAdultAnimals";
             constexpr std::string_view kBabyAnimals = "AllowBabyAnimals";
             constexpr std::string_view kRescued = "RescuedAnimals";
-            constexpr std::string_view kAnimalSpending = "OtherAnimalSpending"; ///< A ledger period's animal lines
+            constexpr std::string_view kAnimalSpending = "OtherAnimalSpending";     ///< A ledger period's animal lines
+            constexpr std::string_view kSpeciesSpending = "WildSpeciesExpenditure"; ///< The same, for each species
+            constexpr std::string_view kAnimalBought = "CostBuying";
+            constexpr std::string_view kAnimalSold = "Sales";
+            constexpr std::string_view kAnimalFood = "Feeding";
+            constexpr std::string_view kAnimalAdoptions = "Adoption";
+            constexpr std::string_view kAnimalOther = "Other";
+            constexpr std::string_view kSpeciesName = "SystemName";
             constexpr std::string_view kGuestsInPark = "GuestsInPark";
             constexpr std::string_view kAdultsInPark = "AdultsInPark";
             constexpr std::string_view kTeenagersInPark = "TeenagersInPark";
@@ -202,6 +211,14 @@ namespace rct3::save::model
             constexpr std::string_view kForChallenge = "IsChallengeCondtion"; // Spelt so in the files
             constexpr std::string_view kItemSymbol = "SymbolName";            // Of the carried item kind an items goal names
             constexpr std::string_view kStallSymbol = "SYMBOLNAME";           // Of the stall kind
+            constexpr std::string_view kSpecies = "Species";
+            constexpr std::string_view kAllowBought = "AllowBought";
+            constexpr std::string_view kReleased = "NumReleased";
+            constexpr std::string_view kCaptured = "NumCaptured";
+            constexpr std::string_view kStarted = "Started";
+            constexpr std::string_view kMinGalleryExcitement = "MinVGExcitement";
+            constexpr std::string_view kGalleriesSeen = "VGsExisting";
+            constexpr std::string_view kGalleryVisitors = "Count";
 
             // Challenge attributes
             constexpr std::string_view kChallengeName = "Name";
@@ -492,9 +509,25 @@ namespace rct3::save::model
                 if (const auto f = v.field(c.name); is_numeric(f))
                     p.*c.member = static_cast<i32>(f->as_integer());
             }
-            // shortcut: the animal lines' saved amounts are left at nought; read them with the rest of the history (#356).
+            const auto spending = [](const Value& s) {
+                using namespace names;
+                return AnimalSpending {
+                    .purchase_sale = i32_of(s.field(kAnimalBought), 0) + i32_of(s.field(kAnimalSold), 0),
+                    .food = i32_of(s.field(kAnimalFood), 0),
+                    .adoptions = i32_of(s.field(kAnimalAdoptions), 0),
+                    .other = i32_of(s.field(kAnimalOther), 0),
+                };
+            };
             if (const auto f = v.field(names::kAnimalSpending); f && f->kind() == ValueKind::Struct)
-                p.animal_spending = AnimalSpending { };
+                p.animal_spending = spending(*f);
+            if (const auto f = v.field(names::kSpeciesSpending); f && f->kind() == ValueKind::List)
+            {
+                for (const Value& s : f->items())
+                {
+                    if (s.kind() == ValueKind::Struct)
+                        p.species_spending.push_back({ .species = string_of(s.field(names::kSpeciesName)), .spending = spending(s) });
+                }
+            }
             return p;
         }
 
@@ -696,6 +729,22 @@ namespace rct3::save::model
             }
             if (c.kind == ConditionKind::SceneryItems)
                 c.classification = i32_of(o.find(kClassification), 0);
+            using enum ConditionKind;
+            if (c.kind == AnimalsOfSpecies || c.kind == AnimalSalesProfit || c.kind == AnimalsReleased)
+                c.animals = AnimalTarget { .species_number = i32_of(o.find(kSpecies), -1), .bought_count = bool_of(o.find(kAllowBought), true), .done = i32_of(o.find(kReleased), 0) };
+            if (c.kind == EscapedAnimals)
+                c.animals = AnimalTarget { .done = i32_of(o.find(kCaptured), 0), .started = bool_of(o.find(kStarted), false) };
+            if (c.kind == ViewingGalleries)
+                c.gallery = GalleryTarget { .min_excitement = float_of(o.find(kMinGalleryExcitement), 0.0f) };
+            if (c.kind == GalleryVisitors)
+            {
+                c.gallery = GalleryTarget { };
+                if (const auto seen = o.find(kGalleriesSeen); seen && seen->kind() == ValueKind::List)
+                {
+                    for (const Value& g : seen->items())
+                        c.gallery->visitors += g.kind() == ValueKind::Struct ? i32_of(g.field(kGalleryVisitors), 0) : 0;
+                }
+            }
             if (bool_of(o.find(kForChallenge), false))
                 c.challenge = i32_of(o.find(kChallengeId), 0);
             set.conditions.push_back(std::move(c));
@@ -1277,6 +1326,19 @@ namespace rct3::save::model
                 case Role::Particle:
                     break;
             }
+        }
+        // Animal goals number their species by the park's species in name order, whatever the case.
+        std::vector<std::string_view> species;
+        for (const AssetRequirement& e : m.content.entries)
+        {
+            if (e.kind == AssetKind::AnimalSpecies)
+                species.push_back(e.symbol);
+        }
+        std::ranges::sort(species, strings::LessIgnoringCase { });
+        for (Condition& c : m.objectives.conditions)
+        {
+            if (c.animals && c.animals->species_number >= 0 && std::cmp_less(c.animals->species_number, species.size()))
+                c.animals->species = species[static_cast<usize>(c.animals->species_number)];
         }
         if (console)
         {

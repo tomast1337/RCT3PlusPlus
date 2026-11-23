@@ -6,12 +6,14 @@
 // itself carries the shell up and bursts it. A laser shot shines its beams from its tube for the laser's run, drawn
 // after the world as thin lines of light added to what is behind them. A drawing laser sweeps its one beam over its
 // pictures, and where the beam lands on the ground it leaves a spot of light that fades over a few seconds, so the
-// picture stays a moment after the beam has passed. A launcher taken away leaves its shots out.
+// picture stays a moment after the beam has passed. Every shot leaves along its tube as the launcher is aimed at that
+// moment of the show (particles::aim_at). A launcher taken away leaves its shots out.
 #pragma once
 
 #include "core/types.hpp"
 #include "math/glm.hpp"
 #include "park/camera.hpp"
+#include "park/object/mesh.hpp"
 #include "particles/display.hpp"
 #include "render/device.hpp"
 #include "save/model/world.hpp"
@@ -90,6 +92,9 @@ namespace rct3::scene::park
     /// The view of the display playing from `yaw`: its launchers and the sky its shells burst in; none when no
     /// display plays or none of its launchers stands.
     std::optional<rct3::park::ParkCamera> park_display_view(const ParkScene& scene, f32 yaw);
+    /// Where each standing launcher of the display playing fires its first tube from and which way it points now,
+    /// as aimed; none when no display plays.
+    std::vector<rct3::park::object::PlacedEffect> park_display_tubes(const ParkScene& scene);
     /// A tick of the park's: starts the displays that fall due, and ends the one playing once its time is up, so
     /// guests watch it for the same ticks however the frames fall.
     void tick_park_fireworks(ParkScene& scene);

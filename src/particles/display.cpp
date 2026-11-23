@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <cmath>
 #include <string_view>
 
 namespace rct3::particles
@@ -127,6 +128,63 @@ namespace rct3::particles
             return desc->as_reference();
         }
 
+        /// The object `parent`'s reference `name` points to, decoded.
+        std::optional<save::DecodedObject> referred(const save::SaveFile& file, const save::ObjectIndex& index, const save::Value& parent, std::string_view name)
+        {
+            const auto ref = parent.field(name);
+            const auto o = ref && ref->kind() == save::ValueKind::Reference ? index.find(ref->as_reference()) : std::nullopt;
+            if (!o)
+                return std::nullopt;
+            auto decoded = save::decode_object(file, *o);
+            return decoded ? std::optional(std::move(*decoded)) : std::nullopt;
+        }
+
+        std::optional<Aim> aim_of(const save::Value& v)
+        {
+            const Aim aim { .elevation = { number(v, "Elevation") }, .angle = { number(v, "Angle") } };
+            if (!std::isfinite(aim.elevation.value) || !std::isfinite(aim.angle.value))
+                return std::nullopt;
+            return aim;
+        }
+
+        /// The aims the placed launchers of `display` keep, and its keys (`display_fields`' SlotKeyFrames): a timeline
+        /// whose points are each a time in seconds and the aims of some placed launchers then. A key naming a launcher
+        /// none of the display's shots fire from is left out, as nothing aims it.
+        void read_aims(const save::SaveFile& file, const save::ObjectIndex& index, const save::Value& display_fields, Display& display)
+        {
+            for (Launcher& launcher : display.launchers)
+                if (const auto o = index.find(*launcher.placed))
+                    if (const auto item = save::decode_object(file, *o))
+                        if (const auto kept = item->fields.field("FireworkSlotTransform"); kept && kept->kind() == save::ValueKind::Struct)
+                            launcher.aim = aim_of(*kept).value_or(Aim { });
+            const auto blender = referred(file, index, display_fields, "SlotKeyFrames");
+            if (!blender)
+                return;
+            const auto stored = list(blender->fields, "FixedPts");
+            // Past the count the slots hold leftovers, not points; so do a key's slots past its own count.
+            const usize used = static_cast<usize>(std::clamp<i64>(whole(blender->fields, "NumPts"), 0, static_cast<i64>(stored.size())));
+            for (const save::Value& point : stored.first(used))
+            {
+                const f32 seconds = number(point, "PointTime");
+                const auto key = std::isfinite(seconds) ? referred(file, index, point, "BlenderElement") : std::nullopt;
+                if (!key)
+                    continue;
+                const auto slots = list(key->fields, "SlotInfo");
+                const usize count = static_cast<usize>(std::clamp<i64>(whole(key->fields, "NumCachedItems"), 0, static_cast<i64>(slots.size())));
+                for (const save::Value& slot : slots.first(count))
+                {
+                    const auto item = slot.field("SceneryItem");
+                    if (!item || item->kind() != save::ValueKind::Reference)
+                        continue;
+                    const auto launcher = std::ranges::find(display.launchers, std::optional(item->as_reference()), &Launcher::placed);
+                    if (const auto aim = aim_of(slot); aim && launcher != display.launchers.end())
+                        launcher->keys.push_back({ .seconds = seconds, .aim = *aim });
+                }
+            }
+            for (Launcher& launcher : display.launchers)
+                std::ranges::stable_sort(launcher.keys, { }, &AimKey::seconds);
+        }
+
     } // namespace
 
     std::expected<Display, DisplayError> read_display(std::span<const std::byte> data)
@@ -207,6 +265,7 @@ namespace rct3::particles
                     shot.laser = laser_in(file, index, *laser);
             }
             std::ranges::stable_sort(display.shots, { }, &Shot::seconds);
+            read_aims(file, index, o->fields, display);
             displays.push_back(std::move(display));
         }
         return displays;
@@ -233,6 +292,41 @@ namespace rct3::particles
         const bool in_month = month >= 0 && month < 32 && (display.months >> month & 1u) != 0;
         const f32 since = minutes - static_cast<f32>(display.start_minutes);
         return in_month && since >= 0 && since < kStartWindowMinutes;
+    }
+
+    Aim aim_at(const Launcher& launcher, f32 seconds)
+    {
+        const auto& keys = launcher.keys;
+        if (keys.empty())
+            return launcher.aim;
+        const auto after = std::ranges::upper_bound(keys, seconds, { }, &AimKey::seconds);
+        if (after == keys.begin())
+            return after->aim;
+        const AimKey& before = *(after - 1);
+        if (after == keys.end() || after->seconds <= before.seconds)
+            return before.aim;
+        const f32 t = (seconds - before.seconds) / (after->seconds - before.seconds);
+        return {
+            .elevation = { std::lerp(before.aim.elevation.value, after->aim.elevation.value, t) },
+            .angle = { std::lerp(before.aim.angle.value, after->aim.angle.value, t) },
+        };
+    }
+
+    glm::mat3 aimed(glm::vec3 tube, Aim aim)
+    {
+        // Across the tube level, so its front is the way it leans; a tube standing straight up has +z for its front.
+        const glm::vec3 level { tube.z, 0, -tube.x };
+        constexpr f32 kStandingUp = 1e-4f; ///< How little a tube may lean and still count as standing straight up
+        const glm::vec3 across = glm::length(level) > kStandingUp ? glm::normalize(level) : glm::vec3(1, 0, 0);
+        const glm::vec3 front = glm::cross(across, tube);
+        const f32 up = std::cos(aim.elevation.value);
+        const f32 out = std::sin(aim.elevation.value);
+        const glm::mat3 tilted { across, tube * up + front * out, front * up - tube * out };
+        // Turned round the tube as it stood.
+        const f32 c = std::cos(aim.angle.value);
+        const f32 s = std::sin(aim.angle.value);
+        const auto turn = [&](glm::vec3 v) { return v * c + glm::cross(tube, v) * s + tube * glm::dot(tube, v) * (1 - c); };
+        return { turn(tilted[0]), turn(tilted[1]), turn(tilted[2]) };
     }
 
     std::span<const Shot> advance_display(DisplayRun& run, const Display& display, f32 seconds)

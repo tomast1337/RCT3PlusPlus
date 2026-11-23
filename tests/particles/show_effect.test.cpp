@@ -196,6 +196,55 @@ namespace
         return b.v;
     }
 
+    /// A park's firework display (id 1) of two shots, from placed launchers 40 and 41. Launcher 40 keeps an aim of
+    /// 0.2 up and 0.5 round; 41 keeps none. The display's keys (timeline id 5, of 10 seconds) are stored latest first,
+    /// with a leftover past their count: at 6 seconds (key 7) launcher 40 aims 1.5 up and 3 round, beside an item no
+    /// shot fires from; at 2 seconds (key 6) 0.5 up and 1 round, with a leftover slot naming 41 past the key's count.
+    std::vector<std::byte> invented_aimed_show()
+    {
+        const Attr shot { "EntriesElement", "struct", 0, { { "EffectType", "int32", 4 }, { "Name", "string", 0 }, { "ParticleSourceRef", "reference", 8 }, { "SceneryItemRef", "reference", 8 }, { "Time", "float32", 4 } } };
+        const Attr aim { "FireworkSlotTransform", "struct", 0, { { "Angle", "float32", 4 }, { "Elevation", "float32", 4 } } };
+        const Attr slot { "SlotInfoElement", "struct", 0, { { "Angle", "float32", 4 }, { "Elevation", "float32", 4 }, { "SceneryItem", "managedobjectptr", 8 } } };
+        Bytes b = class_table(
+            {
+                { "FireworkDisplay", { { "Name", "string", 0 }, { "Entries", "array", 0, { shot } }, { "SlotKeyFrames", "managedobjectptr", 8 } } },
+                { "SceneryItem", { aim } },
+                kTimeline,
+                { "FireworkSlotKeyFrame", { { "NumCachedItems", "int32", 4 }, { "SlotInfo", "array", 0, { slot } } } },
+            });
+        const auto entry = [](u64 item, f32 seconds) {
+            Bytes one;
+            one.put_u32(0).field(text("Fireworks\\Peony.frw")).put_u64(0).put_u64(item).put_f32(seconds);
+            return one;
+        };
+        Bytes shots;
+        shots.put_u32(2).field(entry(40, 1)).field(entry(41, 3));
+        const auto aimed = [](f32 angle, f32 elevation) {
+            Bytes one;
+            one.put_f32(angle).put_f32(elevation);
+            return one;
+        };
+        const auto slot_of = [](f32 angle, f32 elevation, u64 item) {
+            Bytes one;
+            one.put_f32(angle).put_f32(elevation).put_u64(item);
+            return one;
+        };
+        b.put_u32(6);
+        b.put_u32(0).put_u64(1).field(text("Aimed")).field(shots).put_u64(5);
+        b.put_u32(1).put_u64(40).field(aimed(0.5f, 0.2f));
+        b.put_u32(1).put_u64(41).field(aimed(0, 0));
+        Bytes keys = timeline({ { 7, 6 }, { 6, 2 }, { 6, 99 } }, 2, 10);
+        b.put_u32(2).put_u64(5);
+        b.v.insert(b.v.end(), keys.v.begin(), keys.v.end());
+        Bytes early;
+        early.put_u32(2).field(slot_of(1, 0.5f, 40)).field(slot_of(9, 9, 41));
+        b.put_u32(3).put_u64(6).put_u32(1).field(early);
+        Bytes late;
+        late.put_u32(2).field(slot_of(3, 1.5f, 40)).field(slot_of(-1, 0.25f, 99));
+        b.put_u32(3).put_u64(7).put_u32(2).field(late);
+        return b.v;
+    }
+
 } // namespace
 
 TEST_CASE("a laser file reads its settings, its timelines in time order and its drawings")
@@ -401,5 +450,80 @@ TEST_CASE("a drawing laser's beam turns toward its pen by the drawing's scale")
     {
         laser_beams(laser, 3, ways);
         CHECK(ways.empty());
+    }
+}
+
+TEST_CASE("a park's display reads the aims its launchers keep and its keys for them")
+{
+    const std::vector<std::byte> park = invented_aimed_show();
+    const auto file = rct3::save::read_save(park, { .verify_checksum = false });
+    REQUIRE(file.has_value());
+    const auto displays = read_park_displays(*file);
+    REQUIRE(displays.has_value());
+    REQUIRE(displays->size() == 1);
+    const auto& launchers = displays->front().launchers;
+    REQUIRE(launchers.size() == 2);
+    CHECK(launchers[0].aim.elevation.value == doctest::Approx(0.2));
+    CHECK(launchers[0].aim.angle.value == doctest::Approx(0.5));
+    REQUIRE(launchers[0].keys.size() == 2);
+    CHECK(launchers[0].keys[0].seconds == doctest::Approx(2));
+    CHECK(launchers[0].keys[1].aim.angle.value == doctest::Approx(3));
+    CHECK(launchers[1].keys.empty());
+}
+
+TEST_CASE("a launcher's aim runs between its keys and holds before and after them")
+{
+    const Launcher kept { .aim = { .elevation = { 0.2f }, .angle = { 0.5f } } };
+    Launcher keyed = kept;
+    keyed.keys = { { .seconds = 2, .aim = { .elevation = { 0.5f }, .angle = { 1 } } }, { .seconds = 6, .aim = { .elevation = { 1.5f }, .angle = { 3 } } } };
+
+    SUBCASE("without keys it keeps its own")
+    {
+        CHECK(aim_at(kept, 4).angle.value == doctest::Approx(0.5));
+    }
+    SUBCASE("before the first key it holds that key")
+    {
+        CHECK(aim_at(keyed, 0).elevation.value == doctest::Approx(0.5));
+    }
+    SUBCASE("between two keys straight from one to the other")
+    {
+        CHECK(aim_at(keyed, 4).elevation.value == doctest::Approx(1));
+        CHECK(aim_at(keyed, 5).angle.value == doctest::Approx(2.5));
+    }
+    SUBCASE("after the last it holds that")
+    {
+        CHECK(aim_at(keyed, 60).angle.value == doctest::Approx(3));
+    }
+    SUBCASE("two keys at one time take the later")
+    {
+        keyed.keys.insert(keyed.keys.begin() + 1, AimKey { .seconds = 2, .aim = { .elevation = { 0.1f }, .angle = { 0 } } });
+        CHECK(aim_at(keyed, 2).elevation.value == doctest::Approx(0.1));
+    }
+}
+
+TEST_CASE("an aim tilts a tube off the way it stands, then turns it round")
+{
+    const auto near = [](glm::vec3 a, glm::vec3 b) { return glm::distance(a, b) < 1e-5f; };
+    constexpr f32 kQuarter = std::numbers::pi_v<f32> / 2;
+
+    SUBCASE("unaimed, a standing tube points up with its front +z")
+    {
+        const glm::mat3 frame = aimed({ 0, 1, 0 }, { });
+        CHECK(near(frame[1], { 0, 1, 0 }));
+        CHECK(near(frame[2], { 0, 0, 1 }));
+        CHECK(near(frame[0], glm::cross(frame[1], frame[2])));
+    }
+    SUBCASE("a standing tube tilted a quarter turn lies level toward +z, and a quarter turn round takes it to +x")
+    {
+        CHECK(near(aimed({ 0, 1, 0 }, { .elevation = { kQuarter } })[1], { 0, 0, 1 }));
+        CHECK(near(aimed({ 0, 1, 0 }, { .elevation = { kQuarter }, .angle = { kQuarter } })[1], { 1, 0, 0 }));
+    }
+    SUBCASE("a leaning tube tilts further the way it leans, and turns round the way it stood")
+    {
+        const glm::vec3 leaning = glm::normalize(glm::vec3(1, 1, 0));
+        CHECK(near(aimed(leaning, { .elevation = { kQuarter / 2 } })[1], { 1, 0, 0 }));
+        const glm::mat3 turned = aimed(leaning, { .elevation = { 0.3f }, .angle = { 2 } });
+        CHECK(glm::dot(turned[1], leaning) == doctest::Approx(std::cos(0.3f)));
+        CHECK(glm::abs(glm::determinant(turned)) == doctest::Approx(1));
     }
 }

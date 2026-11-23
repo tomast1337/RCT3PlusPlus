@@ -117,4 +117,38 @@ longer exists) and refers, through `ParticleSourceRef`, to a source object: `Las
 or water jet description, with the same fields as the loose file. So a park plays its shows without the files
 its shots name.
 
+### Aiming launchers
+
+A placed launcher (a `SceneryItem`) keeps its aim in `FireworkSlotTransform`, a struct of two float32 angles in
+radians:
+
+| Field | Meaning |
+|-------|---------|
+| `Elevation` | How far every tube is tilted off the way it stands, 0 (as built) to a quarter turn |
+| `Angle` | How far the tilted tube is then turned round the way it stood |
+
+The tilt goes toward the tube's front: the way it leans away from straight up, and +z for a tube standing straight up.
+The turn is right-handed round the tube as it stood, so for a standing tube a positive angle takes +z toward +x: the
+angle is a compass direction in the park, not one relative to the way the launcher is turned. An item that was never
+aimed keeps 0 and 0 and fires the way its tubes stand. A show of cannons, for example, may keep each cannon tilted most
+of the way down to level and turned toward its target.
+
+A display moves its launchers over the show through `SlotKeyFrames`, a reference to a timeline (`Blender`, as above)
+whose points are times in seconds from the start of the show, not shares of it, and whose values are
+`FireworkSlotKeyFrame` objects:
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `NumCachedItems` | int32 | How many of the slots are in use, counting from the first |
+| `SlotInfo` | array | Slots, each a launcher (`SceneryItem`, a reference to the placed item), its `Elevation` and `Angle`, and a `StorageIndex` (not read) |
+
+The slots past the count hold leftovers from earlier keys, which may name launchers too. A display with no keys has a
+timeline with no points.
+
+While a display plays, each launcher its shots fire from and that a key names is aimed by the keys that name it: between
+the latest such key at or before the time and the next one after it, both angles run straight from one to the other;
+before its first key it holds that key, and after its last it holds the last. A launcher no key names keeps its own
+aim. Shells, laser beams and water jets all leave along the aimed tube, and a laser's elevation and turn are measured
+from the aimed tube as from a standing one.
+
 The shipped display files (`.fwd`) hold fireworks only.

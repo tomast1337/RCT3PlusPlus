@@ -774,6 +774,9 @@ namespace rct3::scene
                       { "shots", d.shots.size() },
                       { "lasers", std::ranges::count(d.shots, particles::ShotKind::Laser, &particles::Shot::kind) },
                       { "drawings", std::ranges::count_if(d.shots, [](const particles::Shot& s) { return s.laser && s.laser->look == particles::LaserLook::Drawing; }) },
+                      { "aimed", std::ranges::count_if(d.launchers, [](const particles::Launcher& l) { return l.aim.elevation.value != 0 || l.aim.angle.value != 0; }) },
+                      { "keyed", std::ranges::count_if(d.launchers, [](const particles::Launcher& l) { return !l.keys.empty(); }) },
+                      { "moving", std::ranges::count_if(d.launchers, [](const particles::Launcher& l) { return std::ranges::any_of(l.keys, [&](const particles::AimKey& k) { return k.aim.elevation.value != l.keys.front().aim.elevation.value || k.aim.angle.value != l.keys.front().aim.angle.value; }); }) },
                       { "playing", playing },
                       { "seconds", playing ? fireworks.playing->run.seconds : 0.0f },
                       { "shining", playing ? fireworks.lasers.size() : 0 },
@@ -783,6 +786,10 @@ namespace rct3::scene
                     const save::model::TerrainGrid& g = grid_of(park_);
                     const glm::vec3 c = fireworks.playing->centre;
                     out.back()["centre"] = { { "col", (c.x - g.origin_x) / g.tile_size_x }, { "row", (c.z - g.origin_z) / g.tile_size_z } };
+                    Json tubes = Json::array();
+                    for (const rct3::park::object::PlacedEffect& t : park::park_display_tubes(park_of(park_)))
+                        tubes.push_back({ { "col", (t.position.x - g.origin_x) / g.tile_size_x }, { "row", (t.position.z - g.origin_z) / g.tile_size_z }, { "up", t.position.y }, { "way", { t.axes[1].x, t.axes[1].y, t.axes[1].z } } });
+                    out.back()["tubes"] = tubes;
                     // The middle of the pictures drawing lasers leave, to look at.
                     if (!fireworks.spots.empty())
                     {

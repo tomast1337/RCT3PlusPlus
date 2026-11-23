@@ -373,8 +373,8 @@ declare namespace park {
      *  (0 apprentice to 2 tycoon), its objective (0 for the level's own), the file's class, whether the
      *  simulation can judge it, the figure asked for (a coaster goal's per ride, its `rides` how many must reach
      *  it and `figure` which statistic) and whether it is a most, the months it must hold, the park's figure now
-     *  (null for goals without one, or before the first check), whether it is met now and for good, and the
-     *  challenge it belongs to. */
+     *  (null for goals without one, or before the first check), whether it is met now and for good, the
+     *  challenge it belongs to, and the species it names (empty for none). */
     function goals(): {
         level: number;
         objective: number;
@@ -389,6 +389,7 @@ declare namespace park {
         met: boolean;
         completed: boolean;
         challenge: number | null;
+        species: string;
     }[];
     /** The scenario's VIP goals: their level, which celebrity, when they next visit, the months they stay,
      *  whether a visit went well, whether the player was told a month ahead, what the VIP wants and puts up with
@@ -402,33 +403,6 @@ declare namespace park {
         toldMonth: boolean;
         wishes: number;
         started: boolean;
-    }[];
-    /** Every goal of the scenario and its challenges, as last checked: its level, its class in the park file, its
-     *  challenge (-1 for a scenario goal), its target and the park's figure (null when none), whether that meets it,
-     *  whether the simulation can judge it at all, and whether it is done. */
-    function goals(): {
-        level: number;
-        kind: string;
-        challenge: number;
-        target: number | null;
-        now: number | null;
-        met: boolean;
-        judged: boolean;
-        completed: boolean;
-    }[];
-    /** The scenario's and its challenges' goals in the park's order: level, text key of the kind, the challenge
-     *  it belongs to (null for a scenario goal), target, species named (empty for none), whether the simulation
-     *  can judge it, and as last checked (each game day) where the park stands and whether that meets it. */
-    function goals(): {
-        level: number;
-        kind: string;
-        challenge: number | null;
-        target: number | null;
-        species: string;
-        judged: boolean;
-        now: number | null;
-        met: boolean;
-        completed: boolean;
     }[];
     /** The VIPs who came in: name, where they are in tiles, patience 0 to 1, whether heading home or gone, their
      *  bodyguards still in the park, how many stops they came to see and which is next, the attraction they walk

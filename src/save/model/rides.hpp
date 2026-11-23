@@ -94,6 +94,7 @@ namespace rct3::save::model
         Tracked, ///< Coaster or other track-guided ride with trains
         Flat,    ///< Animated (flat) ride: no track
         Special, ///< Special attraction: toilets, cash machines and similar facilities
+        Gallery, ///< Viewing gallery on an animal enclosure's edge, where guests pay to watch the animals
     };
 
     // ---------------------------------------------------------------------------------------------------------
@@ -483,6 +484,17 @@ namespace rct3::save::model
         // Special attractions
         units::Money total_withdrawn { }; ///< Cash points
         units::Money average_withdrawn { };
+
+        // Viewing galleries
+        /// A panel of the gallery: its placement record, and where that puts it, on a tile of the enclosure's edge.
+        struct GalleryPanel
+        {
+            ObjectId placement = 0;
+            PlacementSpot spot { };
+        };
+        /// From one end of the gallery to the other, along the fence; the first is `base`'s placement and spot.
+        std::vector<GalleryPanel> panels { };
+        std::string gallery_fence { }; ///< The kind of enclosure fence its panels match, as EnclosureMap::fences names it
     };
 
     struct StallItem

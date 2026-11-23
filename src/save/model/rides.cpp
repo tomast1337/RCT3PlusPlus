@@ -32,6 +32,7 @@ namespace rct3::save::model
             constexpr std::string_view kFlatRide = "AnimatedRideInstance";
             constexpr std::string_view kSpecial = "SpecialAttractionInstance";
             constexpr std::string_view kStall = "StallInstance";
+            constexpr std::string_view kGallery = "ViewingGalleryInstance";
             constexpr std::string_view kTrack = "Track";
             constexpr std::string_view kSegment = "TrackSegment";
             constexpr std::string_view kPiece = "TrackPiece";
@@ -84,6 +85,10 @@ namespace rct3::save::model
             constexpr std::string_view kSpecialOverlay = "SpecialAttractionOverlayName";
             constexpr std::string_view kStallSymbol = "StallSymbolName";
             constexpr std::string_view kStallOverlay = "StallOverlayName";
+            // Viewing galleries name their kind by its asset entry alone, and keep their panels' placements.
+            constexpr std::string_view kGalleryPanels = "Gallery";
+            constexpr std::string_view kGalleryFence = "EnclosureTypeDatabaseEntry";
+            constexpr std::string_view kGalleryFenceName = "SystemName";
 
             // Ride
             constexpr std::string_view kOpMode = "OpMode";
@@ -418,6 +423,7 @@ namespace rct3::save::model
             FlatRide,
             Special,
             Stall,
+            Gallery,
             Track,
             Segment,
             Piece,
@@ -439,7 +445,7 @@ namespace rct3::save::model
                 Role role;
             };
             static constexpr Entry kTable[] = {
-                { id::kTrackedRide, Role::TrackedRide }, { id::kFlatRide, Role::FlatRide },           { id::kSpecial, Role::Special },   { id::kStall, Role::Stall },         { id::kTrack, Role::Track }, { id::kSegment, Role::Segment }, { id::kPiece, Role::Piece }, { id::kPlatform, Role::Platform }, { id::kTrain, Role::Train }, { id::kCar, Role::Car }, { id::kQueueLine, Role::QueueLine }, { id::kFakeQueueLine, Role::QueueLine },
+                { id::kTrackedRide, Role::TrackedRide }, { id::kFlatRide, Role::FlatRide },           { id::kSpecial, Role::Special },   { id::kStall, Role::Stall },         { id::kGallery, Role::Gallery }, { id::kTrack, Role::Track }, { id::kSegment, Role::Segment }, { id::kPiece, Role::Piece }, { id::kPlatform, Role::Platform }, { id::kTrain, Role::Train }, { id::kCar, Role::Car }, { id::kQueueLine, Role::QueueLine }, { id::kFakeQueueLine, Role::QueueLine },
                 { id::kQueueTile, Role::QueueTile },     { id::kStationHolder, Role::StationHolder }, { id::kShopItem, Role::ShopItem }, { id::kShopExtra, Role::ShopExtra },
             };
             for (const auto& e : kTable)
@@ -485,7 +491,7 @@ namespace rct3::save::model
                 for (const auto& o : file_.objects)
                 {
                     const Role r = roles_[o.class_index];
-                    if (r == Role::TrackedRide || r == Role::FlatRide || r == Role::Special)
+                    if (r == Role::TrackedRide || r == Role::FlatRide || r == Role::Special || r == Role::Gallery)
                         load_ride(o, r);
                     else if (r == Role::Stall)
                         load_stall(o);
@@ -903,6 +909,25 @@ namespace rct3::save::model
                         ride.kind = RideKind::Flat;
                         ride.base = read_common(*d, id::kFlatSymbol, id::kFlatOverlay);
                         break;
+                    case Role::Gallery:
+                    {
+                        ride.kind = RideKind::Gallery;
+                        ride.base = read_common(*d, id::kSpecialSymbol, id::kSpecialOverlay);
+                        std::tie(ride.base.symbol, ride.base.overlay_path) = asset_of(ride.base.kind_asset);
+                        for (const auto& item : f[id::kGalleryPanels].items())
+                            if (const ObjectId placement = View(item).ref(); placement != 0)
+                                if (const auto spot = spot_of(placement))
+                                    ride.panels.push_back({ placement, *spot });
+                        if (!ride.panels.empty())
+                        {
+                            ride.base.placement = ride.panels.front().placement;
+                            ride.base.spot = ride.panels.front().spot;
+                        }
+                        if (const std::optional<const Object&> fence = index_.find(live(f[id::kGalleryFence])))
+                            if (const auto e = decode(*fence))
+                                ride.gallery_fence = View(e->fields)[id::kGalleryFenceName].text();
+                        break;
+                    }
                     default:
                         ride.kind = RideKind::Special;
                         ride.base = read_common(*d, id::kSpecialSymbol, id::kSpecialOverlay);

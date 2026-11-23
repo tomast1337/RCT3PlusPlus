@@ -234,7 +234,7 @@ TEST_CASE("a goal reads where the park stands on it and whether that meets it")
     CHECK_FALSE(loan.met);
     CHECK(simulation::judged(save::model::ConditionKind::AnimalHealth));
     CHECK(simulation::judged(save::model::ConditionKind::AnimalsOfSpecies));
-    CHECK_FALSE(simulation::judged(save::model::ConditionKind::SceneryItems));
+    CHECK_FALSE(simulation::judged(save::model::ConditionKind::Other));
 }
 
 TEST_CASE("pool goals read the busiest clean pool and last month's pool tickets, scenery goals the plants of a kind")

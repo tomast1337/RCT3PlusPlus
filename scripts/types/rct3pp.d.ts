@@ -403,6 +403,19 @@ declare namespace park {
         wishes: number;
         started: boolean;
     }[];
+    /** Every goal of the scenario and its challenges, as last checked: its level, its class in the park file, its
+     *  challenge (-1 for a scenario goal), its target and the park's figure (null when none), whether that meets it,
+     *  whether the simulation can judge it at all, and whether it is done. */
+    function goals(): {
+        level: number;
+        kind: string;
+        challenge: number;
+        target: number | null;
+        now: number | null;
+        met: boolean;
+        judged: boolean;
+        completed: boolean;
+    }[];
     /** The VIPs who came in: name, where they are in tiles, patience 0 to 1, whether heading home or gone, their
      *  bodyguards still in the park, how many stops they came to see and which is next, the attraction they walk
      *  to now (empty when none), and their place in people.list() once they are shown. */

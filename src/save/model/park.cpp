@@ -198,6 +198,7 @@ namespace rct3::save::model
             constexpr std::string_view kItemsBought = "ItemsPurchased";
             constexpr std::string_view kTheme = "Theme";
             constexpr std::string_view kThemedNeeded = "TargetNum";
+            constexpr std::string_view kClassification = "Classification";
             constexpr std::string_view kForChallenge = "IsChallengeCondtion"; // Spelt so in the files
             constexpr std::string_view kItemSymbol = "SymbolName";            // Of the carried item kind an items goal names
             constexpr std::string_view kStallSymbol = "SYMBOLNAME";           // Of the stall kind
@@ -693,6 +694,8 @@ namespace rct3::save::model
                 c.theme = i32_of(o.find(kTheme), 0);
                 c.value = i32_of(o.find(kThemedNeeded), 0);
             }
+            if (c.kind == ConditionKind::SceneryItems)
+                c.classification = i32_of(o.find(kClassification), 0);
             if (bool_of(o.find(kForChallenge), false))
                 c.challenge = i32_of(o.find(kChallengeId), 0);
             set.conditions.push_back(std::move(c));

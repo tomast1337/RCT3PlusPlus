@@ -56,14 +56,17 @@ namespace rct3::simulation
         i32 guests = 0; ///< In the park now
         i32 rating = 0; ///< 0 to 1000
         units::Money loan { };
-        /// Last month's ledger period, for the goals on ride income (its ride tickets) and shop profit (shop
-        /// and food sales less their stock); all nought before a month has ended.
+        /// Last month's ledger period, for the goals on ride income (its ride tickets), pool income (its pool
+        /// tickets) and shop profit (shop and food sales less their stock); all nought before a month has ended.
         save::model::LedgerPeriod last_month { };
         i32 animal_health = 0; ///< The animals' average, 0 to 100; 0 with no animals
         i32 dung = 0;          ///< Piles of dung lying in the park
         std::span<const GoalRide> rides { };
         /// Rides and stalls carrying each theme, by the theme's number in the build catalogue; empty when not counted.
         std::span<const i32> themed { };
+        i32 pool_guests = 0; ///< In the busiest pool complex whose water is clean
+        /// Trees, shrubs and flowers standing in the park, in the order scenery goals number them.
+        std::array<i32, 3> plants { };
     };
 
     /// How a goal stands against the park's figures.

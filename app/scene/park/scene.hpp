@@ -933,6 +933,7 @@ namespace rct3::scene::park
         std::optional<usize> pool_complex_asked;                       ///< Of the pools' rooms, one whose complex the player was asked to sell
         std::optional<ui::screens::info::SceneryTab> room_tab;         ///< Last open in a changing room's window
         std::vector<rct3::park::AttractionRef> demolish_asked;         ///< Waiting on the question whether to pull them down
+        std::optional<entt::entity> release_asked;                     ///< An animal waiting on the question whether to set it free
         std::vector<std::string> prizes;                               ///< Text keys told one box at a time, oldest first: prizes won, deletes refused
         std::vector<std::u16string> challenge_notes;                   ///< Told after those, the same way: challenges met with their prizes, and hints for those taken on
         std::vector<std::string_view> left_out;                        ///< What loading the original park left behind, as text keys of its groups, told in a box first

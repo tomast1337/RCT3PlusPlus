@@ -875,7 +875,33 @@ namespace rct3::scene
             Json out = Json::array();
             for (const save::model::Condition& c : park_of(park_).park_model.objectives.conditions)
                 if (c.vip)
-                    out.push_back({ { "level", c.difficulty }, { "who", c.vip->who }, { "next", c.vip->next_visit }, { "months", c.vip->months_to_stay }, { "met", c.vip->met }, { "toldMonth", c.vip->warned_month } });
+                    out.push_back({ { "level", c.difficulty }, { "who", c.vip->who }, { "next", c.vip->next_visit }, { "months", c.vip->months_to_stay }, { "met", c.vip->met }, { "toldMonth", c.vip->warned_month }, { "wishes", c.vip->wishes }, { "started", c.vip->started } });
+            return out;
+        });
+        engine_.define("park.goals", [this](const Json&) {
+            const park::ParkScene& scene = park_of(park_);
+            const auto& conditions = scene.park_model.objectives.conditions;
+            Json out = Json::array();
+            for (usize i = 0; i < conditions.size(); ++i)
+            {
+                const save::model::Condition& c = conditions[i];
+                const simulation::GoalReading reading = i < scene.goal_readings.size() ? scene.goal_readings[i] : simulation::GoalReading { };
+                const std::optional<f64> target = c.coaster ? std::optional<f64>(c.coaster->value) : c.value ? std::optional<f64>(static_cast<f64>(*c.value)) : std::nullopt;
+                out.push_back(
+                    { { "level", c.difficulty },
+                      { "objective", c.objective_id },
+                      { "kind", c.class_name },
+                      { "judged", simulation::judged(c.kind) },
+                      { "target", target ? Json(*target) : Json(nullptr) },
+                      { "atMost", c.coaster ? (c.coaster->flags & save::model::CoasterTarget::kAtMost) != 0 : !c.greater_than.value_or(true) },
+                      { "rides", c.coaster ? c.coaster->rides : 0 },
+                      { "figure", c.coaster ? Json(c.coaster->flags & save::model::CoasterTarget::kFigure) : Json(nullptr) },
+                      { "months", c.months_to_hold },
+                      { "now", reading.now ? Json(*reading.now) : Json(nullptr) },
+                      { "met", reading.met },
+                      { "completed", c.completed },
+                      { "challenge", c.challenge ? Json(*c.challenge) : Json(nullptr) } });
+            }
             return out;
         });
         engine_.define("park.vips", [this](const Json&) {

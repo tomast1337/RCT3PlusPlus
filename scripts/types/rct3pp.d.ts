@@ -369,8 +369,30 @@ declare namespace park {
     function givePrize(id: number): void;
     /** Moves the calendar to `units`; the clock of the day runs on as it was. */
     function setDate(units: number): void;
+    /** The scenario's goals as the park file lists them, with how each read at the last daily check: the level
+     *  (0 apprentice to 2 tycoon), its objective (0 for the level's own), the file's class, whether the
+     *  simulation can judge it, the figure asked for (a coaster goal's per ride, its `rides` how many must reach
+     *  it and `figure` which statistic) and whether it is a most, the months it must hold, the park's figure now
+     *  (null for goals without one, or before the first check), whether it is met now and for good, and the
+     *  challenge it belongs to. */
+    function goals(): {
+        level: number;
+        objective: number;
+        kind: string;
+        judged: boolean;
+        target: number | null;
+        atMost: boolean;
+        rides: number;
+        figure: number | null;
+        months: number;
+        now: number | null;
+        met: boolean;
+        completed: boolean;
+        challenge: number | null;
+    }[];
     /** The scenario's VIP goals: their level, which celebrity, when they next visit, the months they stay,
-     *  whether a visit went well and whether the player was told a month ahead. */
+     *  whether a visit went well, whether the player was told a month ahead, what the VIP wants and puts up with
+     *  (the file's bits) and whether a visit is under way. */
     function vipGoals(): {
         level: number;
         who: number;
@@ -378,6 +400,8 @@ declare namespace park {
         months: number;
         met: boolean;
         toldMonth: boolean;
+        wishes: number;
+        started: boolean;
     }[];
     /** The VIPs who came in: name, where they are in tiles, patience 0 to 1, whether heading home or gone, their
      *  bodyguards still in the park, how many stops they came to see and which is next, the attraction they walk

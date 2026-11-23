@@ -153,6 +153,8 @@ TEST_CASE("a VIP who saw what they came for and kept their patience meets the go
     advance_vips(park.world(), set, 1.2f * kMonth, 1, messages, around);
     CHECK(messages.list.back().text_key == "VIPCondition_Success");
     CHECK(set.conditions[0].vip->met);
+    CHECK_FALSE(set.conditions[0].vip->started); // The visit is over
+    CHECK_FALSE(set.conditions[0].vip->seen_fireworks);
     CHECK(check_goals(set, { }, 1.2f * kMonth).has_value()); // The level is won
 }
 
@@ -295,4 +297,59 @@ TEST_CASE("a VIP who wants a swim has seen the pool once they swim in one")
     CHECK(vip_opinion(vip, wants, 1) == 0);
     vip.pool = true;
     CHECK(vip_opinion(vip, wants, 1) == 1);
+}
+
+TEST_CASE("what a VIP has done goes with their goal, and a visit kept that way goes on from it")
+{
+    Sandbox park = gated();
+    auto& r = park.world().registry;
+    const entt::entity wild = park.flat_ride("Wild", { 4, 0 }, 100, { .excitement = 0.7f });
+    r.emplace<Trains>(wild);
+    r.get<Attraction>(wild).saved = 40;
+    const T wants { .wishes = T::kCoasters | T::kFireworks, .next_visit = 0, .months_to_stay = 2, .coasters_needed = 1, .min_excitement = 5 };
+    ParkMessages messages;
+
+    SUBCASE("a visit under way is kept with the goal")
+    {
+        auto set = one_goal(wants);
+        advance_vips(park.world(), set, 0, 1, messages, { });
+        const auto vip = the_vip(r);
+        REQUIRE(vip);
+        CHECK(set.conditions[0].vip->started);
+        CHECK(set.conditions[0].vip->ever_visited);
+        r.get<Errand>(*vip) = { ErrandKind::Riding, wild, 0 };
+        advance_vips(park.world(), set, 1, kTuning.vips.look.value, messages, { });
+        CHECK(set.conditions[0].vip->coasters_done == std::vector<u64> { 40 });
+        CHECK_FALSE(set.conditions[0].vip->seen_fireworks);
+        CHECK(set.conditions[0].vip->happiness_known == 1);
+    }
+    SUBCASE("a visit kept with the goal goes on when the VIP comes back in")
+    {
+        T saved = wants;
+        saved.started = true;
+        saved.seen_fireworks = true;
+        saved.coasters_done = { 40 };
+        saved.average_happiness = 0.5f;
+        saved.happiness_known = 4;
+        auto set = one_goal(saved);
+        advance_vips(park.world(), set, 0, 1, messages, { });
+        const auto vip = the_vip(r);
+        REQUIRE(vip);
+        const Vip& v = r.get<Vip>(*vip);
+        CHECK(v.coasters == std::vector { wild });
+        CHECK(v.fireworks);
+        CHECK(v.looks == 4);
+        CHECK(v.happiness_sum == doctest::Approx(2));
+        CHECK(vip_opinion(v, *set.conditions[0].vip, 0) == 1);
+    }
+    SUBCASE("a new visit starts with nothing done")
+    {
+        T stale = wants;
+        stale.seen_fireworks = true; // Left from a visit that is over
+        auto set = one_goal(stale);
+        advance_vips(park.world(), set, 0, 1, messages, { });
+        const auto vip = the_vip(r);
+        REQUIRE(vip);
+        CHECK_FALSE(r.get<Vip>(*vip).fireworks);
+    }
 }

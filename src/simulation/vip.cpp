@@ -107,6 +107,9 @@ namespace rct3::simulation
                     goal.met = true;
                 else
                     goal.next_visit = time + static_cast<f32>(goal.retry_months) * kMonth;
+                goal.started = goal.seen_fireworks = goal.seen_scenery = goal.been_to_pool = false;
+                goal.coasters_done.clear();
+                goal.average_happiness = goal.happiness_known = 0;
                 r.remove<Vip>(*mine);
                 continue;
             }
@@ -171,7 +174,17 @@ namespace rct3::simulation
                     else if (!doors.empty())
                         stops.push_back(doors.front()); // They say there is no way to it
                 }
-                r.emplace<Vip>(guest, Vip { .goal = c.id, .who = goal.who, .came = time, .look = tune.look, .stops = std::move(stops) });
+                // A visit cut short by the park being saved and loaded again goes on from what they had done.
+                // shortcut: the time they had spent in the park is not kept, so they stay their full months again;
+                // keep it once the VIP themselves are saved.
+                std::vector<entt::entity> ridden;
+                if (goal.started)
+                    for (const auto [ride, attraction] : r.view<const Attraction>().each())
+                        if (attraction.saved != 0 && std::ranges::contains(goal.coasters_done, attraction.saved))
+                            ridden.push_back(ride);
+                const u32 looks = goal.started ? static_cast<u32>(std::max(goal.happiness_known, 0.0f)) : 0;
+                r.emplace<Vip>(guest, Vip { .goal = c.id, .who = goal.who, .coasters = std::move(ridden), .fireworks = goal.started && goal.seen_fireworks, .themed = goal.started && goal.seen_scenery, .came = time, .look = tune.look, .happiness_sum = goal.average_happiness * static_cast<f32>(looks), .looks = looks, .pool = goal.started && goal.been_to_pool, .stops = std::move(stops) });
+                goal.started = goal.ever_visited = true;
                 goal.warned_week = goal.warned_month = false;
                 tell("VIP_ArrivedInPark", goal.who);
                 continue;
@@ -281,6 +294,16 @@ namespace rct3::simulation
                 vip.fireworks = true;
             if ((goal.wishes & T::kThemedArea) != 0 && around.themed && r.all_of<Pose>(guest) && around.themed(r.get<Pose>(guest).position, goal.theme, tune.reach) >= goal.scenery_needed)
                 vip.themed = true;
+            // What they have done so far goes with the goal, for a park saved during the visit.
+            goal.seen_fireworks = vip.fireworks;
+            goal.seen_scenery = vip.themed;
+            goal.been_to_pool = vip.pool;
+            goal.coasters_done.clear();
+            for (const entt::entity ride : vip.coasters)
+                if (const auto* attraction = r.try_get<Attraction>(ride); attraction != nullptr && attraction->saved != 0)
+                    goal.coasters_done.push_back(attraction->saved);
+            goal.average_happiness = vip.happiness_sum / static_cast<f32>(vip.looks);
+            goal.happiness_known = static_cast<f32>(vip.looks);
             // Each autograph signed since the last look wears a VIP who minds hunters down a little.
             if ((goal.wishes & T::kAutographs) != 0)
                 lose(goal.autograph_tolerance, static_cast<f32>(vip.signatures));

@@ -396,6 +396,16 @@ namespace rct3::save::model
         f32 target_happiness = 0;                       ///< kHappiness, 0..1
         bool met = false;                               ///< A visit went well; the goal stays met
         bool warned_month = false, warned_week = false; ///< The player was told the visit is near
+
+        // The visit under way, kept with the goal so a park saved during it carries on from what the VIP had done.
+        bool started = false; ///< A VIP of this goal is in the park
+        bool ever_visited = false;
+        bool seen_fireworks = false;
+        bool seen_scenery = false; ///< The themed area they wanted
+        bool been_to_pool = false;
+        std::vector<u64> coasters_done { }; ///< The park file's ids of the different coasters they rode
+        f32 average_happiness = 0;
+        f32 happiness_known = 0; ///< How many looks round the average is over
     };
 
     /// What an items-bought goal counts: sales of one item, anywhere or at one kind of stall, or every sale at that

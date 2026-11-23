@@ -118,7 +118,7 @@ namespace rct3::park::ride
 
     std::vector<save::model::PlacedObject> ride_fences(const save::model::Ride& ride, const ModelOf& model_of, u64 last_id)
     {
-        if (ride.kind == save::model::RideKind::Special)
+        if (ride.kind == save::model::RideKind::Special || ride.kind == save::model::RideKind::Gallery)
             return { };
         FenceLook look;
         if (!ride.override_fence_symbol.empty())

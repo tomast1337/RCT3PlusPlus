@@ -331,6 +331,9 @@ namespace rct3::ui::screens::info
                 age = years == 0 ? text(strings, kZeroYears) : filled(text(strings, years == 1 ? kOneYear : kManyYears), u"#", count(years));
             }
             add_half(page, strings, "AttractionCustomersDialogLabel_AgeYears", std::move(age));
+            // A gallery is as exciting as the enclosure it looks into.
+            if (f.ride && f.ride->kind == save::model::RideKind::Gallery)
+                add(page, strings, "AttractionResultsDialogLabel_Excitement", f.ride->assessment.valid ? rating(f.ride->assessment.excitement, strings) : missing());
             if (f.ride && !f.ride->stations.empty())
             {
                 f32 longest = 0;
@@ -873,6 +876,7 @@ namespace rct3::ui::screens::info
             case save::model::RideKind::Tracked:
                 return AttractionKind::Tracked;
             case save::model::RideKind::Special:
+            case save::model::RideKind::Gallery:
                 return AttractionKind::Facility;
             case save::model::RideKind::Flat:
                 break;

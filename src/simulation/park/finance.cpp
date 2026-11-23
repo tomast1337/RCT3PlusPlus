@@ -184,7 +184,7 @@ namespace rct3::simulation::park
     {
         f32 worth = 0;
         for (const save::model::Ride& ride : rides.rides)
-            if (ride.kind != save::model::RideKind::Special && !ride.base.demolished && ride.base.state == save::model::AttractionState::Open && ride.assessment.valid)
+            if (ride.kind != save::model::RideKind::Special && ride.kind != save::model::RideKind::Gallery && !ride.base.demolished && ride.base.state == save::model::AttractionState::Open && ride.assessment.valid)
                 worth += ride.assessment.excitement * ride.assessment.excitement;
         return { std::max(guests, 0) * kTuning.park_value.per_guest.value + std::llround(worth * static_cast<f32>(kTuning.park_value.per_excitement.value)) };
     }

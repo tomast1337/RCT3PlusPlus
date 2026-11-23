@@ -63,6 +63,8 @@ namespace rct3::parkfile
                 }
             if (ride.base.spot)
                 built.insert(ride.base.spot->object);
+            for (const save::model::Ride::GalleryPanel& panel : ride.panels)
+                built.insert(panel.spot.object);
             for (const save::model::Station& station : ride.stations)
                 for (const auto& spot : { station.entrance_spot, station.exit_spot })
                     if (spot)

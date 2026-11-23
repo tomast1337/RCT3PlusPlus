@@ -17,6 +17,7 @@
 #include "simulation/components.hpp"
 #include "simulation/crowds.hpp"
 #include "simulation/day_clock.hpp"
+#include "simulation/galleries.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/holding.hpp"
 #include "simulation/park/state.hpp"
@@ -274,6 +275,30 @@ namespace rct3::simulation
         std::optional<NodeId> stall_front(const PathNetwork& paths, const save::model::PlacementSpot& spot, i32 facing)
         {
             return path_at(paths, spot, rct3::park::object::turned_x(rct3::park::ModelTurn::from(facing).turned(3)), false);
+        }
+
+        /// Where guests come to a viewing gallery: a footpath on a tile beside one of its panels, the first found from
+        /// its first panel on, and the way from there to that panel.
+        struct GalleryDoor
+        {
+            NodeId path { };
+            glm::vec2 window { 0.0f };
+        };
+
+        std::optional<GalleryDoor> gallery_door(const PathNetwork& paths, const save::model::Ride& gallery)
+        {
+            // shortcut: any path beside a panel, at any height; upgrade when galleries stand on raised ground beside
+            // raised paths.
+            constexpr std::array<glm::ivec2, 4> kSides { glm::ivec2 { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 } };
+            for (const save::model::Ride::GalleryPanel& panel : gallery.panels)
+                for (const glm::ivec2 side : kSides)
+                    for (u32 n = 0; n < paths.nodes().size(); ++n)
+                    {
+                        const PathNode& node = paths.nodes()[n];
+                        if (!node.removed && !node.queue && node.tile.col == panel.spot.col + side.x && node.tile.row == panel.spot.row + side.y)
+                            return GalleryDoor { .path = NodeId { n }, .window = glm::vec2(-side) };
+                    }
+            return std::nullopt;
         }
 
         /// Guests line up on the queue that reaches the entrance, or walk straight in from a path; none when
@@ -667,6 +692,12 @@ namespace rct3::simulation
                 entrance = stall_front(world.paths, *stall->base.spot, stall->base.facing);
             else if (facility != rides.rides.end() && facility->kind == save::model::RideKind::Special && facility->base.spot)
                 entrance = facility_door(world.paths, *facility->base.spot);
+            else if (auto* gallery = r.try_get<Gallery>(e); gallery != nullptr && facility != rides.rides.end())
+                if (const auto door = gallery_door(world.paths, *facility))
+                {
+                    entrance = door->path;
+                    gallery->window = door->window;
+                }
             if (!entrance || entrance == attraction.entrance)
                 continue;
             attraction.entrance = entrance;
@@ -1200,6 +1231,30 @@ namespace rct3::simulation
             r.emplace<Shop>(e, *product);
             if (breaks)
                 r.emplace<Upkeep>(e, Upkeep { .broken = broken, .inspect_every = std::nullopt, .break_in = units::Seconds { 0 } });
+            ++added;
+        }
+        return added;
+    }
+
+    usize import_galleries(SimWorld& world, const save::model::RideModel& rides, const save::model::EnclosureMap& enclosures)
+    {
+        usize added = 0;
+        for (const save::model::Ride& ride : rides.rides)
+        {
+            if (ride.kind != save::model::RideKind::Gallery || ride.panels.empty() || ride.base.demolished)
+                continue;
+            const auto door = gallery_door(world.paths, ride);
+            if (!door)
+                continue;
+            // Its panels stand on the enclosure's edge tiles, or just outside them.
+            const save::model::PlacementSpot& panel = ride.panels.front().spot;
+            std::optional<i32> enclosure = enclosures.at(panel.col, panel.row);
+            if (!enclosure)
+                enclosure = enclosures.at(panel.col + static_cast<i32>(door->window.x), panel.row + static_cast<i32>(door->window.y));
+            auto& r = world.registry;
+            const entt::entity e = r.create();
+            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Gallery, .name = ride.base.name, .entrance = door->path, .price = units::Money { std::max<i64>(ride.ticket_price.value, 0) }, .open = ride.base.state == save::model::AttractionState::Open, .saved = ride.base.id, .running_cost = ride.base.running_cost });
+            r.emplace<Gallery>(e, Gallery { .enclosure = enclosure, .windows = kGalleryRates.windows_per_panel * static_cast<u32>(ride.panels.size()), .window = door->window });
             ++added;
         }
         return added;

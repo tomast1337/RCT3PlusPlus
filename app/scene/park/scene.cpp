@@ -52,11 +52,13 @@
 #include "scene/zoo_animals.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/awards.hpp"
+#include "simulation/boat.hpp"
 #include "simulation/challenges.hpp"
 #include "simulation/components.hpp"
 #include "simulation/enjoyment.hpp"
 #include "simulation/fence_wear.hpp"
 #include "simulation/fireworks.hpp"
+#include "simulation/galleries.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/holding.hpp"
 #include "simulation/import_park.hpp"
@@ -1631,6 +1633,13 @@ namespace rct3::scene::park
                                     default:
                                         break;
                                 }
+                    // Those each gallery had as the park was loaded, and those since.
+                    // shortcut: a gallery pulled down takes its visitors with it; keep a park total when goals need it.
+                    i64 gallery_visitors = 0;
+                    for (const save::model::Ride& ride : scene.rides.rides)
+                        gallery_visitors += ride.kind == save::model::RideKind::Gallery && !ride.base.demolished ? ride.base.total_guests : 0;
+                    for (const auto [e, a, gallery] : scene.sim.registry.view<const simulation::Attraction, const simulation::Gallery>().each())
+                        gallery_visitors += a.customers;
                     const simulation::ParkFigures figures {
                         .park_value = { simulation::park::park_value(scene.park.guests, scene.rides).value },
                         .guests = scene.park.guests,
@@ -1646,6 +1655,8 @@ namespace rct3::scene::park
                         .animals = goal_animals,
                         .this_month = money.ledger.empty() ? save::model::LedgerPeriod { } : money.ledger.front(),
                         .months_before = money.cumulative.value_or(save::model::LedgerPeriod { }),
+                        .galleries = static_cast<i32>(std::ranges::count_if(scene.rides.rides, [](const save::model::Ride& r) { return r.kind == save::model::RideKind::Gallery && !r.base.demolished; })),
+                        .gallery_visitors = gallery_visitors,
                     };
                     scene.goal_readings.clear();
                     for (const save::model::Condition& c : scene.park_model.objectives.conditions)
@@ -1745,6 +1756,28 @@ namespace rct3::scene::park
                         const auto model = scene.models.find(rct3::park::object::model_key(o));
                         if (model != scene.models.end() && model->second.category <= std::to_underlying(rct3::park::ItemCategory::Flowers))
                             ++scene.enclosure_sites[static_cast<usize>(*in)].plants;
+                    }
+                    // Its water and how level its ground lies, for those looking in through its galleries.
+                    if (!scene.sim.registry.view<const simulation::Gallery>().empty())
+                    {
+                        constexpr f32 kLevel = 0.5f; ///< Chosen by eye: corners this close in height read as flat ground
+                        const simulation::WaterTiles water = simulation::water_tiles(scene.grid, scene.footpaths.water.bodies);
+                        for (i32 row = 0; row < scene.grid.height; ++row)
+                            for (i32 col = 0; col < scene.grid.width; ++col)
+                            {
+                                const std::optional<i32> in = scene.enclosures.at(col, row);
+                                if (!in || static_cast<usize>(*in) >= scene.enclosure_sites.size())
+                                    continue;
+                                simulation::EnclosureSite& site = scene.enclosure_sites[static_cast<usize>(*in)];
+                                const auto [low, high] = std::ranges::minmax(scene.grid.at(col, row).corners);
+                                site.level += high - low < kLevel ? 1 : 0;
+                                site.water += water.at(col, row) ? 1 : 0;
+                            }
+                        simulation::rate_galleries(scene.sim, scene.enclosure_sites);
+                        // The window shows a gallery's excitement as a ride's, out of ten.
+                        for (const auto [e, a, gallery] : scene.sim.registry.view<const simulation::Attraction, const simulation::Gallery>().each())
+                            if (const auto ride = std::ranges::find(scene.rides.rides, a.saved, [](const save::model::Ride& r) { return r.base.id; }); a.saved != 0 && ride != scene.rides.rides.end())
+                                ride->assessment = { .valid = true, .excitement = gallery.excitement.value * 10 };
                     }
                 }
                 profiling::section("Guests", [&] {

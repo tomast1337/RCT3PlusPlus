@@ -179,7 +179,11 @@ namespace rct3::simulation
         BoringEntertainer = 39, ///< After watching a poor one
         StaffHappy = 56,
         StaffMotivated = 57,
-        AnimalKilled = 250, ///< Saw a predator kill an animal
+        AnimalKilled = 250,         ///< Saw a predator kill an animal
+        SeeAnimal = 212,            ///< Enjoyed watching the animals at a viewing gallery
+        AnimalIsBoring = 220,       ///< Watched animals with little to see
+        AnimalLooksHealthy = 222,   ///< Watched animals in fine health
+        AnimalLooksUnhealthy = 202, ///< Watched animals in poor health
         // rct3++'s own, numbered on past the game's, with texts of rct3++'s (ui/thought_text.hpp)
         WaitingForFriends = 256, ///< Waiting by a ride for the rest of their party
         RodeTogether = 257,      ///< Rode in one load with others of their party
@@ -239,7 +243,8 @@ namespace rct3::simulation
     {
         Shop,
         Ride,
-        Pool, ///< A changing room of a pool, where guests pay to swim
+        Pool,    ///< A changing room of a pool, where guests pay to swim
+        Gallery, ///< A viewing gallery, where guests pay to watch an enclosure's animals (galleries.hpp)
     };
 
     struct Attraction

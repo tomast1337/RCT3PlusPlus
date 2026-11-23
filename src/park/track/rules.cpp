@@ -146,7 +146,7 @@ namespace rct3::park::track
 
     std::optional<std::string> open_refusal(const save::model::Ride& ride, const TrackRules& rules, save::model::AttractionState state, bool editing, std::optional<const TrackCourse&> course, usize pool_joined)
     {
-        if (state == save::model::AttractionState::Closed || ride.kind == save::model::RideKind::Special)
+        if (state == save::model::AttractionState::Closed || ride.kind == save::model::RideKind::Special || ride.kind == save::model::RideKind::Gallery)
             return std::nullopt;
         const bool test = state == save::model::AttractionState::Testing;
         const bool circuit = (ride.track && ride.track->circuit) || (course && course->closed);

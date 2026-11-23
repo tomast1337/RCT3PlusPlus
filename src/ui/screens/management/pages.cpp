@@ -851,7 +851,7 @@ namespace rct3::ui::screens::management
             for (usize i = 0; i < f.rides->rides.size(); ++i)
             {
                 const save::model::Ride& r = f.rides->rides[i];
-                const bool facility = r.kind == save::model::RideKind::Special;
+                const bool facility = r.kind == save::model::RideKind::Special || r.kind == save::model::RideKind::Gallery;
                 if ((tab == AttractionListTab::Rides && facility) || (tab == AttractionListTab::Facilities && !facility) || tab == AttractionListTab::Stalls || r.base.demolished)
                     continue;
                 widgets::TableRow row = common_row(r.base, { ManagementRow::Kind::Ride, i });

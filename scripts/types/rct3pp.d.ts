@@ -987,6 +987,14 @@ type RideInfo = {
           /** A ride placed whole, or a facility (toilets, cash machines, first aid, information). */
           kind: "flat" | "facility";
       }
+    | {
+          /** A viewing gallery on an animal enclosure's edge. */
+          kind: "gallery";
+          /** As its enclosure rates with those looking in, out of ten; null before it is rated. */
+          excitement: number | null;
+          /** Its panels' tiles, from one end to the other. */
+          panels: Spot[];
+      }
 ) &
     (({ joined: false } & { [K in keyof RideRun]?: undefined }) | ({ joined: true } & RideRun));
 

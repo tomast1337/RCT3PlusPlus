@@ -68,6 +68,8 @@ namespace rct3::simulation
     {
         i32 tiles = 0;
         i32 plants = 0; ///< Trees, shrubs and flowers standing on it
+        i32 water = 0;  ///< Tiles under water
+        i32 level = 0;  ///< Tiles whose ground is close to flat
     };
 
     /// Values for animal care. Chosen by eye: each one picked to read well in play, none from a source.

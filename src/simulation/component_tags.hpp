@@ -16,6 +16,7 @@
 #include "simulation/enjoyment.hpp"
 #include "simulation/fence_wear.hpp"
 #include "simulation/fireworks.hpp"
+#include "simulation/galleries.hpp"
 #include "simulation/guest_edits.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/parties.hpp"
@@ -117,6 +118,7 @@ namespace rct3::simulation
         Tagged<PoolTank> { "PTNK" },
         Tagged<PoolRoute> { "PRTE" },
         Tagged<PoolDoor> { "PDOR" },
+        Tagged<Gallery> { "GLRY" },
         Tagged<ParkGate> { "GATE" },
         Tagged<HeldLevels> { "HLVL" },
         Tagged<Held> { "HELD" },

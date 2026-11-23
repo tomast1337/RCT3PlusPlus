@@ -146,6 +146,14 @@ TEST_CASE("an animal bought books on the purchase line, for the park and for its
     CHECK(money.ledger[0].animal_spending->purchase_sale == 0);
     CHECK(money.ledger[0].species_spending.empty());
     CHECK(money.ledger[1].animal_spending->purchase_sale == 55'000);
+    // The month ended joins the all-time total, for the park and each species.
+    REQUIRE(money.cumulative);
+    CHECK(money.cumulative->animal_spending->purchase_sale == 55'000);
+    REQUIRE(money.cumulative->species_spending.size() == 2);
+    CHECK(money.cumulative->species_spending[0].spending.purchase_sale == 35'000);
+    CHECK(book(park, money, kept, units::Money { -8'000 }, LedgerLine::AnimalPurchaseSale, Charge::IfAffordable, "lion"));
+    ledger_month(money, kept, { .year = 0, .month = 2 }).staff_wages += 1;
+    CHECK(money.cumulative->species_spending[1].spending.purchase_sale == 12'000);
 }
 
 TEST_CASE("a park whose file kept no ledger starts one at its first booking")

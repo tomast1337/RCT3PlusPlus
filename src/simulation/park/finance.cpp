@@ -28,6 +28,24 @@ namespace rct3::simulation::park
         {
             // The counters only some parks have stay shown in the months that follow.
             const save::model::LedgerPeriod& before = ledger.front();
+            // The month ending joins the all-time total, which the goal on profit from selling animals counts.
+            // shortcut: only the animal lines are carried into the total; carry the rest once something reads them.
+            save::model::LedgerPeriod& total = finance.cumulative ? *finance.cumulative : finance.cumulative.emplace();
+            const auto add = [](save::model::AnimalSpending& to, const save::model::AnimalSpending& from) {
+                to.purchase_sale += from.purchase_sale;
+                to.food += from.food;
+                to.adoptions += from.adoptions;
+                to.other += from.other;
+            };
+            if (before.animal_spending)
+                add(total.animal_spending ? *total.animal_spending : total.animal_spending.emplace(), *before.animal_spending);
+            for (const save::model::SpeciesSpending& s : before.species_spending)
+            {
+                auto kind = std::ranges::find(total.species_spending, s.species, &save::model::SpeciesSpending::species);
+                if (kind == total.species_spending.end())
+                    kind = total.species_spending.insert(kind, { .species = s.species });
+                add(kind->spending, s.spending);
+            }
             const auto zero = [](i32) { return 0; };
             const save::model::LedgerPeriod next { .pool_tickets = before.pool_tickets.transform(zero), .billboards = before.billboards.transform(zero), .viewing_gallery_tickets = before.viewing_gallery_tickets.transform(zero), .animal_spending = before.animal_spending.transform([](const save::model::AnimalSpending&) { return save::model::AnimalSpending { }; }) };
             ledger.insert(ledger.begin(), next);

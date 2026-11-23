@@ -939,6 +939,8 @@ namespace rct3::scene::park
                     scene.camera.target = scene.sim.registry.get<simulation::Pose>(*scene.shown_animal).position;
                 else if (change->id == ui::screens::info::animal_control(ui::screens::info::AnimalControl::Camera))
                     ride_animal(scene, assets, *scene.shown_animal, AnimalEye::Follow);
+                else if (change->id == ui::screens::info::animal_control(ui::screens::info::AnimalControl::Release))
+                    ask_release(scene, *assets.strings, assets.palette, *scene.shown_animal);
             }
             else if (change && !scene.shown_party.empty())
             {
@@ -2720,6 +2722,12 @@ namespace rct3::scene::park
         {
             if (const auto answer = question->take_answer(); answer && *answer == 0)
                 remove_falls(device, scene, assets, std::exchange(scene.land.falls_asked, { }));
+        }
+        if (auto question = desktop.root().find_as<ui::widgets::QuestionBox>(kReleaseName))
+        {
+            if (const auto answer = question->take_answer(); answer && *answer == 0)
+                if (const auto animal = std::exchange(scene.release_asked, std::nullopt))
+                    release_animal(scene, *animal);
         }
         if (auto question = desktop.root().find_as<ui::widgets::QuestionBox>(kDemolishName))
         {

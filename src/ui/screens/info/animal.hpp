@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // What the info panel shows about a zoo animal out of its crate: its details (its name to change, its species,
-// sex and age, what it is doing, a button that turns the view to it and one that enters AnimalCam on it), bars of how it fares, the facts of its
+// sex and age, what it is doing, a button that turns the view to it, one that enters AnimalCam on it and one that sets it free), bars of how it fares, the facts of its
 // species, what guests thought of it and who adopted it.
 #pragma once
 
@@ -48,8 +48,9 @@ namespace rct3::ui::screens::info
     enum class AnimalControl : u8
     {
         Name,
-        Locate, ///< Turns the park's view to the animal
-        Camera, ///< Enters AnimalCam on it
+        Locate,  ///< Turns the park's view to the animal
+        Camera,  ///< Enters AnimalCam on it
+        Release, ///< Asks whether to set it free in the wild
     };
 
     [[nodiscard]] constexpr i32 animal_control(AnimalControl control)

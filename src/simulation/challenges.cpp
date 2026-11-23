@@ -23,9 +23,9 @@ namespace rct3::simulation
         bool offerable(const ObjectiveSet& set, const Challenge& c)
         {
             const auto own = [&](const Condition& g) { return g.challenge == c.challenge_id; };
-            // shortcut: a challenge asking for scenery of a kind, escaped animals caught or animals set free is never
-            // offered, as the player cannot let animals out for it or set them free; offer it once they can.
-            const auto doable = [](save::model::ConditionKind kind) { return judged(kind) && kind != save::model::ConditionKind::EscapedAnimals && kind != save::model::ConditionKind::AnimalsReleased; };
+            // shortcut: a challenge asking for scenery of a kind or escaped animals caught is never offered, as the
+            // player cannot let animals out for it; offer it once they can.
+            const auto doable = [](save::model::ConditionKind kind) { return judged(kind) && kind != save::model::ConditionKind::EscapedAnimals; };
             return std::ranges::any_of(set.conditions, own) && std::ranges::none_of(set.conditions, [&](const Condition& g) { return own(g) && !doable(g.kind); });
         }
 

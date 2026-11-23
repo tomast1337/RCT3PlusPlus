@@ -17,6 +17,7 @@
 #include "scene/park/debug_tab.hpp"
 #include "scene/park/info_panel.hpp"
 #include "scene/park/poses.hpp"
+#include "scene/park/questions.hpp"
 #include "scene/park/refresh.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/pool_tools.hpp"
@@ -1640,6 +1641,13 @@ namespace rct3::scene
                 throw std::invalid_argument("animals.open takes an animal's id from animals.list()");
             park.animal_requested = e;
             return Json(nullptr);
+        });
+        engine_.define("animals.release", [this](const Json& a) {
+            park::ParkScene& park = park_of(park_);
+            const entt::entity e = a.at(0).is_number_unsigned() ? entt::entity { a[0].get<entt::id_type>() } : entt::null;
+            if (!park.sim.registry.valid(e) || !park.sim.registry.all_of<simulation::Animal>(e))
+                throw std::invalid_argument("animals.release takes an animal's id from animals.list()");
+            return Json(park::release_animal(park, e));
         });
         engine_.define("animals.shown", [this](const Json&) -> Json {
             const park::ParkScene& park = park_of(park_);

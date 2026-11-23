@@ -58,7 +58,7 @@ namespace rct3::particles
         bool lit = false;      ///< The beam shines on the way here from the point before; off, it jumps
     };
 
-    /// A picture a laser draws, traced point after point.
+    /// A picture a laser draws, traced point after point, each point taking the same share of its time.
     struct LaserDrawing
     {
         f32 seconds = 0; ///< One trace of it
@@ -73,7 +73,8 @@ namespace rct3::particles
         i32 beams = 1;
         f32 power = 0;                   ///< Read as how far the beams reach, meters
         f32 trail_seconds = 0;           ///< How long a moving beam leaves a glow behind it
-        f32 drawing_scale = 0;           ///< How large its drawings are thrown
+        f32 drawing_scale = 0;           ///< The angle the drawing pad's width is thrown across, degrees
+        bool centred = false;            ///< Its drawings thrown round their middle; else round their first point
         std::array<Curve, 4> colour { }; ///< Red, green, blue and opacity, 0 to 1
         Curve elevation { };             ///< Radians up from level
         Curve spin { };                  ///< Turns round its base, radians a second
@@ -83,10 +84,15 @@ namespace rct3::particles
 
     /// How far round laser `laser` has turned `seconds` into its run, radians: its spin summed over that time.
     [[nodiscard]] f32 laser_turn(const Laser& laser, f32 seconds) noexcept;
-    /// The ways the beams of a cone or fan laser point `seconds` into its run, as unit vectors in its tube's frame:
-    /// y along the tube, z its front. A cone's beams stand evenly round the tube at its elevation; a fan's lie in one
-    /// plane through the tube, from its elevation on one side over to the same on the other. Both turn round the
-    /// tube as the laser spins. Replaces what `ways` held; a drawing laser has none.
+    /// Where the pen of drawing laser `laser` is `seconds` into its run, on the drawing pad measured from where the
+    /// pictures are thrown round, and whether it shines. The drawings are traced once from the run's start, one after
+    /// another, each starting where the one before left off; past their end the pen stays there, dark.
+    [[nodiscard]] LaserPoint laser_pen(const Laser& laser, f32 seconds);
+    /// The ways the beams of a laser point `seconds` into its run, as unit vectors in its tube's frame: y along the
+    /// tube, z its front. A cone's beams stand evenly round the tube at its elevation; a fan's lie in one plane
+    /// through the tube, from its elevation on one side over to the same on the other. Both turn round the tube as the
+    /// laser spins. A drawing laser has one beam, turned off the tube toward its pen by the drawing's scale (pad
+    /// across toward x, pad down toward z), while the pen shines. Replaces what `ways` held.
     void laser_beams(const Laser& laser, f32 seconds, std::vector<glm::vec3>& ways);
 
     enum class ShowEffectError : u8

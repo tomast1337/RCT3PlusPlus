@@ -52,14 +52,15 @@ One object of class `LaserDesc` or `LaserBaseDesc` (the two names have the same 
 | `NumBeams` | int32 | How many beams; the shipped lasers use 1 to 50 |
 | `Power` | float32 | Read as how far the beams reach, meters; 20 to 500 in the shipped lasers, the short ones broad or many-beamed |
 | `TrailDuration` | float32 | How long a moving beam leaves a glow behind it, seconds |
-| `ImageSpread` | float32 | How large the drawings are thrown |
+| `ImageSpread` | float32 | How large the drawings are thrown: the angle, in degrees, that the drawing pad's width of 32 spans. 10 in every shipped laser |
 | `ColourBlender` | reference | Colour timeline |
 | `ElevationBlender` | reference | Angle of the beams up from level (the plane across the launcher's tube), radians; the shipped values stay between 0 and just under a quarter turn. Measured from level, not from the tube: shipped cones of many beams spin fast at 0, which would put every beam in one line up the tube |
 | `RotVelBlender` | reference | How fast the beams turn round the base, radians a second; below 0 the other way |
 | `SpreadBlender` | reference | How wide each beam spreads: about 1 for a thin beam, up to about 1.6 for a broad searchlight |
 | `LaserWord` | reference | The drawings, as a `LaserWritingWord` |
 
-A laser kept in a park has one more field, `DoCentre` (int32), whether its drawing is thrown centred.
+A laser kept in a park has one more field, `DoCentre` (int32), whether its drawing is thrown centred: round the
+middle of the box round its points rather than round its first point.
 
 A `LaserWritingWord` holds `Letters`, an array of references to `LaserWritingLetter` objects, each one
 drawing, and `LetterNames`, an array of strings beside them (empty in the shipped files). Lasers that draw
@@ -80,6 +81,18 @@ One `LaserWritingLetter`:
 
 The shipped drawings fill 1022 slots and use several hundred of them. The first point of every drawing is a
 jump.
+
+How a drawing laser plays its drawings:
+
+- They are traced once, from the start of the laser's run, one after another; each drawing starts where the one
+  before it ended. Within a drawing every point takes the same share of its `Duration`, however far apart the points
+  are, and the pen runs straight from one point to the next. Past the last drawing the beam is off for the rest of
+  the run.
+- The beam is turned off the launcher's tube toward the pen by an angle that grows with the pen's distance from the
+  first point (or the middle, centred), scaled by `ImageSpread`. Elevation and rotation are not used.
+- The picture shows where the beam lands, up to `Power` meters away: the beam leaves a spot of light there that
+  fades over a few seconds, so the whole picture is seen at once while the beam goes over it. A drawing thrown at
+  the open sky leaves no picture.
 
 ## Water jet (`.wjt`)
 

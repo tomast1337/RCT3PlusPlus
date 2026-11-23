@@ -4,7 +4,9 @@
 // runs in, once the time of day reaches its start, a message tells the player and the display plays to its
 // music. Each shot sets its firework effect off from its tube of the launcher placed in the park; the effect
 // itself carries the shell up and bursts it. A laser shot shines its beams from its tube for the laser's run, drawn
-// after the world as thin lines of light added to what is behind them. A launcher taken away leaves its shots out.
+// after the world as thin lines of light added to what is behind them. A drawing laser sweeps its one beam over its
+// pictures, and where the beam lands on the ground it leaves a spot of light that fades over a few seconds, so the
+// picture stays a moment after the beam has passed. A launcher taken away leaves its shots out.
 #pragma once
 
 #include "core/types.hpp"
@@ -51,6 +53,16 @@ namespace rct3::scene::park
             save::model::PlacedObjectIndex object { };
             usize tube = 0;
             f32 shot_at = 0; ///< park_clock when it was shot
+            f32 traced = 0;  ///< Seconds into its run up to which a drawing laser has left its spots
+        };
+
+        /// Where a drawing laser's beam landed: the picture it leaves.
+        struct Spot
+        {
+            glm::vec3 from { 0.0f }; ///< The tube it shone from
+            glm::vec3 at { 0.0f };
+            glm::vec3 light { 0.0f };
+            f32 laid_at = 0; ///< park_clock
         };
 
         struct BeamCorner
@@ -63,6 +75,7 @@ namespace rct3::scene::park
         std::vector<u8> was_due; ///< By display: due at the last look, so a day starts it once
         std::optional<Playing> playing;
         std::vector<Shining> lasers;
+        std::vector<Spot> spots;
         std::vector<glm::vec3> ways;          ///< A laser's beams, filled again for each
         std::vector<BeamCorner> beam_corners; ///< The beams' triangles, built again each frame
         render::PipelineHandle beams;

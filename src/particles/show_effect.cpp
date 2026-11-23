@@ -208,6 +208,7 @@ namespace rct3::particles
             .power = number(fields, "Power"),
             .trail_seconds = number(fields, "TrailDuration"),
             .drawing_scale = number(fields, "ImageSpread"),
+            .centred = whole(fields, "DoCentre") != 0,
             .colour = colours(file, index, fields),
             .elevation = numbers(file, index, fields, "ElevationBlender"),
             .spin = numbers(file, index, fields, "RotVelBlender"),
@@ -254,10 +255,63 @@ namespace rct3::particles
         return area * laser.seconds;
     }
 
+    LaserPoint laser_pen(const Laser& laser, f32 seconds)
+    {
+        // Each drawing is laid from its first point, and the next one goes on from where it ends.
+        glm::vec2 start { 0.0f };
+        glm::vec2 low { 0.0f }, high { 0.0f };
+        LaserPoint pen { };
+        bool found = false;
+        f32 left = seconds;
+        for (const LaserDrawing& d : laser.drawings)
+        {
+            if (d.points.empty() || d.seconds <= 0)
+                continue;
+            const glm::vec2 first = d.points.front().at;
+            for (const LaserPoint& p : d.points)
+            {
+                low = glm::min(low, start + p.at - first);
+                high = glm::max(high, start + p.at - first);
+            }
+            if (!found && left >= 0 && left < d.seconds)
+            {
+                const f32 place = left / d.seconds * static_cast<f32>(d.points.size());
+                const auto i = static_cast<usize>(place);
+                if (i + 1 < d.points.size())
+                {
+                    const f32 share = place - static_cast<f32>(i);
+                    pen = { .at = start + glm::mix(d.points[i].at, d.points[i + 1].at, share) - first, .lit = d.points[i + 1].lit };
+                }
+                else
+                    pen = { .at = start + d.points.back().at - first, .lit = false };
+                found = true;
+            }
+            left -= d.seconds;
+            start += d.points.back().at - first;
+            if (found && !laser.centred)
+                break;
+        }
+        if (!found)
+            pen = { .at = start, .lit = false };
+        if (laser.centred)
+            pen.at -= (low + high) / 2.0f;
+        return pen;
+    }
+
     void laser_beams(const Laser& laser, f32 seconds, std::vector<glm::vec3>& ways)
     {
         ways.clear();
-        if (laser.look == LaserLook::Drawing || laser.beams <= 0)
+        if (laser.look == LaserLook::Drawing)
+        {
+            const LaserPoint pen = laser_pen(laser, seconds);
+            if (!pen.lit)
+                return;
+            constexpr f32 kPadWidth = 32; // The drawing pad's units across
+            const glm::vec2 turn = pen.at * (laser.drawing_scale / kPadWidth * std::numbers::pi_v<f32> / 180);
+            ways.push_back({ std::cos(turn.y) * std::sin(turn.x), std::cos(turn.y) * std::cos(turn.x), std::sin(turn.y) });
+            return;
+        }
+        if (laser.beams <= 0)
             return;
         const f32 t = laser.seconds > 0 ? seconds / laser.seconds : 0.0f;
         const f32 elevation = laser.elevation.values.empty() ? 0.0f : laser.elevation.at(t);

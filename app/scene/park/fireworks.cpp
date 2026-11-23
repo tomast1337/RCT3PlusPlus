@@ -4,6 +4,7 @@
 #include "core/types.hpp"
 #include "logging/log.hpp"
 #include "park/object/mesh.hpp"
+#include "park/object/pick.hpp"
 #include "save/save_file.hpp"
 #include "scene/park/scene.hpp"
 #include "simulation/day_clock.hpp"
@@ -30,6 +31,10 @@ namespace rct3::scene::park
         constexpr units::Distance kJetRadius { 0.06f }; ///< Chosen by eye: a show jet's stream at the nozzle, thinner than a cannon's
         constexpr f32 kJetBreakup = 0.7f;               ///< Chosen by eye: how much it breaks into spray as it falls
         constexpr units::Seconds kJetLinger { 0.5f };   ///< Its drops live this much past coming down to the nozzle's height
+        /// How often a drawing laser's beam leaves a spot: one every few points of the shipped drawings (600 to 900 points
+        /// traced in 1.2 s), close enough that the spots join into lines.
+        constexpr units::Seconds kSpotStep { 0.005f };
+        constexpr units::Seconds kSpotLife { 3 }; ///< Chosen by eye: how long a spot glows, so a whole picture shows at once
 
         /// Where launcher `launcher` of the display stands, by its place in the park's objects; none once it is gone.
         std::optional<usize> launcher_object(const ParkScene& scene, const particles::Launcher& launcher)
@@ -130,6 +135,7 @@ namespace rct3::scene::park
         if (display >= fireworks.displays.size())
             return false;
         fireworks.lasers.clear();
+        fireworks.spots.clear();
         const particles::Display& d = fireworks.displays[display];
         glm::vec3 sum { 0.0f };
         usize standing = 0;
@@ -166,6 +172,7 @@ namespace rct3::scene::park
     {
         scene.fireworks.playing.reset();
         scene.fireworks.lasers.clear();
+        scene.fireworks.spots.clear();
     }
 
     void tick_park_fireworks(ParkScene& scene)
@@ -191,6 +198,30 @@ namespace rct3::scene::park
             const particles::Display& display = fireworks.displays[fireworks.playing->display];
             for (const particles::Shot& shot : particles::advance_display(fireworks.playing->run, display, park_time.value))
                 fire(scene, display, shot);
+            // A drawing laser's beam leaves a spot where it lands on the ground, at the colour it shines then.
+            for (ParkFireworks::Shining& shining : fireworks.lasers)
+            {
+                const particles::Laser& laser = *display.shots[shining.shot].laser;
+                if (laser.look != particles::LaserLook::Drawing || shining.object.value >= scene.objects.size())
+                    continue;
+                const rct3::park::object::PlacedEffect from = tube_of(scene, shining.object.value, shining.tube);
+                const f32 into = std::min(scene.park_clock - shining.shot_at, laser.seconds);
+                for (; shining.traced + kSpotStep.value <= into; shining.traced += kSpotStep.value)
+                {
+                    const f32 at = shining.traced + kSpotStep.value;
+                    particles::laser_beams(laser, at, fireworks.ways);
+                    if (fireworks.ways.empty())
+                        continue;
+                    const glm::vec3 way = glm::normalize(from.axes * fireworks.ways.front());
+                    const auto hit = rct3::park::object::ground_hit({ .origin = from.position, .direction = way }, scene.grid, laser.power);
+                    if (!hit)
+                        continue;
+                    const f32 t = at / laser.seconds;
+                    const glm::vec3 light = glm::vec3(laser.colour[0].at(t), laser.colour[1].at(t), laser.colour[2].at(t)) * laser.colour[3].at(t);
+                    fireworks.spots.push_back({ .from = from.position, .at = from.position + way * *hit, .light = light, .laid_at = scene.park_clock });
+                }
+            }
+            std::erase_if(fireworks.spots, [&](const ParkFireworks::Spot& spot) { return scene.park_clock - spot.laid_at >= kSpotLife.value; });
             std::erase_if(fireworks.lasers, [&](const ParkFireworks::Shining& l) { return scene.park_clock - l.shot_at >= display.shots[l.shot].laser->seconds; });
         }
         // The show's jets shoot as their patterns say, each from its start; past its end one is let be, and stops.
@@ -218,16 +249,44 @@ namespace rct3::scene::park
     void draw_park_lasers(render::Device& device, ParkScene& scene, const glm::mat4& view_projection, glm::vec3 eye)
     {
         ParkFireworks& fireworks = scene.fireworks;
-        if (!fireworks.playing || fireworks.lasers.empty() || !fireworks.beams)
+        if (!fireworks.playing || (fireworks.lasers.empty() && fireworks.spots.empty()) || !fireworks.beams)
             return;
         constexpr units::Distance kBeamHalfWidth { 0.06f }; ///< Chosen by eye: a beam where it leaves the tube, at a width of 1
         /// Chosen by eye: how fast a beam opens with distance for each unit its width is past 1, so a searchlight's
         /// width of about 1.6 throws a broad cone while the common 1 stays a thin line.
         constexpr f32 kOpeningPerWidth = 0.25f;
-        constexpr f32 kThinnestSeen = 0.0025f; ///< Chosen by eye: the least half width, as a share of the distance from the eye, two or three pixels, so far beams do not flicker away
-        constexpr f32 kFarEnd = 0.15f;         ///< Chosen by eye: how bright a beam still is at its far end, fading into the air
-        constexpr f32 kDimmest = 0.04f;        ///< Chosen by eye: the least a wide beam dims to
-        constexpr usize kTrailCopies = 3;      ///< Chosen by eye: the earlier beams drawn fainter behind a moving one
+        constexpr f32 kThinnestSeen = 0.0025f;         ///< Chosen by eye: the least half width, as a share of the distance from the eye, two or three pixels, so far beams do not flicker away
+        constexpr f32 kFarEnd = 0.15f;                 ///< Chosen by eye: how bright a beam still is at its far end, fading into the air
+        constexpr f32 kDimmest = 0.04f;                ///< Chosen by eye: the least a wide beam dims to
+        constexpr usize kTrailCopies = 3;              ///< Chosen by eye: the earlier beams drawn fainter behind a moving one
+        constexpr units::Distance kSpotHalf { 0.15f }; ///< Chosen by eye: half the width of a drawing laser's spot
+        constexpr f32 kSpotLift = 0.05f;               ///< Chosen by eye: meters a spot is drawn toward the eye, off the ground it lies on
+        constexpr usize kSpotBeams = 12;               ///< Chosen by eye: the spots a faint beam is drawn to each frame, so a picture's light seems to come from its tube
+        constexpr f32 kSpotBeamLight = 0.35f;          ///< Chosen by eye: how bright those faint beams are
+
+        // A beam from `a` to `b`: at each end a band across it as the eye sees it, bright down its middle, dark at its
+        // edges.
+        const auto beam = [&](glm::vec3 a, glm::vec3 b, f32 near, f32 far, glm::vec3 light) {
+            const glm::vec3 along = glm::normalize(b - a);
+            const auto across = [&](glm::vec3 p, f32 half) {
+                const glm::vec3 side = glm::cross(along, eye - p);
+                const f32 size = glm::length(side);
+                return size > 1e-6f ? side / size * std::max(half, glm::distance(eye, p) * kThinnestSeen) : glm::vec3(0.0f);
+            };
+            const glm::vec3 across_a = across(a, near);
+            const glm::vec3 across_b = across(b, far);
+            const glm::vec4 bright { light, 1 };
+            const glm::vec4 faint { light * kFarEnd, 1 };
+            const glm::vec4 dark { 0, 0, 0, 1 };
+            for (const f32 side : { -1.0f, 1.0f })
+            {
+                const ParkFireworks::BeamCorner edge_a { a + side * across_a, dark };
+                const ParkFireworks::BeamCorner middle_a { a, bright };
+                const ParkFireworks::BeamCorner middle_b { b, faint };
+                const ParkFireworks::BeamCorner edge_b { b + side * across_b, dark };
+                fireworks.beam_corners.insert(fireworks.beam_corners.end(), { edge_a, middle_a, middle_b, edge_a, middle_b, edge_b });
+            }
+        };
 
         const particles::Display& display = fireworks.displays[fireworks.playing->display];
         fireworks.beam_corners.clear();
@@ -239,7 +298,6 @@ namespace rct3::scene::park
             const rct3::park::object::PlacedEffect from = tube_of(scene, shining.object.value, shining.tube);
             const f32 into = scene.park_clock - shining.shot_at;
             const f32 length = std::max(laser.power, 1.0f);
-            // shortcut: a laser of the drawing look shines nothing; trace its drawings once lasers draw pictures.
             for (usize copy = 0; copy <= kTrailCopies && (copy == 0 || laser.trail_seconds > 0); ++copy)
             {
                 const f32 at = into - laser.trail_seconds * static_cast<f32>(copy) / kTrailCopies;
@@ -260,29 +318,44 @@ namespace rct3::scene::park
                 for (const glm::vec3& way : fireworks.ways)
                 {
                     const glm::vec3 along = glm::normalize(from.axes * way);
-                    const glm::vec3 a = from.position;
-                    const glm::vec3 b = a + along * length;
-                    // At each end a band across the beam as the eye sees it, bright down its middle, dark at its edges.
-                    const auto across = [&](glm::vec3 p, f32 half) {
-                        const glm::vec3 side = glm::cross(along, eye - p);
-                        const f32 size = glm::length(side);
-                        return size > 1e-6f ? side / size * std::max(half, glm::distance(eye, p) * kThinnestSeen) : glm::vec3(0.0f);
-                    };
-                    const glm::vec3 across_a = across(a, near);
-                    const glm::vec3 across_b = across(b, far);
-                    const glm::vec4 bright { light, 1 };
-                    const glm::vec4 faint { light * kFarEnd, 1 };
-                    const glm::vec4 dark { 0, 0, 0, 1 };
-                    for (const f32 side : { -1.0f, 1.0f })
-                    {
-                        const ParkFireworks::BeamCorner edge_a { a + side * across_a, dark };
-                        const ParkFireworks::BeamCorner middle_a { a, bright };
-                        const ParkFireworks::BeamCorner middle_b { b, faint };
-                        const ParkFireworks::BeamCorner edge_b { b + side * across_b, dark };
-                        fireworks.beam_corners.insert(fireworks.beam_corners.end(), { edge_a, middle_a, middle_b, edge_a, middle_b, edge_b });
-                    }
+                    // A drawing laser's beam ends where it meets the ground, which its picture is drawn on.
+                    const f32 reach = laser.look == particles::LaserLook::Drawing ? rct3::park::object::ground_hit({ .origin = from.position, .direction = along }, scene.grid, length).value_or(length) : length;
+                    beam(from.position, from.position + along * reach, near, far, light);
                 }
             }
+        }
+
+        // Each spot a square facing the eye, bright in its middle and dark at its corners, fading as it ages.
+        const usize spots = fireworks.spots.size();
+        for (usize i = 0; i < spots; ++i)
+        {
+            const ParkFireworks::Spot& spot = fireworks.spots[i];
+            const f32 fade = 1 - (scene.park_clock - spot.laid_at) / kSpotLife.value;
+            if (fade <= 0)
+                continue;
+            const glm::vec3 light = spot.light * fade;
+            const glm::vec3 to_eye = eye - spot.at;
+            const f32 distance = glm::length(to_eye);
+            if (distance < 1e-3f)
+                continue;
+            const glm::vec3 facing = to_eye / distance;
+            const glm::vec3 level = glm::cross(facing, glm::vec3(0, 1, 0));
+            const glm::vec3 side = glm::length(level) > 1e-3f ? glm::normalize(level) : glm::vec3(1, 0, 0);
+            const glm::vec3 up = glm::cross(side, facing);
+            const f32 half = std::max(kSpotHalf.value, distance * kThinnestSeen);
+            const glm::vec3 middle = spot.at + facing * kSpotLift;
+            const std::array corners { middle - (side + up) * half, middle + (side - up) * half, middle + (side + up) * half, middle - (side - up) * half };
+            for (usize c = 0; c < corners.size(); ++c)
+                fireworks.beam_corners.insert(fireworks.beam_corners.end(), { { middle, { light, 1 } }, { corners[c], { 0, 0, 0, 1 } }, { corners[(c + 1) % corners.size()], { 0, 0, 0, 1 } } });
+        }
+        // A few faint beams from the tube to spots, others each frame, so the picture's light flickers back to its tube.
+        const usize first = static_cast<usize>(scene.park_clock * 997);
+        for (usize k = 0; k < std::min(spots, kSpotBeams); ++k)
+        {
+            const ParkFireworks::Spot& spot = fireworks.spots[(first + k * spots / kSpotBeams) % spots];
+            const f32 fade = 1 - (scene.park_clock - spot.laid_at) / kSpotLife.value;
+            if (fade > 0)
+                beam(spot.from, spot.at, kBeamHalfWidth.value, kBeamHalfWidth.value, spot.light * fade * kSpotBeamLight);
         }
         if (fireworks.beam_corners.empty())
             return;

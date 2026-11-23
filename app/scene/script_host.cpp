@@ -773,14 +773,25 @@ namespace rct3::scene
                       { "launchers", d.launchers.size() },
                       { "shots", d.shots.size() },
                       { "lasers", std::ranges::count(d.shots, particles::ShotKind::Laser, &particles::Shot::kind) },
+                      { "drawings", std::ranges::count_if(d.shots, [](const particles::Shot& s) { return s.laser && s.laser->look == particles::LaserLook::Drawing; }) },
                       { "playing", playing },
                       { "seconds", playing ? fireworks.playing->run.seconds : 0.0f },
-                      { "shining", playing ? fireworks.lasers.size() : 0 } });
+                      { "shining", playing ? fireworks.lasers.size() : 0 },
+                      { "spots", playing ? fireworks.spots.size() : 0 } });
                 if (playing)
                 {
                     const save::model::TerrainGrid& g = grid_of(park_);
                     const glm::vec3 c = fireworks.playing->centre;
                     out.back()["centre"] = { { "col", (c.x - g.origin_x) / g.tile_size_x }, { "row", (c.z - g.origin_z) / g.tile_size_z } };
+                    // The middle of the pictures drawing lasers leave, to look at.
+                    if (!fireworks.spots.empty())
+                    {
+                        glm::vec3 sum { 0.0f };
+                        for (const park::ParkFireworks::Spot& spot : fireworks.spots)
+                            sum += spot.at;
+                        const glm::vec3 m = sum / static_cast<f32>(fireworks.spots.size());
+                        out.back()["picture"] = { { "col", (m.x - g.origin_x) / g.tile_size_x }, { "row", (m.z - g.origin_z) / g.tile_size_z } };
+                    }
                 }
             }
             return out;

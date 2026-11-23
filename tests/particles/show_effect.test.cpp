@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdint>
 #include <doctest/doctest.h>
+#include <numbers>
 #include <string>
 #include <utility>
 #include <vector>
@@ -315,10 +316,90 @@ TEST_CASE("a laser's beams point round a cone or across a fan")
         CHECK(near(ways[1], { 0, 1, 0 }));
         CHECK(near(ways[2], { 0, 0, -1 }));
     }
-    SUBCASE("a drawing laser has no beams of these")
+    SUBCASE("a drawing laser without drawings shines nothing")
     {
         ways.push_back({ });
         laser_beams({ .seconds = 1, .look = LaserLook::Drawing, .beams = 1 }, 0, ways);
+        CHECK(ways.empty());
+    }
+}
+
+namespace
+{
+
+    // A square drawn in four lit strokes after a dark jump to its corner, a second for its five points.
+    LaserDrawing invented_square()
+    {
+        return { .seconds = 1, .points = { { .at = { 4, 4 } }, { .at = { 12, 4 }, .lit = true }, { .at = { 12, 12 }, .lit = true }, { .at = { 4, 12 }, .lit = false }, { .at = { 4, 4 }, .lit = true } } };
+    }
+
+} // namespace
+
+TEST_CASE("a drawing laser's pen runs along its drawings")
+{
+    const auto near = [](glm::vec2 a, glm::vec2 b) { return glm::distance(a, b) < 1e-4f; };
+    Laser laser { .seconds = 10, .look = LaserLook::Drawing, .drawings = { invented_square() } };
+    SUBCASE("each point takes the same share of the drawing's time, measured from its first point")
+    {
+        CHECK(near(laser_pen(laser, 0).at, { 0, 0 }));
+        CHECK(near(laser_pen(laser, 0.3f).at, { 8, 4 }));
+        CHECK(laser_pen(laser, 0.3f).lit);
+    }
+    SUBCASE("a stroke the drawing does not light is dark all the way")
+    {
+        CHECK_FALSE(laser_pen(laser, 0.5f).lit);
+        CHECK(near(laser_pen(laser, 0.5f).at, { 4, 8 }));
+        CHECK(laser_pen(laser, 0.7f).lit);
+    }
+    SUBCASE("once traced it stays at the end, dark")
+    {
+        CHECK_FALSE(laser_pen(laser, 0.9f).lit);
+        CHECK_FALSE(laser_pen(laser, 5).lit);
+        CHECK(near(laser_pen(laser, 5).at, { 0, 0 }));
+        CHECK_FALSE(laser_pen(laser, -1).lit);
+    }
+    SUBCASE("a second drawing starts where the first ended")
+    {
+        laser.drawings.push_back({ .seconds = 2, .points = { { .at = { 20, 20 } }, { .at = { 30, 20 }, .lit = true } } });
+        CHECK(near(laser_pen(laser, 1.5f).at, { 5, 0 }));
+        CHECK(laser_pen(laser, 1.5f).lit);
+    }
+    SUBCASE("centred, it is measured from the middle of all its drawings")
+    {
+        laser.centred = true;
+        CHECK(near(laser_pen(laser, 0).at, { -4, -4 }));
+        CHECK(near(laser_pen(laser, 0.3f).at, { 4, 0 }));
+    }
+}
+
+TEST_CASE("a drawing laser's beam turns toward its pen by the drawing's scale")
+{
+    std::vector<glm::vec3> ways;
+    const auto near = [](glm::vec3 a, glm::vec3 b) { return glm::distance(a, b) < 1e-5f; };
+    // A stroke straight across, over the pad's width of 32, thrown 90 degrees wide.
+    Laser laser { .seconds = 10, .look = LaserLook::Drawing, .drawing_scale = 90, .drawings = { { .seconds = 1, .points = { { .at = { 0, 5 } }, { .at = { 32, 5 }, .lit = true } } } } };
+    SUBCASE("at the first point it shines up the tube")
+    {
+        laser_beams(laser, 0, ways);
+        REQUIRE(ways.size() == 1);
+        CHECK(near(ways[0], { 0, 1, 0 }));
+    }
+    SUBCASE("half way across it has turned 45 degrees toward x")
+    {
+        laser_beams(laser, 0.25f, ways);
+        REQUIRE(ways.size() == 1);
+        CHECK(near(ways[0], { std::sqrt(0.5f), std::sqrt(0.5f), 0 }));
+    }
+    SUBCASE("a pad down the page turns it toward z, scaled the same")
+    {
+        laser.drawings[0].points[1].at = { 0, 13 };
+        laser_beams(laser, 0.25f, ways);
+        REQUIRE(ways.size() == 1);
+        CHECK(near(ways[0], { 0, std::cos(std::numbers::pi_v<f32> / 16), std::sin(std::numbers::pi_v<f32> / 16) }));
+    }
+    SUBCASE("with the pen lifted there is no beam")
+    {
+        laser_beams(laser, 3, ways);
         CHECK(ways.empty());
     }
 }

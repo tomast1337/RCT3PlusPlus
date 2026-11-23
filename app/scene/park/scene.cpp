@@ -1577,9 +1577,7 @@ namespace rct3::scene::park
                     {
                         health += animal.health.value;
                         ++animals;
-                        // shortcut: every animal counts as bought, as none is born in the park yet; mark those born
-                        // here once animals breed.
-                        goal_animals.push_back({ .species = animal.species });
+                        goal_animals.push_back({ .species = animal.species, .born_here = animal.mother != entt::null });
                     }
                     // The ledger moved on to this month, so that the period before it is last month's.
                     save::model::Finance& money = scene.park_model.finance;

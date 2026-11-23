@@ -900,31 +900,8 @@ namespace rct3::scene
                       { "now", reading.now ? Json(*reading.now) : Json(nullptr) },
                       { "met", reading.met },
                       { "completed", c.completed },
-                      { "challenge", c.challenge ? Json(*c.challenge) : Json(nullptr) } });
-            }
-            return out;
-        });
-        engine_.define("park.goals", [this](const Json&) {
-            const park::ParkScene& p = park_of(park_);
-            Json out = Json::array();
-            for (usize i = 0; i < p.park_model.objectives.conditions.size(); ++i)
-            {
-                const save::model::Condition& c = p.park_model.objectives.conditions[i];
-                const std::optional<simulation::GoalReading> reading = i < p.goal_readings.size() ? std::optional(p.goal_readings[i]) : std::nullopt;
-                const std::optional<i64> now = reading ? reading->now : std::nullopt;
-                out.push_back({ { "level", c.difficulty }, { "kind", c.class_name }, { "challenge", c.challenge.value_or(-1) }, { "target", c.value ? Json(*c.value) : Json(nullptr) }, { "now", now ? Json(*now) : Json(nullptr) }, { "met", reading && reading->met }, { "judged", simulation::judged(c.kind) }, { "completed", c.completed } });
-            }
-            return out;
-        });
-        engine_.define("park.goals", [this](const Json&) {
-            const park::ParkScene& park = park_of(park_);
-            Json out = Json::array();
-            const auto& goals = park.park_model.objectives.conditions;
-            for (usize i = 0; i < goals.size(); ++i)
-            {
-                const save::model::Condition& c = goals[i];
-                const simulation::GoalReading reading = i < park.goal_readings.size() ? park.goal_readings[i] : simulation::GoalReading { };
-                out.push_back({ { "level", c.difficulty }, { "kind", simulation::condition_name(c.kind) }, { "challenge", c.challenge ? Json(*c.challenge) : Json(nullptr) }, { "target", c.value ? Json(*c.value) : Json(nullptr) }, { "species", c.animals ? c.animals->species : std::string { } }, { "judged", simulation::judged(c.kind) }, { "now", reading.now ? Json(*reading.now) : Json(nullptr) }, { "met", reading.met }, { "completed", c.completed } });
+                      { "challenge", c.challenge ? Json(*c.challenge) : Json(nullptr) },
+                      { "species", c.animals ? c.animals->species : std::string { } } });
             }
             return out;
         });

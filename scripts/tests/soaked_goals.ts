@@ -33,7 +33,7 @@ for (const name of kScenarios) {
         log(
             name,
             `level ${g.level}`,
-            g.challenge >= 0 ? `challenge ${g.challenge}` : "scenario",
+            g.challenge !== null ? `challenge ${g.challenge}` : "scenario",
             g.kind,
             `target ${g.target}`,
             `now ${g.now}`,

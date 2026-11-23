@@ -23,9 +23,9 @@ const kParks = [
     "ScrubGardens",
 ];
 const kSpeciesGoals = [
-    "ObjectiveCondition_NumAnimalsOfSpecies",
-    "ObjectiveCondition_AnimalSalesProfit",
-    "ObjectiveCondition_ReleaseAnimals",
+    "NumAnimalsOfSpeciesCondition",
+    "AnimalSalesProfitCondition",
+    "ReleaseAnimalsCondition",
 ];
 
 for (const name of kParks) {

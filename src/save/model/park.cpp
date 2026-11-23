@@ -184,6 +184,14 @@ namespace rct3::save::model
             constexpr std::string_view kVipMet = "ConditionMet";
             constexpr std::string_view kVipWarnedMonth = "GivenMonthWarning";
             constexpr std::string_view kVipWarnedWeek = "GivenWeekWarning";
+            constexpr std::string_view kVipStarted = "Started";
+            constexpr std::string_view kVipEverVisited = "HasVIPEverVisited";
+            constexpr std::string_view kVipSeenFireworks = "SeenFireworks";
+            constexpr std::string_view kVipSeenScenery = "SeenScenery";
+            constexpr std::string_view kVipBeenToPool = "BeenToPool";
+            constexpr std::string_view kVipCoastersDone = "CoastersDone";
+            constexpr std::string_view kVipAverageHappiness = "AverageHappiness";
+            constexpr std::string_view kVipHappinessKnown = "HappinessKnown";
             constexpr std::string_view kItemsItem = "Item";
             constexpr std::string_view kItemsStall = "Stall";
             constexpr std::string_view kItemsCounts = "ItemsBoughtMode";
@@ -651,7 +659,18 @@ namespace rct3::save::model
                     .met = bool_of(o.find(kVipMet), false),
                     .warned_month = bool_of(o.find(kVipWarnedMonth), false),
                     .warned_week = bool_of(o.find(kVipWarnedWeek), false),
+                    .started = bool_of(o.find(kVipStarted), false),
+                    .ever_visited = bool_of(o.find(kVipEverVisited), false),
+                    .seen_fireworks = bool_of(o.find(kVipSeenFireworks), false),
+                    .seen_scenery = bool_of(o.find(kVipSeenScenery), false),
+                    .been_to_pool = bool_of(o.find(kVipBeenToPool), false),
+                    .average_happiness = float_of(o.find(kVipAverageHappiness), 0.0f),
+                    .happiness_known = float_of(o.find(kVipHappinessKnown), 0.0f),
                 };
+            if (const auto done = o.find(kVipCoastersDone); c.vip && done && done->kind() == ValueKind::List)
+                for (const auto& ride : done->items())
+                    if (const auto id = ref_of(ride, index))
+                        c.vip->coasters_done.push_back(*id);
             if (c.kind == ConditionKind::ItemsBought)
             {
                 // The item and stall are named by their kinds' entries.

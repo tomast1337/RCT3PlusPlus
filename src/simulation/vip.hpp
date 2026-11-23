@@ -11,6 +11,8 @@
 // wear their patience down, a happy mood builds it back, and they tick off what they came to see (different
 // exciting coasters, fireworks, a themed area). The visit went well when they leave with patience left and
 // everything seen; the goal is then met for good. A visit that went badly is tried again some months on.
+// What they have done so far is kept with the goal: a park saved during a visit has the VIP come back in on loading
+// with what they had already seen.
 //
 // Only the goals of the level being played send anyone; the others' dates roll on a month at a time.
 

@@ -596,6 +596,27 @@ TEST_CASE("park: a VIP goal keeps its visit, wishes and tolerances")
     CHECK_FALSE(c[1].vip.has_value());
 }
 
+TEST_CASE("park: a VIP goal keeps what the VIP of a visit under way has done")
+{
+    const auto l = load(
+        {
+            { "VIPCondition", 1, { fint("Difficulty", 0), fint("ConditionId", 0), fint("SubConditionFlags", 0x14), fbool("Started", true), fbool("HasVIPEverVisited", true), fbool("SeenFireworks", true), fbool("SeenScenery", false), fbool("BeenToPool", true), frefs("CoastersDone", { 2, 99 }), ffloat("AverageHappiness", 0.75f), ffloat("HappinessKnown", 6) } },
+            { "ParkValueCondition", 2, { fint("Difficulty", 0), fint("ConditionId", 1), fint("Value", 5) } },
+        });
+    const auto& c = l->model.objectives.conditions;
+    REQUIRE(c.size() == 2);
+    REQUIRE(c[0].vip.has_value());
+    const VipTarget& v = *c[0].vip;
+    CHECK(v.started);
+    CHECK(v.ever_visited);
+    CHECK(v.seen_fireworks);
+    CHECK_FALSE(v.seen_scenery);
+    CHECK(v.been_to_pool);
+    CHECK(v.coasters_done == std::vector<u64> { 2 }); // A ride no longer in the file is dropped
+    CHECK(v.average_happiness == 0.75f);
+    CHECK(v.happiness_known == 6.0f);
+}
+
 TEST_CASE("park: a challenge keeps the wait before it is offered, and its postponement")
 {
     const auto l = load(

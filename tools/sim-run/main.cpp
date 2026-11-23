@@ -3,6 +3,7 @@
 // sim-run: run the simulation headless on an original save and report what happened.
 //
 //   sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--hash TICKS] [--reload-at TICK]... [--awards] [--car-places] [--left-out]
+//   sim-run SAVE... --left-out-summary
 //
 // Brings over the save's paths, stalls, rides and guests, runs N seconds of park time (default 600) and prints
 // what each shop and ride took and how the guests are doing, with how long the run took. --threads N steps it on N
@@ -16,7 +17,8 @@
 // each piece's length against the park's, and stops without running. Flat rides take their timing from their
 // models, so they come over only with --game, the game's folder. --left-out reads the park as the app does, prints
 // what that left behind, one tab-separated line per class (class, objects, whether none of it was read, the fields
-// never looked up joined by commas), and stops without running.
+// never looked up joined by commas), then the park's totals of classes and fields unread, left on purpose and read,
+// and stops without running. --left-out-summary prints only the totals, for each save given and for all of them.
 #include "config/game/install.hpp"
 #include "core/types.hpp"
 #include "logging/crash.hpp"
@@ -126,7 +128,6 @@ int main(int argc, char** argv)
     rct3::logging::configure({ .memory_capacity = 0, .plain = true });
     using namespace rct3;
     logging::install_crash_report();
-    const char* path = nullptr;
     f32 seconds = 600;
     u32 threads = 1; // Stepping the park, the main thread among them
     u64 seed = 1;
@@ -140,6 +141,8 @@ int main(int argc, char** argv)
     bool awards = false;                             // Print what the theme awards count
     std::optional<std::vector<CarPlace>> car_places; // With --car-places: each saved car stood by our track, then stop
     bool left_out = false;                           // Print what loading the park left behind, then stop
+    bool left_out_summary = false;                   // Only the totals of that, over every save given
+    std::vector<const char*> paths;
     for (i32 i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--seconds") == 0 && i + 1 < argc)
@@ -166,16 +169,78 @@ int main(int argc, char** argv)
             car_places.emplace();
         else if (std::strcmp(argv[i], "--left-out") == 0)
             left_out = true;
+        else if (std::strcmp(argv[i], "--left-out-summary") == 0)
+            left_out_summary = true;
         else if (std::strcmp(argv[i], "--weather") == 0 && i + 1 < argc)
             weather = argv[++i];
         else
-            path = argv[i];
+            paths.push_back(argv[i]);
     }
-    if (!path || (car_places && !game))
+    if (paths.empty() || (paths.size() > 1 && !left_out_summary) || (car_places && !game))
     {
-        out.error("usage: sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--hash TICKS] [--reload-at TICK]... [--awards] [--car-places] [--left-out]");
+        out.error("usage: sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--hash TICKS] [--reload-at TICK]... [--awards] [--car-places] [--left-out]\n       sim-run SAVE... --left-out-summary");
         return 2;
     }
+    if (left_out || left_out_summary)
+    {
+        const auto counts = [](const save::LeftOutCount& c) { return std::format("{} unread, {} skipped, {} read", c.unread, c.skipped, c.read); };
+        save::LeftOutTotals all;
+        std::set<std::string> classes; // Unread in some save, by name
+        std::set<std::string> fields;  // As "Class.Field"
+        std::set<std::string> untouched;
+        for (const char* p : paths)
+        {
+            std::ifstream in(p, std::ios::binary);
+            const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            const save::FieldReads reads(std::as_bytes(std::span(raw)));
+            const auto file = save::read_save(std::as_bytes(std::span(raw)), { .verify_checksum = false });
+            if (!file)
+            {
+                out.error("{}: {}", p, save::to_string(file.error()));
+                return 1;
+            }
+            // What the app reads of an original park, so the fields left are those it leaves too.
+            const save::ObjectIndex index(*file);
+            if (!save::model::load_people(*file, index) || !save::model::load_world(*file, index) || !save::model::load_rides(*file, index))
+            {
+                out.error("{}: cannot load people, world or rides", p);
+                return 1;
+            }
+            (void)save::model::load_park(*file, index);
+            (void)save::model::load_shows(*file, index);
+            (void)save::model::load_tutorial(*file);
+            (void)particles::read_park_displays(*file);
+            const save::LeftOut left = save::left_out(*file, reads);
+            for (const save::LeftOutClass& c : left.classes)
+            {
+                std::string joined;
+                for (const std::string& f : c.fields)
+                {
+                    joined += std::format("{}{}", joined.empty() ? "" : ",", f);
+                    fields.insert(std::format("{}.{}", c.name, f));
+                }
+                classes.emplace(c.name);
+                if (c.untouched)
+                    untouched.emplace(c.name);
+                if (!left_out_summary)
+                    out.info("{}\t{:d}\t{:d}\t{}", c.name, c.objects, c.untouched, joined);
+            }
+            out.info("{}classes: {}; fields: {}", left_out_summary ? std::format("{}\t", std::filesystem::path(p).filename().string()) : "", counts(left.totals.classes), counts(left.totals.fields));
+            for (const auto& [sum, add] : { std::pair { &all.classes, left.totals.classes }, std::pair { &all.fields, left.totals.fields } })
+            {
+                sum->unread += add.unread;
+                sum->skipped += add.skipped;
+                sum->read += add.read;
+            }
+        }
+        if (left_out_summary)
+        {
+            out.info("all {} saves\tclasses: {}; fields: {}", paths.size(), counts(all.classes), counts(all.fields));
+            out.info("distinct\t{} classes unread somewhere ({} wholly untouched somewhere), {} class fields", classes.size(), untouched.size(), fields.size());
+        }
+        return 0;
+    }
+    const char* path = paths.front();
     std::ifstream in(path, std::ios::binary);
     const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
     if (!in && raw.empty())
@@ -183,9 +248,6 @@ int main(int argc, char** argv)
         out.error("{}: cannot read", path);
         return 1;
     }
-    std::optional<save::FieldReads> reads;
-    if (left_out)
-        reads.emplace(std::as_bytes(std::span(raw)));
     const auto file = save::read_save(std::as_bytes(std::span(raw)), { .verify_checksum = false });
     if (!file)
     {
@@ -200,22 +262,6 @@ int main(int argc, char** argv)
     {
         out.error("{}: cannot load people, world or rides", path);
         return 1;
-    }
-    if (reads)
-    {
-        // The rest of what the app reads of an original park, so the fields left are those it leaves too.
-        (void)save::model::load_park(*file, index);
-        (void)save::model::load_shows(*file, index);
-        (void)save::model::load_tutorial(*file);
-        (void)particles::read_park_displays(*file);
-        for (const save::LeftOutClass& c : save::left_out(*file, *reads))
-        {
-            std::string fields;
-            for (const std::string& f : c.fields)
-                fields += std::format("{}{}", fields.empty() ? "" : ",", f);
-            out.info("{}\t{:d}\t{:d}\t{}", c.name, c.objects, c.untouched, fields);
-        }
-        return 0;
     }
 
     simulation::SimWorld world;

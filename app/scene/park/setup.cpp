@@ -1933,7 +1933,7 @@ namespace rct3::scene::park
         }
         if (reads)
         {
-            const std::vector<save::LeftOutClass> left = save::left_out(*file, *reads);
+            const std::vector<save::LeftOutClass> left = save::left_out(*file, *reads).classes;
             for (const save::LeftOutClass& c : left)
             {
                 std::string fields;

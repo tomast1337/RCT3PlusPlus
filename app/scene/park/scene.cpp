@@ -28,6 +28,7 @@
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 #include "scene/enclosure_tools.hpp"
+#include "scene/park/animal_sale.hpp"
 #include "scene/park/attraction_state.hpp"
 #include "scene/park/camera_controls.hpp"
 #include "scene/park/deleting.hpp"
@@ -941,6 +942,8 @@ namespace rct3::scene::park
                     ride_animal(scene, assets, *scene.shown_animal, AnimalEye::Follow);
                 else if (change->id == ui::screens::info::animal_control(ui::screens::info::AnimalControl::Release))
                     ask_release(scene, *assets.strings, assets.palette, *scene.shown_animal);
+                else if (change->id == ui::screens::info::animal_control(ui::screens::info::AnimalControl::Sell))
+                    ask_sell_animal(scene, assets, info_units(assets, options).currency, *scene.shown_animal);
             }
             else if (change && !scene.shown_party.empty())
             {
@@ -2711,6 +2714,12 @@ namespace rct3::scene::park
                         info->hide();
                     }
                 }
+        }
+        if (auto question = desktop.root().find_as<ui::widgets::QuestionBox>(kSellAnimalName))
+        {
+            if (const auto answer = question->take_answer(); answer && *answer == 0)
+                if (const auto animal = std::exchange(scene.animal_sale_asked, std::nullopt))
+                    (void)sell_animal(scene, assets, *animal);
         }
         if (auto question = desktop.root().find_as<ui::widgets::QuestionBox>(kLakeName))
         {

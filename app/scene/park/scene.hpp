@@ -931,11 +931,12 @@ namespace rct3::scene::park
         u32 built = 0;                                                 ///< Things put down so far, each heard as a thump (scene/park/sounds.hpp)
         u32 levels_won = 0;                                            ///< Levels of the scenario won while playing, each heard as a fanfare (scene/park/sounds.hpp)
         std::optional<usize> pool_complex_asked;                       ///< Of the pools' rooms, one whose complex the player was asked to sell
+        std::optional<entt::entity> animal_sale_asked;                 ///< The animal the player was asked to sell
         std::optional<ui::screens::info::SceneryTab> room_tab;         ///< Last open in a changing room's window
         std::vector<rct3::park::AttractionRef> demolish_asked;         ///< Waiting on the question whether to pull them down
         std::optional<entt::entity> release_asked;                     ///< An animal waiting on the question whether to set it free
         std::vector<std::string> prizes;                               ///< Text keys told one box at a time, oldest first: prizes won, deletes refused
-        std::vector<std::u16string> challenge_notes;                   ///< Told after those, the same way: challenges met with their prizes, and hints for those taken on
+        std::vector<std::u16string> challenge_notes;                   ///< Told after those, the same way: challenges met with their prizes, hints for those taken on, and animals sold
         std::vector<std::string_view> left_out;                        ///< What loading the original park left behind, as text keys of its groups, told in a box first
         bool info_shown = false;                                       ///< The info panel showed last frame, to tell it opening
         std::optional<ui::screens::park_view::ParkTool> menu_shown;    ///< The tool row's menu open last frame, to tell one opening

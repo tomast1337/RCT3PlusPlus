@@ -22,11 +22,7 @@ const kParks = [
     "RunDownZoo",
     "ScrubGardens",
 ];
-const kSpeciesGoals = [
-    "NumAnimalsOfSpeciesCondition",
-    "AnimalSalesProfitCondition",
-    "ReleaseAnimalsCondition",
-];
+const kSpeciesGoals = ["NumAnimalsOfSpeciesCondition", "AnimalSalesProfitCondition", "ReleaseAnimalsCondition"];
 
 for (const name of kParks) {
     await park.open(`Campaigns/Base/Wild/${name}.dat`, { sandbox: false });

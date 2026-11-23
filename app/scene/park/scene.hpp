@@ -600,6 +600,8 @@ namespace rct3::scene::park
             std::optional<particles::JetPattern> pattern;                   ///< Of a fountain show's shot, what it shoots
             f32 shot_at = 0;                                                ///< And park_clock when it was shot
             usize tube = 0;                                                 ///< Its launcher's firing point
+            usize launcher = 0;                                             ///< Of a fountain show's shot, in its display's launchers
+            particles::Aim aim { };                                         ///< And that launcher's aim, followed while the show plays
         };
         std::vector<Jet> jets;
         f32 jets_clock = 0;                                 ///< park_clock when the jets last moved

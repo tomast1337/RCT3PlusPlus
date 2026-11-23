@@ -55,12 +55,20 @@ namespace rct3::scene::park
             return rct3::park::object::placed_transform(scene.objects[i], model != scene.models.end() ? &model->second : nullptr, scene.grid, scene.fitted);
         }
 
-        /// Where launcher object `i` shoots from by tube `tube`, pointing the way the tube does.
-        rct3::park::object::PlacedEffect tube_of(const ParkScene& scene, usize i, usize tube)
+        /// Where launcher object `i` shoots from by tube `tube`, pointing the way the tube does turned by `aim`.
+        rct3::park::object::PlacedEffect tube_of(const ParkScene& scene, usize i, usize tube, particles::Aim aim)
         {
             const rct3::park::object::ObjectModel* model = i < scene.places.models.size() ? scene.places.models[i] : nullptr;
             const rct3::park::object::ObjectModel none { };
-            return rct3::park::object::launch_point(object_place(scene, i), model != nullptr ? *model : none, tube);
+            rct3::park::object::PlacedEffect from = rct3::park::object::launch_point(object_place(scene, i), model != nullptr ? *model : none, tube);
+            from.axes = particles::aimed(from.axes[1], aim);
+            return from;
+        }
+
+        /// The aim now of the launcher shot `shot` of the display playing fires from.
+        particles::Aim aim_now(const ParkFireworks& fireworks, const particles::Display& display, usize shot)
+        {
+            return particles::aim_at(display.launchers[display.shots[shot].launcher], fireworks.playing ? fireworks.playing->run.seconds : 0.0f);
         }
 
         /// A curve's value, 0 when it has no points.
@@ -75,10 +83,12 @@ namespace rct3::scene::park
             if (!i)
                 return;
             const auto tube = static_cast<usize>(std::max(shot.tube, 0));
+            const auto index = static_cast<usize>(&shot - display.shots.data());
+            const particles::Aim aim = aim_now(scene.fireworks, display, index);
             if (shot.kind == particles::ShotKind::Laser)
             {
                 if (shot.laser && shot.laser->seconds > 0)
-                    scene.fireworks.lasers.push_back({ .shot = static_cast<usize>(&shot - display.shots.data()), .object = save::model::PlacedObjectIndex { *i }, .tube = tube, .shot_at = scene.park_clock });
+                    scene.fireworks.lasers.push_back({ .shot = index, .object = save::model::PlacedObjectIndex { *i }, .tube = tube, .shot_at = scene.park_clock });
                 return;
             }
             if (shot.kind == particles::ShotKind::WaterJet)
@@ -91,10 +101,10 @@ namespace rct3::scene::park
                 const f32 life = 2 * highest / units::kGravity.value + kJetLinger.value;
                 // The pattern's widening, near 1, is read as what the stream's width is multiplied by each second.
                 const f32 spread = kJetRadius.value * std::max(value_at(shot.jet->widening, 0) - 1, 0.0f);
-                scene.jets.push_back(ParkScene::Jet { .object = save::model::PlacedObjectIndex { *i }, .water = rct3::park::water::WaterJet(life, kJetRadius.value, spread, kJetBreakup), .pattern = shot.jet, .shot_at = scene.park_clock, .tube = tube });
+                scene.jets.push_back(ParkScene::Jet { .object = save::model::PlacedObjectIndex { *i }, .water = rct3::park::water::WaterJet(life, kJetRadius.value, spread, kJetBreakup), .pattern = shot.jet, .shot_at = scene.park_clock, .tube = tube, .launcher = shot.launcher, .aim = aim });
                 return;
             }
-            const rct3::park::object::PlacedEffect from = tube_of(scene, *i, tube);
+            const rct3::park::object::PlacedEffect from = tube_of(scene, *i, tube, aim);
             if (!fire_park_particles(scene.particles, shot.effect, from.position, from.axes[1]))
                 logging::logger("fireworks").debug("no firework effect {}", shot.effect);
         }
@@ -168,6 +178,17 @@ namespace rct3::scene::park
         return rct3::park::framed(points, yaw, kShowPitch.value);
     }
 
+    std::vector<rct3::park::object::PlacedEffect> park_display_tubes(const ParkScene& scene)
+    {
+        std::vector<rct3::park::object::PlacedEffect> tubes;
+        if (!scene.fireworks.playing)
+            return tubes;
+        for (const particles::Launcher& l : scene.fireworks.displays[scene.fireworks.playing->display].launchers)
+            if (const auto i = launcher_object(scene, l))
+                tubes.push_back(tube_of(scene, *i, 0, particles::aim_at(l, scene.fireworks.playing->run.seconds)));
+        return tubes;
+    }
+
     void stop_park_display(ParkScene& scene)
     {
         scene.fireworks.playing.reset();
@@ -204,7 +225,7 @@ namespace rct3::scene::park
                 const particles::Laser& laser = *display.shots[shining.shot].laser;
                 if (laser.look != particles::LaserLook::Drawing || shining.object.value >= scene.objects.size())
                     continue;
-                const rct3::park::object::PlacedEffect from = tube_of(scene, shining.object.value, shining.tube);
+                const rct3::park::object::PlacedEffect from = tube_of(scene, shining.object.value, shining.tube, aim_now(fireworks, display, shining.shot));
                 const f32 into = std::min(scene.park_clock - shining.shot_at, laser.seconds);
                 for (; shining.traced + kSpotStep.value <= into; shining.traced += kSpotStep.value)
                 {
@@ -223,6 +244,9 @@ namespace rct3::scene::park
             }
             std::erase_if(fireworks.spots, [&](const ParkFireworks::Spot& spot) { return scene.park_clock - spot.laid_at >= kSpotLife.value; });
             std::erase_if(fireworks.lasers, [&](const ParkFireworks::Shining& l) { return scene.park_clock - l.shot_at >= display.shots[l.shot].laser->seconds; });
+            for (ParkScene::Jet& jet : scene.jets)
+                if (jet.pattern && jet.launcher < display.launchers.size())
+                    jet.aim = particles::aim_at(display.launchers[jet.launcher], fireworks.playing->run.seconds);
         }
         // The show's jets shoot as their patterns say, each from its start; past its end one is let be, and stops.
         for (ParkScene::Jet& jet : scene.jets)
@@ -231,7 +255,7 @@ namespace rct3::scene::park
             if (!jet.pattern || into >= jet.pattern->seconds || jet.object.value >= scene.objects.size())
                 continue;
             const f32 t = into / jet.pattern->seconds;
-            const rct3::park::object::PlacedEffect from = tube_of(scene, jet.object.value, jet.tube);
+            const rct3::park::object::PlacedEffect from = tube_of(scene, jet.object.value, jet.tube, jet.aim);
             const glm::vec3 up = from.axes[1];
             // Its lean, in radians, tips it toward the launcher's front, and back below 0: a guess, as the files do not
             // say which way it leans.
@@ -295,7 +319,7 @@ namespace rct3::scene::park
             if (shining.object.value >= scene.objects.size())
                 continue;
             const particles::Laser& laser = *display.shots[shining.shot].laser;
-            const rct3::park::object::PlacedEffect from = tube_of(scene, shining.object.value, shining.tube);
+            const rct3::park::object::PlacedEffect from = tube_of(scene, shining.object.value, shining.tube, aim_now(fireworks, display, shining.shot));
             const f32 into = scene.park_clock - shining.shot_at;
             const f32 length = std::max(laser.power, 1.0f);
             for (usize copy = 0; copy <= kTrailCopies && (copy == 0 || laser.trail_seconds > 0); ++copy)

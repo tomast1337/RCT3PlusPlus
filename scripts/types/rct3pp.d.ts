@@ -398,7 +398,8 @@ declare namespace park {
     /** The park's firework displays: name, what most of its shots are (a fountain show is mostly water jets), how
      *  long it runs, music file, the months they run in (a bit a month, the first lowest), start time in minutes
      *  after midnight, launchers, shots, laser shots and those that draw pictures, and whether one plays now, how far it is, how many of its laser shots
-     *  shine now, how many spots drawing lasers have left lit, the middle of its launchers and of those spots. */
+     *  shine now, how many spots drawing lasers have left lit, the middle of its launchers and of those spots, and its
+     *  launchers' aimed tubes. */
     function displays(): {
         name: string;
         kind: "fireworks" | "lasers" | "water";
@@ -410,12 +411,20 @@ declare namespace park {
         shots: number;
         lasers: number;
         drawings: number;
+        /** Launchers the park keeps aimed off the way their tubes stand. */
+        aimed: number;
+        /** Launchers the display aims over the show by keys, and those of them whose keys differ, so they move. */
+        keyed: number;
+        moving: number;
         playing: boolean;
         seconds: number;
         shining: number;
         spots: number;
         centre?: MapPoint;
         picture?: MapPoint;
+        /** While it plays, each standing launcher's first tube: where it is (height in meters) and the way it points
+         *  now as aimed, a unit vector in the world's x, y (up) and z. */
+        tubes?: { col: Tiles; row: Tiles; up: number; way: [number, number, number] }[];
     }[];
     /** The show rides' shows: the ride's place in rides.list() and name, the string keys of its tricks in the order
      *  the show puts them on and how long they take, whether a show runs now (it starts as the ride sets off), how

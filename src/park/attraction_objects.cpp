@@ -20,6 +20,8 @@ namespace rct3::park
             const save::model::Ride& r = rides.rides[i];
             const AttractionRef ref { AttractionRef::Kind::Ride, i };
             own(r.base.placement, ref);
+            for (const save::model::Ride::GalleryPanel& panel : r.panels)
+                own(panel.placement, ref);
             for (const save::model::Station& s : r.stations)
             {
                 own(s.entrance, ref);

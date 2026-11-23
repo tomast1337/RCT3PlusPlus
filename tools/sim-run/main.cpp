@@ -540,6 +540,7 @@ int main(int argc, char** argv)
         const auto found = facility_kinds.find(ride.base.id);
         return found != facility_kinds.end() ? std::optional(found->second) : std::nullopt;
     });
+    const usize galleries = simulation::import_galleries(world, *rides, world_model->enclosures);
     simulation::import_scenery(world, world_model->objects, [&](const save::model::PlacedObject& o) {
         const auto found = scenery.find(o.id);
         return found != scenery.end() ? found->second : 0.0f;
@@ -560,7 +561,7 @@ int main(int argc, char** argv)
         simulation::import_party_mix(world, *park_model->group_mix);
     const usize uses = simulation::resume_saved_uses(world, *people, guests, staff, world_model->use_points, carried);
     simulation::import_passport_rules(world, *people, world_model->use_points, carried);
-    out.info("facilities {:d}  sights {:d}  gate {}  guests back at a use {:d}", facilities, sight_count, gate ? "yes" : "none", uses);
+    out.info("facilities {:d}  galleries {:d}  sights {:d}  gate {}  guests back at a use {:d}", facilities, galleries, sight_count, gate ? "yes" : "none", uses);
     // The park's time of day, as its file left it, run through every hour.
     simulation::DayWindow hours;
     if (park_model && park_model->has_park)

@@ -1790,7 +1790,7 @@ namespace rct3::scene
             {
                 const save::model::Ride& ride = park.rides.rides[i];
                 const save::model::Station* station = ride.stations.empty() ? nullptr : &ride.stations.front();
-                Json one { { "index", i },      { "name", ride.base.name },     { "symbol", ride.base.symbol }, { "overlay", ride.base.overlay_path },  { "flat", ride.kind == save::model::RideKind::Flat }, { "kind", std::array { "tracked", "flat", "facility" }[std::to_underlying(ride.kind)] }, { "site", spot_json(ride.base.spot) }, { "entrance", spot_json(station ? station->entrance_spot : std::nullopt) }, { "exit", spot_json(station ? station->exit_spot : std::nullopt) },
+                Json one { { "index", i },      { "name", ride.base.name },     { "symbol", ride.base.symbol }, { "overlay", ride.base.overlay_path },  { "flat", ride.kind == save::model::RideKind::Flat }, { "kind", std::array { "tracked", "flat", "facility", "gallery" }[std::to_underlying(ride.kind)] }, { "site", spot_json(ride.base.spot) }, { "entrance", spot_json(station ? station->entrance_spot : std::nullopt) }, { "exit", spot_json(station ? station->exit_spot : std::nullopt) },
                            { "joined", false }, { "fence", ride.fence_symbol }, { "music", ride.music },        { "demolished", ride.base.demolished }, { "graphSamples", ride.graphs.speed.size() } };
                 for (const auto& [field, id] : { std::pair { "entranceItem", station ? station->entrance : 0 }, std::pair { "exitItem", station ? station->exit : 0 } })
                 {
@@ -1878,10 +1878,18 @@ namespace rct3::scene
                     }
                     one["cars"] = std::move(cars);
                 }
+                if (ride.kind == save::model::RideKind::Gallery)
+                {
+                    one["excitement"] = ride.assessment.valid ? Json(ride.assessment.excitement) : Json(nullptr);
+                    Json panels = Json::array();
+                    for (const save::model::Ride::GalleryPanel& panel : ride.panels)
+                        panels.push_back(spot_json(panel.spot));
+                    one["panels"] = std::move(panels);
+                }
                 const entt::entity e = i < park.ride_entities.size() ? park.ride_entities[i] : entt::null;
                 const auto& registry = park.sim.registry;
                 // A facility is run as a shop: where it serves from and how many it has served.
-                if (ride.kind == save::model::RideKind::Special)
+                if (ride.kind == save::model::RideKind::Special || ride.kind == save::model::RideKind::Gallery)
                     for (const auto [_, a] : registry.view<const simulation::Attraction>().each())
                         if (a.saved == ride.base.id)
                         {

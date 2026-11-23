@@ -1168,6 +1168,7 @@ namespace rct3::scene::park
                         const auto file = install.find(std::format("{}.common.ovl", ride.base.overlay_path));
                         return file ? rct3::park::special_attraction_kind(*file, std::string_view(ride.base.symbol).substr(0, ride.base.symbol.find(':'))) : std::nullopt;
                     });
+                    simulation::import_galleries(scene.sim, scene.rides, scene.enclosures);
                     simulation::import_sights(scene.sim, scene.objects, [&](const save::model::PlacedObject& o) -> std::optional<simulation::PathItemKind> {
                         const auto model = scene.models.find(rct3::park::object::model_ref(o));
                         return model == scene.models.end() ? std::nullopt : simulation::sight_of(model->second.category, model->second.feature);

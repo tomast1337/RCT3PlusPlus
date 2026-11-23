@@ -9,6 +9,7 @@
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/enjoyment.hpp"
+#include "simulation/galleries.hpp"
 #include "simulation/name_cheats.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/ride_walks.hpp"
@@ -170,6 +171,14 @@ namespace rct3::simulation
                         continue;
                     out.push_back({ e, AttractionKind::Pool, Product::Drink, *a.entrance, a.price.value, 0, 0, Serve::Any, false });
                 }
+                else if (const auto* gallery = r.try_get<Gallery>(e))
+                {
+                    // Nor a gallery with every window taken; those in it are its queue.
+                    const usize in = watching(r, e);
+                    if (in >= gallery->windows)
+                        continue;
+                    out.push_back({ e, AttractionKind::Gallery, Product::Drink, *a.entrance, a.price.value, 0, 1, Serve::Any, false, gallery->excitement.value, 0, gallery_worth(*gallery), false, in });
+                }
             }
             return out;
         }
@@ -281,7 +290,9 @@ namespace rct3::simulation
                     // An untested ride's intensity is not known yet, so it puts no one off; nor does a ride a cheat has
                     // them try whatever it is like.
                     const bool tried = o.tracked ? cheats.ride_all_tracked : cheats.ride_all_flat;
-                    if (o.kind != AttractionKind::Ride || o.price > wallet.cash.value || (!o.untested && !tried && (o.intensity > wildest || o.intensity < taste.least.value)) || (o.cover < least_cover && !tried) || (splash && !o.splash))
+                    // A gallery is taken as a ride of no intensity, that suits those wanting a calm one.
+                    const bool gallery = o.kind == AttractionKind::Gallery;
+                    if ((o.kind != AttractionKind::Ride && !gallery) || o.price > wallet.cash.value || (!o.untested && !tried && !gallery && (o.intensity > wildest || o.intensity < taste.least.value)) || (o.cover < least_cover && !tried) || (splash && !o.splash))
                         continue;
                     if (o.no_children && (child || (children && !random::chance(dice.state, kTuning.choosing.with_children.value))))
                         continue;
@@ -354,14 +365,15 @@ namespace rct3::simulation
             return of > 1 ? ring_lane(place, of) : glm::vec2 { 0.0f };
         }
 
-        /// Where on its entrance tile `guest` stands at stall `shop`'s counter: at the tile's edge towards the
-        /// stall, at one of a few places along it, by who they are.
-        glm::vec2 counter_lane(const Shop& shop, entt::entity guest)
+        /// Where on its entrance tile `guest` stands at a stall's counter, or a gallery's window, `counter` that way
+        /// (Shop::counter, Gallery::window): at the tile's edge towards it, at one of a few places along it, by who
+        /// they are.
+        glm::vec2 counter_lane(glm::vec2 counter, entt::entity guest)
         {
             constexpr f32 kReach = 1.2f;                                       ///< Chosen by eye: just short of kLaneReach
             constexpr std::array<f32, 4> kPlaces { -0.9f, -0.3f, 0.3f, 0.9f }; ///< Chosen by eye: along the counter
-            const glm::vec2 across { -shop.counter.y, shop.counter.x };
-            return shop.counter * kReach + across * kPlaces[entt::to_integral(guest) % kPlaces.size()];
+            const glm::vec2 across { -counter.y, counter.x };
+            return counter * kReach + across * kPlaces[entt::to_integral(guest) % kPlaces.size()];
         }
 
         /// A wandering guest (with their party, all walking with them) that may go home now: one done with
@@ -865,10 +877,15 @@ namespace rct3::simulation
                             stride.lane_to = ring_lane(place, of, { turn });
                             ringed = true;
                         }
-                        // The last step to a stall: up to its counter.
+                        // The last step to a stall: up to its counter; to a gallery: up to its window.
                         if (const auto* shop = stride.route.empty() && errand.kind == ErrandKind::Heading ? r.try_get<Shop>(errand.target) : nullptr)
                         {
-                            stride.lane_to = counter_lane(*shop, movers[i]);
+                            stride.lane_to = counter_lane(shop->counter, movers[i]);
+                            ringed = true;
+                        }
+                        else if (const auto* gallery = stride.route.empty() && errand.kind == ErrandKind::Heading ? r.try_get<Gallery>(errand.target) : nullptr)
+                        {
+                            stride.lane_to = counter_lane(gallery->window, movers[i]);
                             ringed = true;
                         }
                     }
@@ -1387,7 +1404,7 @@ namespace rct3::simulation
                     stride.from = at;
                     stride.to = at;
                     stride.progress.value = 1;
-                    stride.lane_from = stride.lane_to = counter_lane(*shop, m);
+                    stride.lane_from = stride.lane_to = counter_lane(shop->counter, m);
                     auto& pose = r.get<Pose>(m);
                     if (glm::length(shop->counter) > 0)
                         pose.heading.value = math::atan2(shop->counter.x, shop->counter.y);
@@ -1463,6 +1480,52 @@ namespace rct3::simulation
                 for (const entt::entity m : followers)
                     if (r.get<Needs>(m).swim.value >= kTuning.needs.want.value / 2 && random::chance(r.get<Dice>(m).state, kTuning.walking.join_chance.value))
                         swim(m);
+            }
+            else if (const auto* gallery = r.try_get<Gallery>(arrived[i]))
+            {
+                // Each pays at the window, at no more than the animals are worth to them, and watches a while there,
+                // facing the enclosure; those finding every window taken go on (5.).
+                // shortcut: watchers stand at the window from the path, not inside on the gallery's walkway; upgrade
+                // when the galleries' walkways are read.
+                const auto watch = [&](entt::entity g) {
+                    auto& attraction = r.get<Attraction>(arrived[i]);
+                    const bool inspector = r.all_of<Staff>(g);
+                    r.get<Errand>(g) = { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
+                    if (!attraction.open || watching(r, arrived[i]) >= gallery->windows)
+                        return;
+                    if (!inspector && attraction.price.value > gallery_worth(*gallery).value && attraction.price.value <= r.get<Wallet>(g).cash.value)
+                    {
+                        auto& happiness = r.get<Mood>(g).happiness.value;
+                        happiness = clamp01(happiness - kTuning.needs.treat.value);
+                        think(r, g, ThoughtKind::NotPaying, arrived[i], now);
+                        return;
+                    }
+                    if (!inspector && !pay(r, g, attraction.price, &Wallet::spent_rides, park::LedgerLine::ViewingGalleryTickets))
+                    {
+                        think(r, g, ThoughtKind::CantAfford, arrived[i], now);
+                        r.get<Wallet>(g).needs_cash = true;
+                        return;
+                    }
+                    if (!inspector)
+                    {
+                        attraction.income.value += attraction.price.value;
+                        ++attraction.customers;
+                        watch_animals(r, g, arrived[i], now);
+                    }
+                    const units::Seconds turn = kGalleryRates.watch;
+                    r.get<Errand>(g) = { .kind = ErrandKind::Buying, .target = arrived[i], .rest = ticks(turn.value), .turn = turn };
+                    auto& stride = r.get<Stride>(g);
+                    stride.route.clear();
+                    stride.from = stride.to = *attraction.entrance;
+                    stride.progress.value = 1;
+                    stride.lane_from = stride.lane_to = counter_lane(gallery->window, g);
+                    auto& pose = r.get<Pose>(g);
+                    pose.heading.value = math::atan2(gallery->window.x, gallery->window.y);
+                    place(paths, stride, pose);
+                };
+                watch(guest);
+                for (const entt::entity m : followers)
+                    watch(m);
             }
             else if (auto* ride = r.try_get<CycleRide>(arrived[i]))
             {

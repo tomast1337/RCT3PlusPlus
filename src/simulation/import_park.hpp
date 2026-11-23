@@ -170,6 +170,9 @@ namespace rct3::simulation
     /// gives a special attraction's kind from the game's files. One opens onto all four sides and joins a path
     /// on any tile next to it, near its height. Returns how many came over. Call after import_paths.
     usize import_facilities(SimWorld& world, const save::model::RideModel& rides, const std::function<std::optional<u32>(const save::model::Ride&)>& kind_of);
+    /// The park's viewing galleries, each an attraction at a footpath beside one of its panels, looking into the
+    /// enclosure of `enclosures` its panels stand on. Returns how many came over. Call after import_paths.
+    usize import_galleries(SimWorld& world, const save::model::RideModel& rides, const save::model::EnclosureMap& enclosures);
     /// The kind of path item guests react to that an item of `category` and `feature` stands as: effects and
     /// animatronics, or a path feature guests know. Nothing for the rest, bins, benches and signs among them.
     [[nodiscard]] std::optional<PathItemKind> sight_of(u32 category, rct3::park::PathFeature feature);

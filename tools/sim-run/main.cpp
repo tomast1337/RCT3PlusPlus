@@ -274,6 +274,7 @@ int main(int argc, char** argv)
     std::vector<std::optional<simulation::Coaster>> coasters(rides->rides.size());
     std::vector<std::optional<park::track::TrackCourse>> courses(rides->rides.size());
     std::vector<std::optional<u32>> guests_room;
+    std::vector<std::optional<u32>> flags;                                                // Of each ride's item
     std::map<u64, simulation::PathItemKind> sights;                                       // Placed objects guests stop at
     std::map<u64, std::array<i32, 2>> gates;                                              // Park entrances, with the tiles each covers
     std::map<u64, f32> scenery;                                                           // What each placed object adds to the scenery round the paths
@@ -345,6 +346,7 @@ int main(int argc, char** argv)
                         facility_kinds[ride.base.id] = *kind;
         std::map<std::string, std::optional<park::object::ObjectModel>, std::less<>> models;
         guests_room = simulation::ride_guests(*rides, [&](std::string_view path) { return install->find(path); });
+        flags = simulation::ride_flags(*rides, [&](std::string_view path) { return install->find(path); });
         for (usize i = 0; i < rides->rides.size(); ++i)
             if (const auto file = rides->rides[i].kind == save::model::RideKind::Tracked ? install->find(std::format("{}.common.ovl", rides->rides[i].base.overlay_path)) : std::nullopt)
                 track_rules[i] = park::track::load_track_rules(*file, rides->rides[i].base.symbol);
@@ -512,6 +514,7 @@ int main(int argc, char** argv)
             cycle->untested = park::track::awaits_first_lap(*track_rules[i], rides->rides[i]);
             untested += cycle->untested;
         }
+    simulation::bar_children(world, ride_entities, flags);
     simulation::import_boats(world, *rides, ride_entities, courses, world_model->terrain, world_model->water.bodies);
     simulation::link_stations(world, ride_entities, courses, world_model->terrain);
     const auto ride_count = static_cast<usize>(std::ranges::count_if(ride_entities, [](entt::entity e) { return e != entt::null; }));

@@ -20,7 +20,10 @@ namespace
         simulation::park::ParkState state { };
         save::model::ParkModel model { };
         save::model::RideModel rides { };
-        World world { .sim = sandbox.world(), .park = state, .model = model, .rides = rides };
+        simulation::Research research { };
+        std::optional<std::vector<simulation::ResearchItem>> research_items { };
+        std::optional<i64> ledger_month { };
+        World world { .sim = sandbox.world(), .park = state, .model = model, .rides = rides, .research = research, .research_items = research_items, .ledger_month = ledger_month };
         entt::entity ride = entt::null;
 
         Park()

@@ -17,7 +17,10 @@ namespace
         simulation::park::ParkState state { .cash = units::Money { 500'000 }, .loan = units::Money { 300'000 } };
         save::model::ParkModel model { .finance = { .max_loan = 1'000'000 } };
         save::model::RideModel rides { };
-        World world { .sim = sim, .park = state, .model = model, .rides = rides };
+        simulation::Research research { };
+        std::optional<std::vector<simulation::ResearchItem>> research_items { };
+        std::optional<i64> ledger_month { };
+        World world { .sim = sim, .park = state, .model = model, .rides = rides, .research = research, .research_items = research_items, .ledger_month = ledger_month };
     };
 } // namespace
 

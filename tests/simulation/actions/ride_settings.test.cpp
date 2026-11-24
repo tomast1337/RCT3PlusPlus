@@ -24,7 +24,9 @@ namespace
         std::optional<std::vector<simulation::ResearchItem>> research_items { };
         std::optional<i64> ledger_month { };
         simulation::DayClock day_clock { };
-        World world { .sim = sandbox.world(), .park = state, .model = model, .rides = rides, .research = research, .research_items = research_items, .ledger_month = ledger_month, .day_clock = day_clock };
+        rct3::park::CarriedKinds carried { };
+        std::vector<save::model::StallIndex> unjoined_stalls { };
+        World world { .sim = sandbox.world(), .park = state, .model = model, .rides = rides, .research = research, .research_items = research_items, .ledger_month = ledger_month, .day_clock = day_clock, .carried = carried, .unjoined_stalls = unjoined_stalls };
         entt::entity ride = entt::null;
 
         Park()
@@ -73,4 +75,24 @@ TEST_CASE("a ride setting or name refused changes nothing")
     CHECK(p.rides.rides.front().ticket_price == units::Money { 200 });
     CHECK(p.rides.rides.front().base.name == "Ride");
     CHECK(p.sandbox.world().registry.get<simulation::Attraction>(p.ride).price == units::Money { 200 });
+}
+
+TEST_CASE("a stall synchronised passes a new price on to the stalls of its kind")
+{
+    Park p;
+    for (save::model::ObjectId id : { 20, 21 })
+        p.rides.stalls.push_back({ .base = { .id = id, .symbol = "Drinks:sta", .name = "Stall" }, .items = { { .kind_symbol = "Soda:cid", .price = { 100 } } }, .sync = true });
+    REQUIRE(apply(p.world, Action { ChangeStall { .stall = 20, .edit = StallEdit::ItemPrice, .item = 0, .value = 150 } }));
+    CHECK(p.rides.stalls[0].items[0].price == units::Money { 150 });
+    CHECK(p.rides.stalls[1].items[0].price == units::Money { 150 });
+    CHECK(apply(p.world, Action { ChangeStall { .stall = 20, .edit = StallEdit::ItemPrice, .item = 1, .value = 150 } }).error() == Refusal::Missing);
+}
+
+TEST_CASE("a stall left with nothing to sell closes")
+{
+    Park p;
+    p.rides.stalls.push_back({ .base = { .id = 20, .name = "Stall", .state = save::model::AttractionState::Open }, .items = { { .kind_symbol = "Soda:cid", .price = { 100 } } } });
+    REQUIRE(apply(p.world, Action { ChangeStall { .stall = 20, .edit = StallEdit::RemoveItem, .item = 0 } }));
+    CHECK(p.rides.stalls[0].items.empty());
+    CHECK(p.rides.stalls[0].base.state == save::model::AttractionState::Closed);
 }

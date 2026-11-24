@@ -843,27 +843,26 @@ namespace rct3::scene::park
             ride_cam(scene, assets, ref.ride());
         else if (stall != nullptr)
         {
-            const usize index = ref.index;
+            using simulation::actions::StallEdit;
+            simulation::actions::ChangeStall edit { .stall = stall->base.id, .value = change.value, .pot = change.pot };
             if (change.id == ui::screens::info::control_id(SyncStalls))
-                stall->sync = change.value != 0;
+                edit.edit = StallEdit::Sync;
             else if (change.id == ui::screens::info::control_id(SellsAs))
             {
-                // A custom stall picks up the kind's goods at its prices, and the extras they take afresh.
                 const std::vector<const rct3::park::BuildItem*> kinds = stall_kinds(scene);
                 if (change.value < 1 || std::cmp_greater(change.value, kinds.size()))
                     return;
                 const rct3::park::BuildItem& kind = *kinds[static_cast<usize>(change.value - 1)];
-                stall->sells_as = std::format("{}:sta", kind.symbol);
-                stall->sells_as_overlay = kind.overlay;
-                stall->items.clear();
-                stall->extras.clear();
+                edit.edit = StallEdit::SellAs;
+                edit.text = std::format("{}:sta", kind.symbol);
+                edit.overlay = kind.overlay;
                 for (const rct3::park::BuildItem::Goods& g : kind.goods)
-                    stall->items.push_back({ .kind_symbol = std::format("{}:cid", g.item), .price = { g.price }, .name = "%ME%" });
+                    edit.items.push_back({ .kind_symbol = std::format("{}:cid", g.item), .price = { g.price }, .name = "%ME%" });
             }
-            else if (const auto item = ui::screens::info::listed(change.id, ItemPrice); item && *item < stall->items.size())
-                stall->items[*item].price = { change.value };
-            else if (const auto gone = ui::screens::info::listed(change.id, ItemRemove); gone && *gone < stall->items.size())
-                stall->items.erase(stall->items.begin() + static_cast<std::ptrdiff_t>(*gone));
+            else if (const auto item = ui::screens::info::listed(change.id, ItemPrice))
+                edit = { .stall = edit.stall, .edit = StallEdit::ItemPrice, .item = *item, .value = change.value };
+            else if (const auto gone = ui::screens::info::listed(change.id, ItemRemove))
+                edit = { .stall = edit.stall, .edit = StallEdit::RemoveItem, .item = *gone };
             else if (const auto added = ui::screens::info::listed(change.id, ItemAdd))
             {
                 const rct3::park::BuildItem* kind = selling_kind(scene, *stall);
@@ -871,45 +870,25 @@ namespace rct3::scene::park
                     return;
                 const rct3::park::BuildItem::Goods& g = kind->goods[*added];
                 // shortcut: it goes on at its kind's own price, as a new stall's items do; upgrade alongside them.
-                const auto at = stall->items.begin() + std::clamp<std::ptrdiff_t>(change.value, 0, std::ssize(stall->items));
-                stall->items.insert(at, { .kind_symbol = std::format("{}:cid", g.item), .price = { g.price }, .name = "%ME%" });
+                edit.edit = StallEdit::AddItem;
+                edit.items = { { .kind_symbol = std::format("{}:cid", g.item), .price = { g.price }, .name = "%ME%" } };
             }
-            else if (const auto moved = ui::screens::info::listed(change.id, ItemMove); moved && *moved < stall->items.size())
-                rct3::park::ride::move_item(*stall, *moved, static_cast<usize>(std::max(change.value, 0)));
-            else if (const auto ticked = ui::screens::info::listed(change.id, ItemExtras); ticked && *ticked < stall->items.size())
-                stall->items[*ticked].extras = static_cast<u32>(change.value);
-            else if (const auto named = ui::screens::info::listed(change.id, ItemName); named && *named < stall->items.size())
-                stall->items[*named].name = strings::to_utf8(change.text);
-            else if (const auto painted = ui::screens::info::listed(change.id, ItemColour); painted && *painted < stall->items.size() && change.pot < save::model::RideColours { }.size())
-                stall->items[*painted].colours[change.pot] = static_cast<u8>(change.value);
-            else if (const auto extra = ui::screens::info::listed(change.id, ExtraLevel); extra && *extra < stall->extras.size())
-                stall->extras[*extra].level = change.value;
+            else if (const auto moved = ui::screens::info::listed(change.id, ItemMove))
+                edit = { .stall = edit.stall, .edit = StallEdit::MoveItem, .item = *moved, .value = change.value };
+            else if (const auto ticked = ui::screens::info::listed(change.id, ItemExtras))
+                edit = { .stall = edit.stall, .edit = StallEdit::ItemExtras, .item = *ticked, .value = change.value };
+            else if (const auto named = ui::screens::info::listed(change.id, ItemName))
+                edit = { .stall = edit.stall, .edit = StallEdit::ItemName, .item = *named, .text = strings::to_utf8(change.text) };
+            else if (const auto painted = ui::screens::info::listed(change.id, ItemColour))
+                edit = { .stall = edit.stall, .edit = StallEdit::ItemColour, .item = *painted, .value = change.value, .pot = change.pot };
+            else if (const auto extra = ui::screens::info::listed(change.id, ExtraLevel))
+                edit = { .stall = edit.stall, .edit = StallEdit::ExtraLevel, .item = *extra, .value = change.value };
             else
                 return;
-            if (stall->sync)
-                rct3::park::ride::copy_menu(scene.rides.stalls, index);
-            for (usize i = 0; i < scene.rides.stalls.size(); ++i)
-            {
-                save::model::Stall& s = scene.rides.stalls[i];
-                if (i != index && !(stall->sync && rct3::park::ride::same_kind(s, *stall)))
-                    continue;
-                // shortcut: a stall left with nothing to sell closes; the game's way with it is not known,
-                // upgrade once it is.
-                if (s.items.empty() && s.base.state == save::model::AttractionState::Open)
-                    set_attraction_state(scene, s.base, save::model::AttractionState::Closed);
-                // An item put on brings the extras it takes.
-                rct3::park::ride::offer_extras(s, scene.carried.items);
-                simulation::restock(scene.sim, s, scene.carried);
-                // One that had nothing to sell was never joined to the paths; it is once it has.
-                bool joined = false;
-                for (const auto [e, a] : scene.sim.registry.view<simulation::Attraction>().each())
-                    joined = joined || a.saved == s.base.id;
-                if (!joined && !s.items.empty() && !std::ranges::contains(scene.placing.unjoined_stalls, save::model::StallIndex { i }))
-                    scene.placing.unjoined_stalls.push_back(save::model::StallIndex { i });
-            }
+            simulation::actions::ask(scene.actions, scene.sim, std::move(edit));
             // The menu's rows follow what changed; a price typed in stays as it is.
             if (!ui::screens::info::listed(change.id, ItemPrice))
-                show_info_page(scene, panel, assets, options);
+                scene.info_after_actions = true;
         }
         else if (ride == nullptr)
             return;

@@ -16,7 +16,8 @@ namespace rct3::simulation::actions
         const auto due = [&](const ActionQueue::Queued& q) { return q.tick <= world.sim.tick; };
         for (const ActionQueue::Queued& q : queue.waiting)
             if (due(q))
-                (void)apply(world, q.action);
+                if (const Outcome done = apply(world, q.action); !done && !done.error().told.empty())
+                    queue.told.push_back(done.error().told);
         std::erase_if(queue.waiting, due);
     }
 

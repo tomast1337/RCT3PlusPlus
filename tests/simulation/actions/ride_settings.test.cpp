@@ -49,7 +49,7 @@ namespace
 TEST_CASE("a ride's new ticket price is what its guests pay from then on")
 {
     Park p;
-    REQUIRE(apply(p.world, Action { ChangeRide { .ride = kRideId, .setting = RideSetting::TicketPrice, .value = 350 } }));
+    REQUIRE(simulation::actions::apply(p.world, Action { ChangeRide { .ride = kRideId, .setting = RideSetting::TicketPrice, .value = 350 } }));
     CHECK(p.rides.rides.front().ticket_price == units::Money { 350 });
     CHECK(p.sandbox.world().registry.get<simulation::Attraction>(p.ride).price == units::Money { 350 });
 }
@@ -57,12 +57,12 @@ TEST_CASE("a ride's new ticket price is what its guests pay from then on")
 TEST_CASE("a ride's waits turn off and on again")
 {
     Park p;
-    REQUIRE(apply(p.world, Action { ChangeRide { .ride = kRideId, .setting = RideSetting::MinWait, .value = 20 } }));
+    REQUIRE(simulation::actions::apply(p.world, Action { ChangeRide { .ride = kRideId, .setting = RideSetting::MinWait, .value = 20 } }));
     CHECK(p.rides.rides.front().options.min_wait == 20);
     p.sandbox.world().registry.emplace_or_replace<simulation::Departure>(p.ride);
-    REQUIRE(apply(p.world, Action { ChangeRide { .ride = kRideId, .setting = RideSetting::MaxWait, .value = 30 } }));
+    REQUIRE(simulation::actions::apply(p.world, Action { ChangeRide { .ride = kRideId, .setting = RideSetting::MaxWait, .value = 30 } }));
     CHECK(p.sandbox.world().registry.get<simulation::Departure>(p.ride).max_wait == units::Seconds { 30 });
-    REQUIRE(apply(p.world, Action { ChangeRide { .ride = kRideId, .setting = RideSetting::MinWait, .value = std::nullopt } }));
+    REQUIRE(simulation::actions::apply(p.world, Action { ChangeRide { .ride = kRideId, .setting = RideSetting::MinWait, .value = std::nullopt } }));
     CHECK_FALSE(p.rides.rides.front().options.min_wait);
 }
 
@@ -71,16 +71,16 @@ TEST_CASE("a ride setting or name refused changes nothing")
     Park p;
     SUBCASE("a ride the park does not have")
     {
-        CHECK(apply(p.world, Action { ChangeRide { .ride = kRideId + 1, .setting = RideSetting::TicketPrice, .value = 350 } }).error() == Refusal::Missing);
+        CHECK(simulation::actions::apply(p.world, Action { ChangeRide { .ride = kRideId + 1, .setting = RideSetting::TicketPrice, .value = 350 } }).error() == Refusal::Missing);
     }
     SUBCASE("a demolished ride")
     {
         p.rides.rides.front().base.demolished = true;
-        CHECK(apply(p.world, Action { ChangeRide { .ride = kRideId, .setting = RideSetting::TicketPrice, .value = 350 } }).error() == Refusal::Missing);
+        CHECK(simulation::actions::apply(p.world, Action { ChangeRide { .ride = kRideId, .setting = RideSetting::TicketPrice, .value = 350 } }).error() == Refusal::Missing);
     }
     SUBCASE("a blank name")
     {
-        CHECK(apply(p.world, Action { RenameAttraction { .attraction = kRideId, .name = "   " } }).error() == Refusal::NothingToDo);
+        CHECK(simulation::actions::apply(p.world, Action { RenameAttraction { .attraction = kRideId, .name = "   " } }).error() == Refusal::NothingToDo);
     }
     CHECK(p.rides.rides.front().ticket_price == units::Money { 200 });
     CHECK(p.rides.rides.front().base.name == "Ride");
@@ -92,17 +92,17 @@ TEST_CASE("a stall synchronised passes a new price on to the stalls of its kind"
     Park p;
     for (save::model::ObjectId id : { 20, 21 })
         p.rides.stalls.push_back({ .base = { .id = id, .symbol = "Drinks:sta", .name = "Stall" }, .items = { { .kind_symbol = "Soda:cid", .price = { 100 } } }, .sync = true });
-    REQUIRE(apply(p.world, Action { ChangeStall { .stall = 20, .edit = StallEdit::ItemPrice, .item = 0, .value = 150 } }));
+    REQUIRE(simulation::actions::apply(p.world, Action { ChangeStall { .stall = 20, .edit = StallEdit::ItemPrice, .item = 0, .value = 150 } }));
     CHECK(p.rides.stalls[0].items[0].price == units::Money { 150 });
     CHECK(p.rides.stalls[1].items[0].price == units::Money { 150 });
-    CHECK(apply(p.world, Action { ChangeStall { .stall = 20, .edit = StallEdit::ItemPrice, .item = 1, .value = 150 } }).error() == Refusal::Missing);
+    CHECK(simulation::actions::apply(p.world, Action { ChangeStall { .stall = 20, .edit = StallEdit::ItemPrice, .item = 1, .value = 150 } }).error() == Refusal::Missing);
 }
 
 TEST_CASE("a stall left with nothing to sell closes")
 {
     Park p;
     p.rides.stalls.push_back({ .base = { .id = 20, .name = "Stall", .state = save::model::AttractionState::Open }, .items = { { .kind_symbol = "Soda:cid", .price = { 100 } } } });
-    REQUIRE(apply(p.world, Action { ChangeStall { .stall = 20, .edit = StallEdit::RemoveItem, .item = 0 } }));
+    REQUIRE(simulation::actions::apply(p.world, Action { ChangeStall { .stall = 20, .edit = StallEdit::RemoveItem, .item = 0 } }));
     CHECK(p.rides.stalls[0].items.empty());
     CHECK(p.rides.stalls[0].base.state == save::model::AttractionState::Closed);
 }
@@ -111,13 +111,13 @@ TEST_CASE("a stall with nothing to sell is not opened, and the player is told wh
 {
     Park p;
     p.rides.stalls.push_back({ .base = { .id = 20, .name = "Stall" } });
-    const Outcome refused = apply(p.world, Action { SetAttractionState { .attraction = 20, .state = save::model::AttractionState::Open } });
+    const Outcome refused = simulation::actions::apply(p.world, Action { SetAttractionState { .attraction = 20, .state = save::model::AttractionState::Open } });
     REQUIRE_FALSE(refused);
     CHECK(refused.error() == Refusal::Forbidden);
     CHECK_FALSE(refused.error().told.empty());
     CHECK(p.rides.stalls[0].base.state == save::model::AttractionState::Closed);
     p.rides.stalls[0].items.push_back({ .kind_symbol = "Soda:cid", .price = { 100 } });
-    REQUIRE(apply(p.world, Action { SetAttractionState { .attraction = 20, .state = save::model::AttractionState::Open } }));
+    REQUIRE(simulation::actions::apply(p.world, Action { SetAttractionState { .attraction = 20, .state = save::model::AttractionState::Open } }));
     CHECK(p.rides.stalls[0].base.state == save::model::AttractionState::Open);
 }
 
@@ -125,10 +125,10 @@ TEST_CASE("a show ride's show keeps one trick at least")
 {
     Park p;
     p.shows.push_back({ .ride = kRideId, .order = { 1, 2 } });
-    REQUIRE(apply(p.world, Action { EditShow { .ride = kRideId, .place = 5, .trick = 3 } }));
+    REQUIRE(simulation::actions::apply(p.world, Action { EditShow { .ride = kRideId, .place = 5, .trick = 3 } }));
     CHECK(p.shows[0].order == std::vector<u32> { 1, 2, 3 });
-    REQUIRE(apply(p.world, Action { EditShow { .ride = kRideId, .place = 0 } }));
-    REQUIRE(apply(p.world, Action { EditShow { .ride = kRideId, .place = 0 } }));
-    CHECK(apply(p.world, Action { EditShow { .ride = kRideId, .place = 0 } }).error() == Refusal::Missing);
+    REQUIRE(simulation::actions::apply(p.world, Action { EditShow { .ride = kRideId, .place = 0 } }));
+    REQUIRE(simulation::actions::apply(p.world, Action { EditShow { .ride = kRideId, .place = 0 } }));
+    CHECK(simulation::actions::apply(p.world, Action { EditShow { .ride = kRideId, .place = 0 } }).error() == Refusal::Missing);
     CHECK(p.shows[0].order == std::vector<u32> { 3 });
 }

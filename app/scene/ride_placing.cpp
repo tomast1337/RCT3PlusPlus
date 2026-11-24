@@ -266,6 +266,8 @@ namespace rct3::scene
                     cycle->untested = rct3::park::track::awaits_first_lap(scene.track_rules[i], ride);
                 if (const auto seating = assets.install ? simulation::ride_seatings(one, [&](std::string_view path) { return assets.install->find(path); }).front() : std::nullopt)
                     scene.ride_seatings[added.front()] = static_cast<u8>(*seating);
+                if (assets.install)
+                    simulation::bar_children(scene.sim, added, simulation::ride_flags(one, [&](std::string_view path) { return assets.install->find(path); }));
                 if (const auto show = std::ranges::find(scene.shows, ride.base.id, &save::model::RideShow::ride); show != scene.shows.end())
                     park::stage_show(scene, *show);
                 park::seat_flat_ride(device, scene, index);

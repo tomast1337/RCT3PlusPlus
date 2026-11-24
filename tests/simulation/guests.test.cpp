@@ -379,6 +379,46 @@ TEST_CASE("bored guests find the flat ride by themselves")
     CHECK(park.run_until([&] { return r.get<Attraction>(ride).customers >= 5; }, 600));
 }
 
+TEST_CASE("children never pick a ride not for children, while grown-ups still do")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 8, 0 }).path({ 4, 1 }, { 4, 6 });
+    const auto ride = park.flat_ride("Bikes", { 4, 6 }, 100);
+    auto& r = park.world().registry;
+    r.get<CycleRide>(ride).no_children = true;
+    for (i32 i = 0; i < 10; ++i)
+        r.get<Visitor>(park.guest({ i % 8, 0 })).age = AgeGroup::Child;
+    park.run_seconds(600);
+    CHECK(r.get<Attraction>(ride).customers == 0);
+    for (i32 i = 0; i < 10; ++i)
+        park.guest({ i % 8, 0 });
+    CHECK(park.run_until([&] { return r.get<Attraction>(ride).customers >= 5; }, 600));
+    for (const auto [g, visitor, errand] : r.view<const Visitor, const Errand>().each())
+        if (visitor.age == AgeGroup::Child)
+            CHECK(errand.kind != ErrandKind::Riding);
+}
+
+TEST_CASE("at a ride not for children a party's children are turned away and wait while the rest ride")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 6, 0 });
+    const auto ride = park.flat_ride("Bikes", { 6, 0 }, 100, { .capacity = 4, .cycle_seconds = 20, .exit = glm::ivec2 { 3, 0 } });
+    const auto parent = park.guest({ 6, 0 });
+    const auto child = park.guest({ 6, 0 });
+    park.party({ parent, child });
+    auto& r = park.world().registry;
+    r.get<Visitor>(child).age = AgeGroup::Child;
+    r.get<CycleRide>(ride).no_children = true;
+    r.get<Errand>(parent) = { ErrandKind::Heading, ride, 0 };
+    park.run(2);
+    CHECK(r.get<Errand>(parent).kind == ErrandKind::Riding);
+    CHECK(r.get<Errand>(child).kind == ErrandKind::Waiting);
+    REQUIRE(r.all_of<Thoughts>(child));
+    CHECK(std::ranges::contains(r.get<Thoughts>(child).recent, ThoughtKind::Barred, &Thought::kind));
+    CHECK(park.run_until([&] { return r.get<Errand>(child).kind == ErrandKind::Following; }, 30));
+    CHECK(r.get<Attraction>(ride).customers == 1);
+}
+
 TEST_CASE("a park steps the same however many workers share the work")
 {
     const auto build = [](u32 threads) {

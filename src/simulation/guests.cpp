@@ -112,6 +112,7 @@ namespace rct3::simulation
             bool untested = false;
             usize queued = 0;     ///< Guests in the queue at this entrance
             bool tracked = false; ///< A ride whose cars run on track
+            bool no_children = false;
         };
 
         /// Whether the guest, or anyone in their party, carries a park map.
@@ -157,10 +158,10 @@ namespace rct3::simulation
                 else if (const auto* ride = r.try_get<CycleRide>(e))
                 {
                     // A ride with more than one station is on offer at each, guests going to the nearest.
-                    out.push_back({ e, AttractionKind::Ride, Product::Drink, *a.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash, ride->excitement.value, ride->nausea.value, ride_worth(*ride), ride->untested, ride->queue.size(), r.all_of<Trains>(e) });
+                    out.push_back({ e, AttractionKind::Ride, Product::Drink, *a.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash, ride->excitement.value, ride->nausea.value, ride_worth(*ride), ride->untested, ride->queue.size(), r.all_of<Trains>(e), ride->no_children });
                     for (const Stop& stop : ride->stops)
                         if (stop.entrance)
-                            out.push_back({ e, AttractionKind::Ride, Product::Drink, *stop.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash, ride->excitement.value, ride->nausea.value, ride_worth(*ride), ride->untested, stop.queue.size(), r.all_of<Trains>(e) });
+                            out.push_back({ e, AttractionKind::Ride, Product::Drink, *stop.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash, ride->excitement.value, ride->nausea.value, ride_worth(*ride), ride->untested, stop.queue.size(), r.all_of<Trains>(e), ride->no_children });
                 }
                 else if (const auto* door = r.try_get<PoolDoor>(e))
                 {
@@ -209,8 +210,9 @@ namespace rct3::simulation
         /// and then a ride. In the rain with no umbrella, a guest getting wet wants one first, and rides only
         /// under cover. On a hot day food and drink is best cold, on a cold day hot; a guest too hot wants
         /// something cold to eat or drink, or a ride that splashes them. A party with a map goes for rides more
-        /// often; one without now and then goes to buy one.
-        std::optional<std::pair<entt::entity, std::vector<NodeId>>> choose(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, const Needs& needs, const Mood& mood, const Wallet& wallet, Dice& dice, bool rained_on, f32 daring, const Taste& taste, f32 temperature, bool with_map, entt::entity last_ridden, entt::entity favourite, const NameCheats& cheats)
+        /// often; one without now and then goes to buy one. A child never picks a ride not for children, and a party
+        /// with `children` seldom does.
+        std::optional<std::pair<entt::entity, std::vector<NodeId>>> choose(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, const Needs& needs, const Mood& mood, const Wallet& wallet, Dice& dice, bool rained_on, f32 daring, const Taste& taste, f32 temperature, bool with_map, entt::entity last_ridden, entt::entity favourite, const NameCheats& cheats, bool child, bool children)
         {
             struct Want
             {
@@ -280,6 +282,8 @@ namespace rct3::simulation
                     // them try whatever it is like.
                     const bool tried = o.tracked ? cheats.ride_all_tracked : cheats.ride_all_flat;
                     if (o.kind != AttractionKind::Ride || o.price > wallet.cash.value || (!o.untested && !tried && (o.intensity > wildest || o.intensity < taste.least.value)) || (o.cover < least_cover && !tried) || (splash && !o.splash))
+                        continue;
+                    if (o.no_children && (child || (children && !random::chance(dice.state, kTuning.choosing.with_children.value))))
                         continue;
                     const RideInMind in_mind { .excitement = { o.excitement }, .intensity = { o.intensity }, .nausea = { o.nausea }, .price = { o.price }, .worth = o.worth, .favourite = o.entity == favourite, .just_been = o.entity == last_ridden, .untested = o.untested };
                     const f32 wants = tried ? std::max(ride_appeal(in_mind, taste, mood), kTuning.choosing.bar) : ride_appeal(in_mind, taste, mood);
@@ -886,10 +890,13 @@ namespace rct3::simulation
                             // A party goes where its neediest member needs to; whoever is sickest decides on rides.
                             Needs want = needs;
                             Mood feel = mood;
+                            const bool child = age_of(r, movers[i]) == AgeGroup::Child;
+                            bool children = child;
                             if (const auto* member = r.try_get<Member>(movers[i]))
                             {
                                 for (const entt::entity m : r.get<Party>(member->party).members)
                                 {
+                                    children = children || age_of(r, m) == AgeGroup::Child;
                                     const Needs& n = r.get<Needs>(m);
                                     want = { std::max(want.hunger.value, n.hunger.value), std::max(want.thirst.value, n.thirst.value), std::max(want.bladder.value, n.bladder.value), std::max(want.swim.value, n.swim.value) };
                                     feel.nausea.value = std::max(feel.nausea.value, r.get<Mood>(m).nausea.value);
@@ -905,7 +912,7 @@ namespace rct3::simulation
                             auto goal = going_home(r, paths, movers[i], at, dice, night, weather.storm, cash_machine, world.tick);
                             const bool with_map = party_map(r, movers[i]);
                             if (!goal)
-                                goal = choose(paths, at, on_offer, want, feel, wallet, dice, weather.rain && !r.all_of<Umbrella>(movers[i]), night && age_of(r, movers[i]) == AgeGroup::Teen ? kTuning.night.daring.value : 0, taste_of(r, movers[i]), weather.temperature.value, with_map, r.all_of<Ridden>(movers[i]) ? r.get<Ridden>(movers[i]).last : entt::null, r.all_of<Favourite>(movers[i]) ? r.get<Favourite>(movers[i]).ride : entt::null, world.cheats);
+                                goal = choose(paths, at, on_offer, want, feel, wallet, dice, weather.rain && !r.all_of<Umbrella>(movers[i]), night && age_of(r, movers[i]) == AgeGroup::Teen ? kTuning.night.daring.value : 0, taste_of(r, movers[i]), weather.temperature.value, with_map, r.all_of<Ridden>(movers[i]) ? r.get<Ridden>(movers[i]).last : entt::null, r.all_of<Favourite>(movers[i]) ? r.get<Favourite>(movers[i]).ride : entt::null, world.cheats, child, children);
                             // Off to a ride: whoever holds the party's map looks at it, once every guest has
                             // stepped, as that may be another member.
                             if (goal && with_map && r.all_of<CycleRide>(goal->first))
@@ -1484,6 +1491,14 @@ namespace rct3::simulation
                 }
                 else
                     r.remove<Crossing>(guest);
+                // A child at a ride not for children (come to it on their way across the park) goes elsewhere, and
+                // the party with them.
+                if (ride->no_children && age_of(r, guest) == AgeGroup::Child)
+                {
+                    think(r, guest, ThoughtKind::Barred, arrived[i], now);
+                    errand = { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
+                    continue;
+                }
                 // A full line puts them off: they think so and go elsewhere, and the party with them.
                 if (queue.size() >= queue_room(line))
                 {
@@ -1504,8 +1519,13 @@ namespace rct3::simulation
                 };
                 join(guest);
                 for (const entt::entity m : followers)
-                    if (r.get<Mood>(m).nausea.value < kTuning.needs.max_nausea.value && random::chance(r.get<Dice>(m).state, kTuning.walking.join_chance.value))
+                {
+                    // The children of a party at a ride not for children are turned away, and wait with the rest.
+                    if (ride->no_children && age_of(r, m) == AgeGroup::Child)
+                        think(r, m, ThoughtKind::Barred, arrived[i], now);
+                    else if (r.get<Mood>(m).nausea.value < kTuning.needs.max_nausea.value && random::chance(r.get<Dice>(m).state, kTuning.walking.join_chance.value))
                         join(m);
+                }
             }
         }
     }

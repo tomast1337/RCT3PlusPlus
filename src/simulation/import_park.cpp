@@ -457,6 +457,19 @@ namespace rct3::simulation
         });
     }
 
+    std::vector<std::optional<u32>> ride_flags(const save::model::RideModel& rides, const std::function<std::optional<std::filesystem::path>(std::string_view)>& find)
+    {
+        return from_ride_items(rides, find, [](const auto& ride) { return std::optional(ride.info.flags); });
+    }
+
+    void bar_children(SimWorld& world, std::span<const entt::entity> added, std::span<const std::optional<u32>> flags)
+    {
+        constexpr u32 kNotForChildren = 0x1; ///< Of an attraction item's flags
+        for (usize i = 0; i < flags.size() && i < added.size(); ++i)
+            if (auto* cycle = flags[i] && added[i] != entt::null ? world.registry.try_get<CycleRide>(added[i]) : nullptr)
+                cycle->no_children = (*flags[i] & kNotForChildren) != 0;
+    }
+
     usize import_cover(SimWorld& world, const std::function<std::vector<rct3::park::Overhead>(std::span<const glm::vec3>)>& overhead)
     {
         PathNetwork& paths = world.paths;

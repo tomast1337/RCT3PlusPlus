@@ -224,6 +224,13 @@ namespace rct3::simulation
     /// `ride_guests` finds its guests; nothing for tracked rides, whose cars say.
     [[nodiscard]] std::vector<std::optional<u32>> ride_seatings(const save::model::RideModel& rides, const std::function<std::optional<std::filesystem::path>(std::string_view)>& find);
 
+    /// The flags of the item of each ride of `rides` (see ovl::AttractionInfo::flags); nothing where it cannot be read.
+    [[nodiscard]] std::vector<std::optional<u32>> ride_flags(const save::model::RideModel& rides, const std::function<std::optional<std::filesystem::path>(std::string_view)>& find);
+
+    /// Marks the rides of `added` (as import_rides and the like made them, by place) whose item's `flags` say they
+    /// are not for children.
+    void bar_children(SimWorld& world, std::span<const entt::entity> added, std::span<const std::optional<u32>> flags);
+
     /// Adds a ride for every flat ride and coaster of `rides` whose timing is known and whose entrance touches
     /// a queue or a path; returns each ride's entity by its place in `rides.rides`, null for those left out. A flat ride's timing is `flat_timings` at its place in
     /// `rides.rides`. A coaster with its track in `coasters` at its place runs its train round it; one without

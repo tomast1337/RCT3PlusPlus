@@ -151,6 +151,7 @@ namespace rct3::simulation
         Hot = 96,
         GaveUpQueue = 131,
         QueueTooLong = 201, ///< Put off a ride by its queue, before joining
+        Barred = 63,        ///< A child turned away from a ride not for children
         AttackedBySeagull = 40,
         RideNotSafe = 45,
         MoreRides = 105, ///< Wishing the park had more rides

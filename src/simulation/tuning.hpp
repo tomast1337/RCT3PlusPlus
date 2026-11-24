@@ -75,6 +75,9 @@ namespace rct3::simulation::tuning
         f32 reach = 25;        ///< Tiles away, as the crow flies, past which a guest does not think of a ride
         f32 map_reach = 60;    ///< And with a park map in hand
         f32 queue_halves = 15; ///< Chosen by eye: guests in a ride's queue that halve how likely one who wants it picks it
+        /// Of a party with children thinking of a ride not for children at all. Approximation: in saved parks,
+        /// grown-ups with children along are on such rides about a third as often as those without.
+        units::Chance with_children { 0.3 };
     };
 
     /// Guests showing how a ride left them as they step off.

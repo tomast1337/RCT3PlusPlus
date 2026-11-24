@@ -1777,7 +1777,12 @@ namespace rct3::scene::park
                         // The window shows a gallery's excitement as a ride's, out of ten.
                         for (const auto [e, a, gallery] : scene.sim.registry.view<const simulation::Attraction, const simulation::Gallery>().each())
                             if (const auto ride = std::ranges::find(scene.rides.rides, a.saved, [](const save::model::Ride& r) { return r.base.id; }); a.saved != 0 && ride != scene.rides.rides.end())
+                            {
                                 ride->assessment = { .valid = true, .excitement = gallery.excitement.value * 10 };
+                                // Satisfaction, as a whole percent: of those who watched since loading, those pleased.
+                                if (gallery.watched > 0)
+                                    ride->base.satisfaction = static_cast<f32>(gallery.pleased) * units::kPercent / static_cast<f32>(gallery.watched);
+                            }
                     }
                 }
                 profiling::section("Guests", [&] {

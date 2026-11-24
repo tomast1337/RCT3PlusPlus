@@ -30,6 +30,8 @@ namespace rct3::simulation
         u32 windows = 0;                   ///< Guests who watch at once
         glm::vec2 window { 0.0f };         ///< From the middle of its entrance tile towards the gallery, one long
         units::Share animals_health { 1 }; ///< Of the animals seen through it, on average
+        u32 watched = 0;                   ///< Guests who have watched at it since the park was loaded
+        u32 pleased = 0;                   ///< Of those, the ones who liked what they saw
     };
 
     /// What an enclosure has for those who come to look at it.

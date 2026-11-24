@@ -71,3 +71,9 @@ for (const g of galleries()) log(g.name, `customers ${g.customers}, excitement $
 const end = visitors()!;
 log("visitors goal after a month", `${end.now ?? "-"} of ${end.target ?? "-"}${end.met ? ", met" : ""}`);
 expect((end.now ?? 0) > (start.now ?? 0), "the gallery visitors goal gaining over a month");
+// A gallery onto healthy animals leaves its visitors pleased, as its satisfaction shows.
+rides.show(galleries()[0].index);
+await until(() => ui.find("info/Attraction_Customers") !== undefined, 120, "the gallery's window");
+await ui.click("info/Attraction_Customers");
+await frames(5);
+await screenshot("pleased gallery window");

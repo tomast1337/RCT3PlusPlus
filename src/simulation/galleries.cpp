@@ -81,11 +81,13 @@ namespace rct3::simulation
     void watch_animals(entt::registry& r, entt::entity guest, entt::entity gallery, f32 now)
     {
         const auto& k = kGalleryRates;
-        const Gallery& g = r.get<Gallery>(gallery);
+        Gallery& g = r.get<Gallery>(gallery);
         auto& happiness = r.get<Mood>(guest).happiness.value;
         happiness = clamp01(happiness + k.cheer.value * (g.excitement.value - k.boring.value) / (1 - k.boring.value));
         const ThoughtKind thought = g.animals_health.value < k.unwell.value ? ThoughtKind::AnimalLooksUnhealthy : g.excitement.value < k.boring.value ? ThoughtKind::AnimalIsBoring : random::chance(r.get<Dice>(guest).state, 0.5) ? ThoughtKind::AnimalLooksHealthy : ThoughtKind::SeeAnimal;
         think(r, guest, thought, gallery, now);
+        ++g.watched;
+        g.pleased += thought == ThoughtKind::SeeAnimal || thought == ThoughtKind::AnimalLooksHealthy ? 1 : 0;
     }
 
 } // namespace rct3::simulation

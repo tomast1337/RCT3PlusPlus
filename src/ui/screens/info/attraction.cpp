@@ -142,6 +142,9 @@ namespace rct3::ui::screens::info
                         return std::u16string(found);
                 }
             }
+            // A viewing gallery is named as the scenery item it is built from.
+            if (const auto found = strings.get_ignoring_case(std::format("SceneryItem_{}", base)); !found.empty())
+                return std::u16string(found);
             return { };
         }
 
@@ -321,8 +324,9 @@ namespace rct3::ui::screens::info
             const std::optional<f32> rate = measured ? std::optional(f.flow->per_hour) : f.takings ? std::optional(f.takings->customers_per_hour) : std::nullopt;
             // A whole line: the rate in words is too wide for half of one.
             add(page, strings, "AttractionCustomersDialogLabel_Customers", rate ? per_hour(strings, count(std::lround(*rate))) : missing());
-            add_half(page, strings, "AttractionCustomersDialogLabel_Popularity", percent(a.popularity * kPercent));
-            add_half(page, strings, "AttractionCustomersDialogLabel_Satisfaction", percent(a.satisfaction * kPercent));
+            // Both kept as whole percents, as the management lists show them.
+            add_half(page, strings, "AttractionCustomersDialogLabel_Popularity", percent(a.popularity));
+            add_half(page, strings, "AttractionCustomersDialogLabel_Satisfaction", percent(a.satisfaction));
             add_half(page, strings, "AttractionCustomersDialogLabel_TotalCustomers", count(a.total_guests + (f.takings ? f.takings->customers : 0)));
             std::u16string age = missing();
             if (f.now)

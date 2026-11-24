@@ -1095,6 +1095,8 @@ type PersonOnPaths = {
     up: WorldUnits;
     /** Their party's number, shared by its members, while they are with it. */
     party?: number;
+    /** A child guest. */
+    child?: true;
     /** On their way out of the park. */
     leaving?: true;
     /** Walking in from a spawn point, not through the gate yet. */

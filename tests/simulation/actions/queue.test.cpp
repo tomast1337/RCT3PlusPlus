@@ -16,7 +16,8 @@ namespace
         simulation::SimWorld sim { };
         simulation::park::ParkState state { .cash = units::Money { 500'000 }, .loan = units::Money { 300'000 } };
         save::model::ParkModel model { .finance = { .max_loan = 1'000'000 } };
-        World world { .sim = sim, .park = state, .model = model };
+        save::model::RideModel rides { };
+        World world { .sim = sim, .park = state, .model = model, .rides = rides };
     };
 } // namespace
 

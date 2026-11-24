@@ -6,6 +6,7 @@
 
 #include "core/types.hpp"
 #include "save/model/park.hpp"
+#include "save/model/rides.hpp"
 #include "simulation/park/state.hpp"
 #include "simulation/sim_world.hpp"
 #include "units/units.hpp"
@@ -22,6 +23,7 @@ namespace rct3::simulation::actions
         SimWorld& sim;
         park::ParkState& park;
         save::model::ParkModel& model;
+        save::model::RideModel& rides;
     };
 
     /// Why an action was not done.

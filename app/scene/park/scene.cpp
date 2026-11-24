@@ -1215,7 +1215,7 @@ namespace rct3::scene::park
             // its simulation all go by its ticks, so a park plays the same however its frames fall.
             // What the player asked applies at the start of the next tick, before the frame's time is counted, and
             // also when no tick runs, so building while paused works.
-            simulation::actions::World action_world { .sim = scene.sim, .park = scene.park, .model = scene.park_model };
+            simulation::actions::World action_world { .sim = scene.sim, .park = scene.park, .model = scene.park_model, .rides = scene.rides };
             simulation::actions::apply_due(scene.actions, action_world);
             const f32 frame_seconds = elapsed.value * simulation::time_factor(scene.park.speed);
             scene.thunder = rct3::park::advance_weather_look(scene.weather_look, scene.park.weather, scene.park.speed.paused ? 0.0f : elapsed.value, scene.weather_dice);

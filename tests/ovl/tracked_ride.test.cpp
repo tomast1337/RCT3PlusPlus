@@ -21,7 +21,8 @@ TEST_CASE("version 1 tracked rides start with the attraction fields")
     pool.add("CoasterSpline:spl");
     std::vector<std::byte> bytes;
     put(bytes, { 3, 0, 0, 0, 10000, static_cast<u32>(-7500), 0, 0, 2500, 0 });
-    bytes.resize(0x28 + 8, std::byte { 0 });
+    bytes.resize(0x28 + 0xC, std::byte { 0 });
+    bytes[0x30] = std::byte { 0x3 }; // Flags: not for children, among others
     const auto overlay = make_record_overlay(1, pool, "Coaster:trr", bytes, { { 4, "CoasterName:txt" }, { 8, "CoasterDescription:txt" }, { 0xC, "CoasterIcon:gsi" }, { 0x24, "CoasterSpline:spl" } });
     const auto items = read_tracked_rides(overlay, overlay.common());
     REQUIRE(items.size() == 1);
@@ -35,6 +36,7 @@ TEST_CASE("version 1 tracked rides start with the attraction fields")
     CHECK(i.value_a == 10000);
     CHECK(i.value_b == -7500);
     CHECK(i.value_c == 2500);
+    CHECK(i.flags == 0x3);
 }
 
 TEST_CASE("version 5 tracked rides give the pieces they list, track sections and splines")
@@ -193,6 +195,7 @@ TEST_CASE("later tracked rides give their track rules and piece patterns")
     REQUIRE(items[0].ride.has_value());
     const auto& r = items[0].ride->rules;
     CHECK(r.flags == 0x200);
+    CHECK(items[0].ride->info.flags == 0x200);
     CHECK(r.min_pieces == 3u);
     CHECK(r.circuit_only);
     CHECK(r.most_trains == 4u);

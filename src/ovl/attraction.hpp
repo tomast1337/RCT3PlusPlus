@@ -35,6 +35,8 @@ namespace rct3::ovl
         /// The add-on pack the attraction came with: 0 for the base game, 1 for the first, 2 for the second.
         /// Version 4 and 5 files only; 0 in older ones, which hold only base game attractions.
         u32 addon = 0;
+        /// Bits: 0x1 children may not ride it. Read from tracked rides and, in version 4 and 5 files, animated rides.
+        u32 flags = 0;
     };
 
     namespace detail
@@ -53,6 +55,7 @@ namespace rct3::ovl
             std::optional<usize> value_b { };
             std::optional<usize> value_c { };
             std::optional<usize> addon { }; ///< Read from one-stream and many-stream files
+            std::optional<usize> flags { };
         };
 
         /// Guests a ride makes room for in the park, from the small block of a ride item that holds it: its
@@ -98,6 +101,7 @@ namespace rct3::ovl
             info.value_b = static_cast<i32>(word(at.value_b));
             info.value_c = word(at.value_c);
             info.addon = layout != OvlLayout::NoStream ? word(at.addon) : 0;
+            info.flags = word(at.flags);
             return info;
         }
 

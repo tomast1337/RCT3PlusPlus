@@ -26,9 +26,9 @@ namespace rct3::ovl
                 case OvlLayout::NoStream:
                     return { { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20 }, 0x28, 0x28, std::nullopt };
                 case OvlLayout::OneStream:
-                    return { { .type_id = 0x68, .name_text = 0x6C, .description_text = 0x70, .icon = 0x74, .style = 0x18, .spline = 0x8C, .value_a = 0x78, .value_b = 0x7C, .value_c = 0x88 }, 0xB8, 0x90, 0xA8 };
+                    return { { .type_id = 0x68, .name_text = 0x6C, .description_text = 0x70, .icon = 0x74, .style = 0x18, .spline = 0x8C, .value_a = 0x78, .value_b = 0x7C, .value_c = 0x88, .flags = 0x98 }, 0xB8, 0x90, 0xA8 };
                 default:
-                    return { { .type_id = 0x70, .name_text = 0x74, .description_text = 0x78, .icon = 0x7C, .style = 0x18, .spline = 0x94, .value_a = 0x80, .value_b = 0x84, .value_c = 0x90 }, 0xC4, 0x98, 0xB4 };
+                    return { { .type_id = 0x70, .name_text = 0x74, .description_text = 0x78, .icon = 0x7C, .style = 0x18, .spline = 0x94, .value_a = 0x80, .value_b = 0x84, .value_c = 0x90, .flags = 0xA0 }, 0xC4, 0x98, 0xB4 };
             }
         }
 

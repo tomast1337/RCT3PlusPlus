@@ -1,0 +1,73 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "simulation/actions/queue.hpp"
+
+#include "core/types.hpp"
+
+#include <doctest/doctest.h>
+
+using namespace rct3;
+using namespace rct3::simulation::actions;
+
+namespace
+{
+    /// A park with cash to spare, a loan and room to borrow more.
+    struct Park
+    {
+        simulation::SimWorld sim { };
+        simulation::park::ParkState state { .cash = units::Money { 500'000 }, .loan = units::Money { 300'000 } };
+        save::model::ParkModel model { .finance = { .max_loan = 1'000'000 } };
+        World world { .sim = sim, .park = state, .model = model };
+    };
+} // namespace
+
+TEST_CASE("an action queued for a tick applies at the start of that tick, not before")
+{
+    Park p;
+    ActionQueue queue;
+    p.sim.tick = 3;
+    queue.waiting.push_back({ .tick = 5, .action = LoanStep { .move = simulation::park::LoanMove::Borrow } });
+    apply_due(queue, p.world);
+    CHECK(p.state.loan == units::Money { 300'000 });
+    p.sim.tick = 4;
+    apply_due(queue, p.world);
+    CHECK(p.state.loan == units::Money { 300'000 });
+    p.sim.tick = 5;
+    apply_due(queue, p.world);
+    CHECK(p.state.loan == units::Money { 400'000 });
+    CHECK(*p.state.cash == units::Money { 600'000 });
+    CHECK(queue.waiting.empty());
+}
+
+TEST_CASE("actions asked while paused apply though no tick runs, in the order asked")
+{
+    Park p;
+    ActionQueue queue;
+    p.sim.tick = 7;
+    ask(queue, p.sim, SetLoan { .to = units::Money { 0 } });
+    ask(queue, p.sim, LoanStep { .move = simulation::park::LoanMove::Borrow });
+    // A paused turn: the tick stays where it is, and the actions apply all the same.
+    apply_due(queue, p.world);
+    CHECK(p.sim.tick == 7);
+    CHECK(p.state.loan == units::Money { 100'000 });
+    CHECK(*p.state.cash == units::Money { 300'000 });
+    CHECK(queue.waiting.empty());
+}
+
+TEST_CASE("an action refused by its check changes nothing")
+{
+    Park p;
+    SUBCASE("repaying more than the cash in hand")
+    {
+        p.state.cash = units::Money { 50 };
+        CHECK(apply(p.world, Action { LoanStep { .move = simulation::park::LoanMove::Repay } }).error() == Refusal::NothingToDo);
+        CHECK(p.state.loan == units::Money { 300'000 });
+        CHECK(*p.state.cash == units::Money { 50 });
+    }
+    SUBCASE("borrowing past the most the park may")
+    {
+        p.state.loan = units::Money { 1'000'000 };
+        CHECK(apply(p.world, Action { SetLoan { .to = units::Money { 2'000'000 } } }).error() == Refusal::NothingToDo);
+        CHECK(p.state.loan == units::Money { 1'000'000 });
+        CHECK(*p.state.cash == units::Money { 500'000 });
+    }
+}

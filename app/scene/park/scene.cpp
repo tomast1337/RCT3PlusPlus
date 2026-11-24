@@ -1174,9 +1174,9 @@ namespace rct3::scene::park
         if (bar)
         {
             if (const auto asked = bar->take_speed())
-                scene.park.speed = *asked;
+                simulation::actions::ask(scene.actions, scene.sim, simulation::actions::SetSpeed { .speed = *asked });
             if (const auto mode = bar->take_day_mode())
-                simulation::change_mode(scene.day_clock, *mode);
+                simulation::actions::ask(scene.actions, scene.sim, simulation::actions::SetDayMode { .mode = *mode });
             if (bar->objective_button().take_click())
                 open_management_window(desktop, ui::screens::management::ManagementTopic::Objectives, 0, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
             if (bar->take_finances())
@@ -1187,7 +1187,7 @@ namespace rct3::scene::park
         for (const ui::PlayCommand c : input.commands)
         {
             if (c == ui::PlayCommand::TogglePause)
-                scene.park.speed = simulation::pause_toggled(scene.park.speed);
+                simulation::actions::ask(scene.actions, scene.sim, simulation::actions::TogglePause { });
             // The ride camera key leaves, or rides along on the ride whose window is open.
             else if (c == ui::PlayCommand::ToggleRideCamera && scene.riding_along())
                 stop_riding(scene);
@@ -1209,7 +1209,7 @@ namespace rct3::scene::park
             // its simulation all go by its ticks, so a park plays the same however its frames fall.
             // What the player asked applies at the start of the next tick, before the frame's time is counted, and
             // also when no tick runs, so building while paused works.
-            simulation::actions::World action_world { .sim = scene.sim, .park = scene.park, .model = scene.park_model, .rides = scene.rides, .research = scene.research, .research_items = scene.research_items, .ledger_month = scene.ledger_month };
+            simulation::actions::World action_world { .sim = scene.sim, .park = scene.park, .model = scene.park_model, .rides = scene.rides, .research = scene.research, .research_items = scene.research_items, .ledger_month = scene.ledger_month, .day_clock = scene.day_clock };
             simulation::actions::apply_due(scene.actions, action_world);
             if (std::exchange(scene.info_after_actions, false))
                 if (auto info = desktop.root().find_as<ui::screens::info::InfoPanel>(kInfoName))

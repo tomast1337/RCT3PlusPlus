@@ -1206,6 +1206,10 @@ namespace rct3::scene::park
         profiling::section("Simulation", [&] {
             // The park runs at the speed picked, and stops while paused: its day and calendar, its messages' ages and
             // its simulation all go by its ticks, so a park plays the same however its frames fall.
+            // What the player asked applies at the start of the next tick, before the frame's time is counted, and
+            // also when no tick runs, so building while paused works.
+            simulation::actions::World action_world { .sim = scene.sim, .park = scene.park, .model = scene.park_model };
+            simulation::actions::apply_due(scene.actions, action_world);
             const f32 frame_seconds = elapsed.value * simulation::time_factor(scene.park.speed);
             scene.thunder = rct3::park::advance_weather_look(scene.weather_look, scene.park.weather, scene.park.speed.paused ? 0.0f : elapsed.value, scene.weather_dice);
             if (scene.rain_strength)
@@ -1376,6 +1380,7 @@ namespace rct3::scene::park
             }
             for (; scene.sim_time >= simulation::kTickSeconds; scene.sim_time -= simulation::kTickSeconds)
             {
+                simulation::actions::apply_due(scene.actions, action_world);
                 constexpr f32 game_seconds = simulation::kTickSeconds;
                 simulation::advance(scene.day_clock, game_seconds);
                 const f32 before = scene.park.time;
@@ -2660,15 +2665,9 @@ namespace rct3::scene::park
         if (asks.buy_land || asks.buy_rights)
             buy_land_tool(scene, asks.buy_rights ? rct3::park::LandBuy::Rights : rct3::park::LandBuy::Land, assets);
         if (asks.borrow)
-            simulation::park::change_loan(scene.park, { scene.park_model.finance.max_loan }, *asks.borrow ? simulation::park::LoanMove::Borrow : simulation::park::LoanMove::Repay);
-        // A step at a time, as the buttons do, until the loan reaches the bar's or can move no more.
+            simulation::actions::ask(scene.actions, scene.sim, simulation::actions::LoanStep { .move = *asks.borrow ? simulation::park::LoanMove::Borrow : simulation::park::LoanMove::Repay });
         if (asks.loan)
-        {
-            const bool borrow = *asks.loan > scene.park.loan;
-            while (*asks.loan != scene.park.loan && (*asks.loan > scene.park.loan) == borrow && simulation::park::change_loan(scene.park, { scene.park_model.finance.max_loan }, borrow ? simulation::park::LoanMove::Borrow : simulation::park::LoanMove::Repay))
-            {
-            }
-        }
+            simulation::actions::ask(scene.actions, scene.sim, simulation::actions::SetLoan { .to = *asks.loan });
         if (asks.research_budget)
             scene.research.budget = *asks.research_budget;
         if (asks.campaign_kind)

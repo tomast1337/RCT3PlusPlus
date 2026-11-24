@@ -70,6 +70,7 @@
 #include "scene/track/building.hpp"
 #include "scene/wild_birds.hpp"
 #include "scene/zoo_animals.hpp"
+#include "simulation/actions/queue.hpp"
 #include "simulation/animal_care.hpp"
 #include "simulation/boat.hpp"
 #include "simulation/components.hpp"
@@ -629,6 +630,7 @@ namespace rct3::scene::park
         std::vector<save::model::RideShow> shows; ///< What the show rides put on, by ride id
         save::model::PeopleModel people;          ///< Guests, staff and litter as saved; read for the weekly rating
         simulation::SimWorld sim;                 ///< The paths, shops and guests the simulation runs
+        simulation::actions::ActionQueue actions; ///< What the player asked of the park, waiting for its tick
         bool simulate = true;                     ///< Run the simulation and show its guests; off only to see the park as saved
         f32 sim_time = 0;                         ///< Park seconds the simulation has still to step
         /// Ride cars, drawn apart from the objects so the simulation can move them round their rides' courses.

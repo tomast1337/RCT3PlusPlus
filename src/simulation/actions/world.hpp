@@ -7,6 +7,7 @@
 #include "core/types.hpp"
 #include "save/model/park.hpp"
 #include "save/model/rides.hpp"
+#include "simulation/day_clock.hpp"
 #include "simulation/park/state.hpp"
 #include "simulation/research.hpp"
 #include "simulation/sim_world.hpp"
@@ -30,6 +31,7 @@ namespace rct3::simulation::actions
         Research& research;
         std::optional<std::vector<ResearchItem>>& research_items; ///< What can be researched; none until the build lists are read
         std::optional<i64>& ledger_month;                         ///< As park::ledger_month keeps it
+        DayClock& day_clock;
     };
 
     /// Why an action was not done.

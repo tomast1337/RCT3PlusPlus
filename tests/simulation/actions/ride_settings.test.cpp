@@ -23,7 +23,8 @@ namespace
         simulation::Research research { };
         std::optional<std::vector<simulation::ResearchItem>> research_items { };
         std::optional<i64> ledger_month { };
-        World world { .sim = sandbox.world(), .park = state, .model = model, .rides = rides, .research = research, .research_items = research_items, .ledger_month = ledger_month };
+        simulation::DayClock day_clock { };
+        World world { .sim = sandbox.world(), .park = state, .model = model, .rides = rides, .research = research, .research_items = research_items, .ledger_month = ledger_month, .day_clock = day_clock };
         entt::entity ride = entt::null;
 
         Park()

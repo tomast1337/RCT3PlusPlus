@@ -23,6 +23,7 @@ namespace rct3::simulation::staff
 
     inline constexpr i32 kMostTraining = 3;
     inline constexpr i32 kMostWageLevel = 2;
+    inline constexpr i32 kMostWarnings = 4; ///< After which a worker cannot be warned again
 
     /// The job a saved staff member of `kind` does in the simulation.
     [[nodiscard]] StaffRole staff_role(save::model::StaffKind kind);

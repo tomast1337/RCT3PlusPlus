@@ -15,6 +15,7 @@
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 #include "simulation/components.hpp"
+#include "simulation/staff/care.hpp"
 #include "ui/screens/info/attraction.hpp"
 #include "ui/screens/info/panel.hpp"
 #include "ui/string_table.hpp"
@@ -145,8 +146,7 @@ namespace rct3::ui::screens::info
 
     /// Longest name the player may type, as in the game.
     inline constexpr i32 kLongestName = 34;
-    /// Warnings after which a member of staff cannot be warned again.
-    inline constexpr i32 kMostWarnings = 4;
+    using simulation::staff::kMostWarnings;
     inline constexpr i32 kMostTraining = 3; ///< Training levels, as the simulation has them
     /// Colours a uniform can be in.
     inline constexpr usize kUniformColours = 16;

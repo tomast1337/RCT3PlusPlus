@@ -987,12 +987,8 @@ namespace rct3::scene::park
                     if (!pick_up_person(scene, *scene.shown_person) && (scene.shown_people[*scene.shown_person].guest == entt::null || scene.sim.registry.all_of<simulation::Left>(scene.shown_people[*scene.shown_person].guest)))
                         simulation::park::post(scene.park.messages, { .text_key = "Pincer_NotOwned" });
                 }
-                else if (change->id == ui::screens::info::person_control(ui::screens::info::PersonControl::Sack))
-                {
-                    fire(scene, *scene.shown_person);
-                    scene.shown_person.reset();
-                    info->hide();
-                }
+                else if (const ShownPerson& p = scene.shown_people[*scene.shown_person]; change->id == ui::screens::info::person_control(ui::screens::info::PersonControl::Sack) && p.staff && p.saved < scene.people.staff.size())
+                    simulation::actions::ask(scene.actions, scene.sim, simulation::actions::FireStaff { .worker = scene.people.staff[p.saved].person.id });
                 else if (change_person(scene, *scene.shown_person, *change))
                 {
                     show_info_page(scene, *info, assets, options);
@@ -2256,7 +2252,7 @@ namespace rct3::scene::park
                 // The staff's mood into the saved staff, for their windows to show.
                 for (const ShownPerson& p : scene.shown_people)
                     if (const auto* staff = p.staff && p.saved < scene.people.staff.size() && scene.sim.registry.valid(p.guest) ? scene.sim.registry.try_get<simulation::Staff>(p.guest) : nullptr)
-                        copy_mood(*staff, scene.people.staff[p.saved]);
+                        simulation::actions::copy_mood(*staff, scene.people.staff[p.saved]);
                 // A train that stalled in testing is told to the player.
                 for (usize i = 0; i < scene.ride_entities.size() && i < scene.rides.rides.size(); ++i)
                     if (auto* stalls = scene.ride_entities[i] != entt::null ? scene.sim.registry.try_get<simulation::TrainStalls>(scene.ride_entities[i]) : nullptr)
@@ -2658,14 +2654,9 @@ namespace rct3::scene::park
             else
                 logging::logger("ui").warning("ledger: writing {} failed", folder ? path.string() : folder.error());
         }
-        // A worker hired is handed to the pointer at once, to be put down where the player likes, or given back
-        // to go to the park's entrance; whoever was held before goes back first.
-        if (const auto hired = asks.staff.hire ? hire(scene, *asks.staff.hire) : std::nullopt)
-        {
-            (void)hold_person(scene, { }, { }, Hold::GiveBack);
-            if (pick_up_person(scene, *hired))
-                scene.holding->from = simulation::entrance_drop(scene.sim).value_or(scene.holding->from);
-        }
+        // A worker hired is handed to the pointer once the park takes them on (show_changed_people).
+        if (asks.staff.hire)
+            simulation::actions::ask(scene.actions, scene.sim, simulation::actions::HireStaff { .kind = *asks.staff.hire });
         // The staff window names workers by their place in the park's staff; the scene by the person shown.
         const auto shown_worker = [&](usize staff) -> std::optional<usize> {
             const auto p = std::ranges::find_if(scene.shown_people, [&](const ShownPerson& p) { return p.staff && p.saved == staff; });
@@ -2688,14 +2679,7 @@ namespace rct3::scene::park
         {
             const usize who = *shown_worker(change->staff);
             if (change->what.id == ui::screens::info::person_control(ui::screens::info::PersonControl::Sack))
-            {
-                if (info && scene.shown_person == who)
-                {
-                    info->hide();
-                    scene.shown_person.reset();
-                }
-                fire(scene, who);
-            }
+                simulation::actions::ask(scene.actions, scene.sim, simulation::actions::FireStaff { .worker = scene.people.staff.at(change->staff).person.id });
             else
             {
                 // The info panel's changes go to the worker it shows; this one is shown for the change alone,

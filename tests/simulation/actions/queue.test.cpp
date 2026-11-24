@@ -72,14 +72,14 @@ TEST_CASE("an action refused by its check changes nothing")
     SUBCASE("repaying more than the cash in hand")
     {
         p.state.cash = units::Money { 50 };
-        CHECK(apply(p.world, Action { LoanStep { .move = simulation::park::LoanMove::Repay } }).error() == Refusal::NothingToDo);
+        CHECK(simulation::actions::apply(p.world, Action { LoanStep { .move = simulation::park::LoanMove::Repay } }).error() == Refusal::NothingToDo);
         CHECK(p.state.loan == units::Money { 300'000 });
         CHECK(*p.state.cash == units::Money { 50 });
     }
     SUBCASE("borrowing past the most the park may")
     {
         p.state.loan = units::Money { 1'000'000 };
-        CHECK(apply(p.world, Action { SetLoan { .to = units::Money { 2'000'000 } } }).error() == Refusal::NothingToDo);
+        CHECK(simulation::actions::apply(p.world, Action { SetLoan { .to = units::Money { 2'000'000 } } }).error() == Refusal::NothingToDo);
         CHECK(p.state.loan == units::Money { 1'000'000 });
         CHECK(*p.state.cash == units::Money { 500'000 });
     }

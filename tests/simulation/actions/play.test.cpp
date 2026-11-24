@@ -34,10 +34,10 @@ namespace
 TEST_CASE("a pause pressed twice plays the park on at the speed it had")
 {
     Park p;
-    REQUIRE(apply(p.world, Action { SetSpeed { .speed = { .speed = simulation::Speed::Fast } } }));
-    REQUIRE(apply(p.world, Action { TogglePause { } }));
+    REQUIRE(simulation::actions::apply(p.world, Action { SetSpeed { .speed = { .speed = simulation::Speed::Fast } } }));
+    REQUIRE(simulation::actions::apply(p.world, Action { TogglePause { } }));
     CHECK(p.state.speed.paused);
-    REQUIRE(apply(p.world, Action { TogglePause { } }));
+    REQUIRE(simulation::actions::apply(p.world, Action { TogglePause { } }));
     CHECK_FALSE(p.state.speed.paused);
     CHECK(p.state.speed.speed == simulation::Speed::Fast);
 }
@@ -45,6 +45,6 @@ TEST_CASE("a pause pressed twice plays the park on at the speed it had")
 TEST_CASE("the day and night switch to the mode asked")
 {
     Park p;
-    REQUIRE(apply(p.world, Action { SetDayMode { .mode = simulation::DayMode::AlwaysNight } }));
+    REQUIRE(simulation::actions::apply(p.world, Action { SetDayMode { .mode = simulation::DayMode::AlwaysNight } }));
     CHECK(p.day_clock.mode == simulation::DayMode::AlwaysNight);
 }

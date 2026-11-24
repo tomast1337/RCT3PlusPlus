@@ -23,6 +23,7 @@ namespace rct3::simulation::actions
         };
         std::vector<Queued> waiting { };   ///< In the order asked
         std::vector<std::string> told { }; ///< Why actions applied were refused, as string keys, for the player
+        Changed changed { };               ///< What actions applied changed, for World::changed
     };
 
     /// Queues `action` for the next tick `world` runs.

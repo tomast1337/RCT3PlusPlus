@@ -4,11 +4,14 @@
 #include "core/types.hpp"
 #include "logging/log.hpp"
 #include "park/person/motions.hpp"
+#include "scene/park/holding.hpp"
 #include "scene/park/patrol.hpp"
 #include "scene/park/ride_camera.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/setup.hpp"
+#include "simulation/actions/ids.hpp"
 #include "simulation/animals.hpp"
+#include "simulation/holding.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/name_cheats.hpp"
 #include "simulation/park/finance.hpp"
@@ -130,7 +133,10 @@ namespace rct3::scene::park
                 number = std::max(number, s.type_id);
         const simulation::Staff& worker = r.get<const simulation::Staff>(e);
         const glm::vec3 at = r.get<const simulation::Pose>(e).position;
+        const save::model::PeopleObjectId id = simulation::actions::new_person_id(scene.people);
         save::model::Staff& kept = scene.people.staff.emplace_back();
+        scene.staff_walkers.push_back(e);
+        kept.person.id = id;
         kept.kind = kind;
         kept.type_id = number + 1;
         kept.wage_level = worker.wage_level;
@@ -329,6 +335,7 @@ namespace rct3::scene::park
             scene.sim.registry.destroy(walker);
         scene.shown_people.erase(scene.shown_people.begin() + static_cast<std::ptrdiff_t>(shown));
         scene.people.staff.erase(scene.people.staff.begin() + static_cast<std::ptrdiff_t>(saved));
+        scene.staff_walkers.erase(scene.staff_walkers.begin() + static_cast<std::ptrdiff_t>(saved));
         for (ShownPerson& p : scene.shown_people)
         {
             if (p.staff && p.saved > saved)
@@ -342,6 +349,74 @@ namespace rct3::scene::park
             else if (*followed && **followed > shown)
                 --**followed;
         }
+    }
+
+    void show_changed_people(ParkScene& scene)
+    {
+        simulation::actions::Changed& changed = scene.actions.changed;
+        if (changed.sacked_staff.empty() && changed.hired_staff.empty() && changed.dressed_staff.empty())
+            return;
+        change_people(scene);
+        const auto shown_page = [&](usize page) { return std::ranges::find_if(scene.shown_people, [&](const ShownPerson& p) { return p.staff && p.saved == page; }); };
+        // A worker's clothes and colours as saved; a part the wardrobe does not have stays as it was.
+        const auto dress = [&](ShownPerson& shown, const save::model::Appearance& a) {
+            rct3::park::person::PersonLook& look = shown.pose.look;
+            for (const auto [part, ref] : { std::pair { &look.head, a.head }, std::pair { &look.body, a.body }, std::pair { &look.legs, a.legs } })
+                if (const auto worn = std::ranges::find(scene.wardrobe, ref.id, &Outfit::id); worn != scene.wardrobe.end())
+                    *part = worn->set;
+            for (usize i = 0; i < look.colours.size(); ++i)
+                if (a.palettes[i] < kColourCells) // Not one the save leaves to pick
+                    look.colours[i] = a.palettes[i];
+        };
+        for (const usize page : changed.sacked_staff)
+        {
+            if (const auto gone = shown_page(page); gone != scene.shown_people.end())
+            {
+                const auto shown = static_cast<usize>(gone - scene.shown_people.begin());
+                if (auto info = scene.desktop->root().find_as<ui::screens::info::InfoPanel>(kInfoName); info && scene.shown_person == shown)
+                    info->hide();
+                scene.shown_people.erase(gone);
+                for (std::optional<usize>* followed : { &scene.shown_person, &scene.riding_person })
+                {
+                    if (*followed == shown)
+                        followed->reset();
+                    else if (*followed && **followed > shown)
+                        --**followed;
+                }
+            }
+            for (ShownPerson& p : scene.shown_people)
+                if (p.staff && p.saved > page)
+                    --p.saved;
+        }
+        for (const entt::entity e : changed.hired_staff)
+        {
+            const auto walker = std::ranges::find(scene.staff_walkers, e);
+            if (walker == scene.staff_walkers.end())
+                continue; // Sacked since
+            const auto page = static_cast<usize>(walker - scene.staff_walkers.begin());
+            const save::model::Person& kept = scene.people.staff[page].person;
+            ShownPerson& shown = scene.shown_people.emplace_back(ShownPerson { .walking = true, .staff = true, .saved = page, .guest = e });
+            dress(shown, kept.appearance);
+            shown.pose.motion = rct3::park::person::motion::kWalk;
+            shown.pose.world = glm::translate(glm::mat4(1.0f), glm::vec3 { kept.position.x, kept.position.y, kept.position.z });
+            scene.known_guests.insert(e);
+        }
+        // The last worker hired is handed to the pointer at once, to be put down where the player likes, or given
+        // back to go to the park's entrance; whoever was held before goes back first.
+        if (!changed.hired_staff.empty())
+            if (const auto hired = std::ranges::find(scene.shown_people, changed.hired_staff.back(), &ShownPerson::guest); hired != scene.shown_people.end())
+            {
+                (void)hold_person(scene, { }, { }, Hold::GiveBack);
+                if (pick_up_person(scene, static_cast<usize>(hired - scene.shown_people.begin())))
+                    scene.holding->from = simulation::entrance_drop(scene.sim).value_or(scene.holding->from);
+            }
+        for (const save::model::PeopleObjectId id : changed.dressed_staff)
+            if (const auto worker = simulation::actions::staff_of(scene.people, id))
+                if (const auto shown = shown_page(static_cast<usize>(&*worker - scene.people.staff.data())); shown != scene.shown_people.end())
+                    dress(*shown, worker->person.appearance);
+        changed.sacked_staff.clear();
+        changed.hired_staff.clear();
+        changed.dressed_staff.clear();
     }
 
 } // namespace rct3::scene::park

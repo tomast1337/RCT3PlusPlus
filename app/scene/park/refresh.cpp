@@ -20,6 +20,7 @@
 #include "scene/park/scene.hpp"
 #include "scene/park/setup.hpp"
 #include "scene/park/view.hpp"
+#include "simulation/actions/ids.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
@@ -1224,7 +1225,10 @@ namespace rct3::scene::park
                         worn[o.section] = &o;
                 if (std::ranges::contains(worn, nullptr))
                     continue;
+                const save::model::PeopleObjectId id = simulation::actions::new_person_id(scene.people);
                 save::model::Staff& kept = scene.people.staff.emplace_back();
+                scene.staff_walkers.push_back(e);
+                kept.person.id = id;
                 kept.kind = keeper ? save::model::StaffKind::AnimalKeeper : save::model::StaffKind::LifeGuard;
                 kept.person.type = type;
                 kept.person.name = std::format("{} {}", keeper ? "Keeper" : "Lifeguard", scene.people.staff.size());
@@ -1298,7 +1302,10 @@ namespace rct3::scene::park
                     const glm::mat4 place = rct3::park::object::placed_transform(*object->second, &model->second, scene.grid, scene.fitted) * *model->second.vendor_place;
                     const entt::entity e = simulation::add_vendor(scene.sim, glm::vec3(place[3]));
                     scene.known_guests.insert(e);
+                    const save::model::PeopleObjectId id = simulation::actions::new_person_id(scene.people);
                     save::model::Staff& kept = scene.people.staff.emplace_back();
+                    scene.staff_walkers.push_back(e);
+                    kept.person.id = id;
                     kept.kind = save::model::StaffKind::Vendor;
                     kept.type_id = ++number;
                     kept.work = save::model::VendorWork { .scenery_item = { post } };

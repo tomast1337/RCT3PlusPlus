@@ -6,10 +6,12 @@
 
 #include "core/types.hpp"
 #include "park/carried_goods.hpp"
+#include "park/person/outfit.hpp"
 #include "park/pools/pools.hpp"
 #include "park/track/course.hpp"
 #include "park/track/rules.hpp"
 #include "save/model/park.hpp"
+#include "save/model/people.hpp"
 #include "save/model/rides.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/park/state.hpp"
@@ -26,6 +28,17 @@
 
 namespace rct3::simulation::actions
 {
+
+    /// What applied actions changed of what the park is drawn from, for whoever draws it to build again only that,
+    /// and then to empty, keeping the lists' memory. Lists are in the order the changes were made.
+    struct Changed
+    {
+        /// Workers sacked, each by their place in the park's staff as it was when they went: a later one counts
+        /// places after the earlier have gone.
+        std::vector<usize> sacked_staff { };
+        std::vector<entt::entity> hired_staff { };                  ///< Workers hired, by the walker made for them
+        std::vector<save::model::PeopleObjectId> dressed_staff { }; ///< Workers whose clothes or their colours changed
+    };
 
     /// The parts of a park that actions read and change. Whoever runs the park owns them and lends them for the call.
     struct World
@@ -44,9 +57,14 @@ namespace rct3::simulation::actions
         const std::vector<std::optional<rct3::park::track::TrackCourse>>& courses; ///< By ride, of those whose track is known whole
         const rct3::park::pools::PoolMap& pools;
         const std::optional<save::model::RideIndex>& building; ///< The ride under construction, if any
-        std::vector<save::model::RideIndex>& readying;
-        std::vector<save::model::RideShow>& shows; ///< What the show rides put on, by ride id
-                                                   ///< Tracked rides whose trains are to be made ready to run
+        std::vector<save::model::RideIndex>& readying;         ///< Tracked rides whose trains are to be made ready to run
+        std::vector<save::model::RideShow>& shows;             ///< What the show rides put on, by ride id
+        save::model::PeopleModel& people;
+        std::vector<entt::entity>& staff_walkers;                ///< By place in `people.staff`, the simulated worker of each; null for one not walked
+        const std::vector<rct3::park::person::Outfit>& wardrobe; ///< What workers hired may wear
+        usize& costumes_given;                                   ///< To entertainers hired, each the next costume in turn
+        const bool& simulating;                                  ///< Whether the park runs its simulation; none is hired without
+        Changed& changed;
     };
 
     /// Why an action was not done.

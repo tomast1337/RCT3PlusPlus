@@ -33,6 +33,7 @@
 #include "park/object/mesh.hpp"
 #include "park/object/pick.hpp"
 #include "park/person/mesh.hpp"
+#include "park/person/outfit.hpp"
 #include "park/pools/pools.hpp"
 #include "park/ride/cars.hpp"
 #include "park/sky/mesh.hpp"
@@ -395,18 +396,7 @@ namespace rct3::scene::park
         simulation::DiveStep dive = simulation::DiveStep::None; ///< How far with a dive when last looked at
     };
 
-    /// A head, body or legs that a guest coming in at the gate may wear.
-    struct Outfit
-    {
-        save::model::PeopleObjectId id = 0; ///< Of its part group in the park's people
-        const rct3::park::person::PartSet* set = nullptr;
-        save::model::PersonType type = save::model::PersonType::Adult;
-        save::model::Sex sex = save::model::Sex::Male;
-        u8 section = 0;    ///< As a part group's
-        u8 vip = 0;        ///< The celebrity it dresses, by the number VIP goals give them; 0 for guests'
-        bool swim = false; ///< Swimwear, worn at a pool in place of the clothes of its section
-        u8 costume = 0;    ///< The entertainer's costume it belongs to, by the save's sub type number
-    };
+    using rct3::park::person::Outfit;
 
     /// A photo of a player's guest to draw: where from, and the start of its file name.
     struct PhotoShot
@@ -768,6 +758,7 @@ namespace rct3::scene::park
         /// What guests carry from stalls, by its carried item's symbol (as `Burger:cid`).
         std::map<std::string, CarriedLook, std::less<>> carried_looks;
         std::vector<ShownPerson> shown_people;
+        std::vector<entt::entity> staff_walkers;                     ///< By place in people.staff, the simulated worker of each; null for one not walked
         std::vector<ui::screens::management::StaffLook> staff_looks; ///< Of each worker, for the staff window; filled each frame
         std::vector<Outfit> wardrobe;                                ///< What guests coming in at the gate wear
         std::unordered_set<entt::entity> known_guests;               ///< The simulated guests the shown people were made for

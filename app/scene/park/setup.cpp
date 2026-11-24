@@ -66,6 +66,7 @@
 #include "scene/park/water.hpp"
 #include "scene/pool_tools.hpp"
 #include "scene/track/trains.hpp"
+#include "simulation/actions/ids.hpp"
 #include "simulation/animal_care.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
@@ -105,6 +106,7 @@
 #include <system_error>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 
 namespace rct3::scene::park
@@ -1018,6 +1020,11 @@ namespace rct3::scene::park
             if (people)
             {
                 scene.people = std::move(*people);
+                // Workers go by the id they are saved under; those hired before rct3++ gave them one get theirs now.
+                std::unordered_set<save::model::PeopleObjectId> worker_ids;
+                for (save::model::Staff& s : scene.people.staff)
+                    if (s.person.id == 0 || !worker_ids.insert(s.person.id).second)
+                        worker_ids.insert(s.person.id = simulation::actions::new_person_id(scene.people));
                 load_people_models(device, scene, install, seed);
                 load_zoo_animals(scene, install);
                 load_wild_birds(device, scene, install);
@@ -1334,6 +1341,11 @@ namespace rct3::scene::park
                             scene.unreliable_rides.push_back(e);
                     }
                     scene.known_guests.insert(guests.begin(), guests.end());
+                    for (entt::entity& e : staff)
+                        if (e != entt::null && !scene.sim.registry.all_of<simulation::Staff>(e))
+                            e = entt::null;
+                    scene.staff_walkers = std::move(staff);
+                    scene.staff_walkers.resize(scene.people.staff.size(), entt::null);
                     for (ShownPerson& p : scene.shown_people)
                     {
                         if (!p.staff && p.saved < guests.size() && guests[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Stride>(guests[p.saved]))
@@ -1343,9 +1355,9 @@ namespace rct3::scene::park
                         }
                         // A vendor stands in their booth as saved, serving the riders handing over their tickets, and a
                         // lifeguard sits in their chair.
-                        else if (p.staff && p.saved < staff.size() && staff[p.saved] != entt::null && scene.sim.registry.all_of<simulation::Staff>(staff[p.saved]))
+                        else if (p.staff && p.saved < scene.staff_walkers.size() && scene.staff_walkers[p.saved] != entt::null)
                         {
-                            p.guest = staff[p.saved];
+                            p.guest = scene.staff_walkers[p.saved];
                             scene.known_guests.insert(p.guest); // A keeper is not hired again
                         }
                     }

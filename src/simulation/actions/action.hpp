@@ -6,6 +6,7 @@
 #pragma once
 
 #include "simulation/actions/park_management.hpp"
+#include "simulation/actions/ride_settings.hpp"
 #include "simulation/actions/world.hpp"
 
 #include <variant>
@@ -13,7 +14,7 @@
 namespace rct3::simulation::actions
 {
 
-    using Action = std::variant<LoanStep, SetLoan>;
+    using Action = std::variant<LoanStep, SetLoan, ChangeRide, CallMechanic, RenameAttraction>;
 
     /// Whether `action` can be done in `world` as it is now, and what it costs.
     [[nodiscard]] Outcome check(const World& world, const Action& action);

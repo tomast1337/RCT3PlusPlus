@@ -439,7 +439,28 @@ namespace rct3::scene::park
 
     simulation::actions::World action_world(ParkScene& scene)
     {
-        return { .sim = scene.sim, .park = scene.park, .model = scene.park_model, .rides = scene.rides, .research = scene.research, .research_items = scene.research_items, .ledger_month = scene.ledger_month, .day_clock = scene.day_clock, .carried = scene.carried, .unjoined_stalls = scene.placing.unjoined_stalls, .track_rules = scene.track_rules, .courses = scene.courses, .pools = scene.pools, .building = scene.building.ride, .readying = scene.readying, .shows = scene.shows };
+        return { .sim = scene.sim,
+                 .park = scene.park,
+                 .model = scene.park_model,
+                 .rides = scene.rides,
+                 .research = scene.research,
+                 .research_items = scene.research_items,
+                 .ledger_month = scene.ledger_month,
+                 .day_clock = scene.day_clock,
+                 .carried = scene.carried,
+                 .unjoined_stalls = scene.placing.unjoined_stalls,
+                 .track_rules = scene.track_rules,
+                 .courses = scene.courses,
+                 .pools = scene.pools,
+                 .building = scene.building.ride,
+                 .readying = scene.readying,
+                 .shows = scene.shows,
+                 .people = scene.people,
+                 .staff_walkers = scene.staff_walkers,
+                 .wardrobe = scene.wardrobe,
+                 .costumes_given = scene.costumes_given,
+                 .simulating = scene.simulate,
+                 .changed = scene.actions.changed };
     }
 
     void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::game::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, units::Seconds elapsed)
@@ -1221,6 +1242,7 @@ namespace rct3::scene::park
             // also when no tick runs, so building while paused works.
             simulation::actions::World action_world = park::action_world(scene);
             simulation::actions::apply_due(scene.actions, action_world);
+            show_changed_people(scene);
             if (!scene.actions.told.empty())
                 scene.refusal = scene.actions.told.back();
             scene.actions.told.clear();
@@ -1398,6 +1420,7 @@ namespace rct3::scene::park
             for (; scene.sim_time >= simulation::kTickSeconds; scene.sim_time -= simulation::kTickSeconds)
             {
                 simulation::actions::apply_due(scene.actions, action_world);
+                show_changed_people(scene);
                 constexpr f32 game_seconds = simulation::kTickSeconds;
                 simulation::advance(scene.day_clock, game_seconds);
                 const f32 before = scene.park.time;

@@ -43,4 +43,9 @@ namespace rct3::scene::park
     /// Fires the member of staff shown as `shown` of shown_people: they leave the park at once, as in the game.
     void fire(ParkScene& scene, usize shown);
 
+    /// Builds again the people actions applied have changed (simulation::actions::Changed): the shown people of the
+    /// workers sacked go, those hired are shown and the last handed to the pointer, and those dressed anew wear it.
+    /// Empties what it has taken.
+    void show_changed_people(ParkScene& scene);
+
 } // namespace rct3::scene::park

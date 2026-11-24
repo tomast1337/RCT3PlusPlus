@@ -18,4 +18,22 @@ namespace rct3::simulation::actions
         return found != rides.stalls.end() ? std::optional<save::model::Stall&>(*found) : std::nullopt;
     }
 
+    std::optional<save::model::Staff&> staff_of(save::model::PeopleModel& people, save::model::PeopleObjectId id)
+    {
+        const auto found = std::ranges::find(people.staff, id, [](const save::model::Staff& s) { return s.person.id; });
+        return found != people.staff.end() ? std::optional<save::model::Staff&>(*found) : std::nullopt;
+    }
+
+    save::model::PeopleObjectId new_person_id(const save::model::PeopleModel& people)
+    {
+        save::model::PeopleObjectId next = save::model::PeopleObjectId { 1 } << 32;
+        for (const save::model::Guest& g : people.guests)
+            next = std::max(next, g.person.id + 1);
+        for (const save::model::Staff& s : people.staff)
+            next = std::max(next, s.person.id + 1);
+        for (const save::model::PartGroup& g : people.part_groups)
+            next = std::max(next, g.id + 1);
+        return next;
+    }
+
 } // namespace rct3::simulation::actions

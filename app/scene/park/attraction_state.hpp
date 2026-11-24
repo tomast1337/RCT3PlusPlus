@@ -28,12 +28,6 @@ namespace rct3::scene::park
     /// Those choices as the tab fans them: each greyed, with why as its help, when `state_refusal` refuses it.
     [[nodiscard]] std::vector<ui::screens::info::InfoChoice> state_fan(const ParkScene& scene, rct3::park::AttractionRef ref, const ui::StringTable& strings);
 
-    /// Puts ride `ride` in `state` when its track and doors let it; otherwise leaves it and gives the string
-    /// key of why not.
-    [[nodiscard]] std::optional<std::string> change_ride_state(ParkScene& scene, save::model::RideIndex ride, save::model::AttractionState state);
-    /// The same for stall `stall`, which cannot open with nothing on its menu.
-    [[nodiscard]] std::optional<std::string> change_stall_state(ParkScene& scene, save::model::StallIndex stall, save::model::AttractionState state);
-
     /// Has the running show ride that `show` is for put it on from its next go.
     void stage_show(ParkScene& scene, const save::model::RideShow& show);
 

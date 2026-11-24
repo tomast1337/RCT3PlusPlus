@@ -22,7 +22,12 @@ namespace
         simulation::DayClock day_clock { };
         rct3::park::CarriedKinds carried { };
         std::vector<save::model::StallIndex> unjoined_stalls { };
-        World world { .sim = sim, .park = state, .model = model, .rides = rides, .research = research, .research_items = research_items, .ledger_month = ledger_month, .day_clock = day_clock, .carried = carried, .unjoined_stalls = unjoined_stalls };
+        std::vector<rct3::park::track::TrackRules> track_rules { };
+        std::vector<std::optional<rct3::park::track::TrackCourse>> courses { };
+        rct3::park::pools::PoolMap pools { };
+        std::optional<save::model::RideIndex> building { };
+        std::vector<save::model::RideIndex> readying { };
+        World world { .sim = sim, .park = state, .model = model, .rides = rides, .research = research, .research_items = research_items, .ledger_month = ledger_month, .day_clock = day_clock, .carried = carried, .unjoined_stalls = unjoined_stalls, .track_rules = track_rules, .courses = courses, .pools = pools, .building = building, .readying = readying };
     };
 } // namespace
 

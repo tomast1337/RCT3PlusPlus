@@ -434,6 +434,11 @@ namespace rct3::scene::park
         return ripple_park_water(scene.water, rct3::park::view_ray(scene.camera, size.x / size.y, ndc), scene.grid);
     }
 
+    simulation::actions::World action_world(ParkScene& scene)
+    {
+        return { .sim = scene.sim, .park = scene.park, .model = scene.park_model, .rides = scene.rides, .research = scene.research, .research_items = scene.research_items, .ledger_month = scene.ledger_month, .day_clock = scene.day_clock, .carried = scene.carried, .unjoined_stalls = scene.placing.unjoined_stalls, .track_rules = scene.track_rules, .courses = scene.courses, .pools = scene.pools, .building = scene.building.ride, .readying = scene.readying };
+    }
+
     void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::game::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, units::Seconds elapsed)
     {
         // The ground is built before the models that give the rides' and stalls' paving its size are read.
@@ -1041,10 +1046,8 @@ namespace rct3::scene::park
                 {
                     const save::model::AttractionState state = states[choice->choice].state;
                     scene.refusal.clear();
-                    if (f.ride != nullptr)
-                        scene.refusal = change_ride_state(scene, scene.shown->ride(), state).value_or("");
-                    else
-                        scene.refusal = change_stall_state(scene, scene.shown->stall(), state).value_or("");
+                    simulation::actions::ask(scene.actions, scene.sim, simulation::actions::SetAttractionState { .attraction = common->id, .state = state });
+                    scene.info_after_actions = true;
                     open_info(scene, *info, *scene.shown, assets, options);
                 }
             }
@@ -1209,7 +1212,7 @@ namespace rct3::scene::park
             // its simulation all go by its ticks, so a park plays the same however its frames fall.
             // What the player asked applies at the start of the next tick, before the frame's time is counted, and
             // also when no tick runs, so building while paused works.
-            simulation::actions::World action_world { .sim = scene.sim, .park = scene.park, .model = scene.park_model, .rides = scene.rides, .research = scene.research, .research_items = scene.research_items, .ledger_month = scene.ledger_month, .day_clock = scene.day_clock, .carried = scene.carried, .unjoined_stalls = scene.placing.unjoined_stalls };
+            simulation::actions::World action_world = park::action_world(scene);
             simulation::actions::apply_due(scene.actions, action_world);
             if (!scene.actions.told.empty())
                 scene.refusal = scene.actions.told.back();
@@ -2643,9 +2646,9 @@ namespace rct3::scene::park
         for (const ui::screens::management::ManagementRow& r : asks.listed)
         {
             if (r.kind == ui::screens::management::ManagementRow::Kind::Ride && r.index < scene.rides.rides.size())
-                (void)change_ride_state(scene, save::model::RideIndex { r.index }, *asks.state_all);
+                simulation::actions::ask(scene.actions, scene.sim, simulation::actions::SetAttractionState { .attraction = scene.rides.rides[r.index].base.id, .state = *asks.state_all, .tell = false });
             else if (r.kind == ui::screens::management::ManagementRow::Kind::Stall && r.index < scene.rides.stalls.size())
-                simulation::actions::put_in_state(scene.sim, scene.rides.stalls[r.index].base, *asks.state_all);
+                simulation::actions::ask(scene.actions, scene.sim, simulation::actions::SetAttractionState { .attraction = scene.rides.stalls[r.index].base.id, .state = *asks.state_all, .tell = false });
         }
         if (asks.park_open)
             simulation::actions::ask(scene.actions, scene.sim, simulation::actions::OpenPark { .open = *asks.park_open });

@@ -17,7 +17,7 @@
 namespace rct3::simulation::actions
 {
 
-    using Action = std::variant<LoanStep, SetLoan, OpenPark, SetResearchBudget, FocusResearch, SetResearchPriority, StartCampaign, SetSpeed, TogglePause, SetDayMode, ChangeRide, CallMechanic, RenameAttraction, ChangeStall>;
+    using Action = std::variant<LoanStep, SetLoan, OpenPark, SetResearchBudget, FocusResearch, SetResearchPriority, StartCampaign, SetSpeed, TogglePause, SetDayMode, ChangeRide, CallMechanic, RenameAttraction, ChangeStall, SetAttractionState>;
 
     /// Whether `action` can be done in `world` as it is now, and what it costs.
     [[nodiscard]] Outcome check(const World& world, const Action& action);

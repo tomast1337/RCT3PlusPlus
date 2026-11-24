@@ -987,6 +987,9 @@ namespace rct3::scene::park
     /// Its random numbers come from `seed`: the same park and seed give the same park.
     [[nodiscard]] std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::game::GameInstall& install, const ui::StringTable& strings, const ui::Palette& palette, const config::game::GameOptions& options, const std::filesystem::path& path, random::Seed seed, const simulation::RatingModel& ratings, const ParkLoadReport& report = { });
 
+    /// The parts of `scene` actions read and change, lent for applying them.
+    [[nodiscard]] simulation::actions::World action_world(ParkScene& scene);
+
     void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::game::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, units::Seconds elapsed);
 
     /// True once the player has confirmed leaving.

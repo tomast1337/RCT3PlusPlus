@@ -1320,8 +1320,10 @@ namespace rct3::scene
             if (!a.at(0).is_number_unsigned() || a[0].get<usize>() >= park.rides.rides.size() || state == kStates.end())
                 throw std::invalid_argument("rides.setState takes a ride's place in rides.list() and \"closed\", \"testing\" or \"open\"");
             // The reason it stays as it was, as a string key; null once changed.
-            const auto refused = park::change_ride_state(park, save::model::RideIndex { a[0].get<usize>() }, state->second);
-            return refused ? Json(*refused) : Json(nullptr);
+            // At once, as a script expects to see it.
+            simulation::actions::World world = park::action_world(park);
+            const auto done = simulation::actions::apply(world, simulation::actions::Action { simulation::actions::SetAttractionState { .attraction = park.rides.rides[a[0].get<usize>()].base.id, .state = state->second } });
+            return done ? Json(nullptr) : Json(done.error().told);
         });
         engine_.define("rides.setFixedSpeed", [this](const Json& a) {
             park::ParkScene& park = park_of(park_);
@@ -1338,8 +1340,9 @@ namespace rct3::scene
             const bool open = a.size() == 2 && a[1] == "open";
             if (!a.at(0).is_number_unsigned() || a[0].get<usize>() >= park.rides.stalls.size() || !(open || (a.size() == 2 && a[1] == "closed")))
                 throw std::invalid_argument("stalls.setState takes a stall's place in stalls.list() and \"closed\" or \"open\"");
-            const auto refused = park::change_stall_state(park, save::model::StallIndex { a[0].get<usize>() }, open ? save::model::AttractionState::Open : save::model::AttractionState::Closed);
-            return refused ? Json(*refused) : Json(nullptr);
+            simulation::actions::World world = park::action_world(park);
+            const auto done = simulation::actions::apply(world, simulation::actions::Action { simulation::actions::SetAttractionState { .attraction = park.rides.stalls[a[0].get<usize>()].base.id, .state = open ? save::model::AttractionState::Open : save::model::AttractionState::Closed } });
+            return done ? Json(nullptr) : Json(done.error().told);
         });
         engine_.define("stalls.setPrice", [this](const Json& a) {
             park::ParkScene& park = park_of(park_);

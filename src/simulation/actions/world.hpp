@@ -6,6 +6,9 @@
 
 #include "core/types.hpp"
 #include "park/carried_goods.hpp"
+#include "park/pools/pools.hpp"
+#include "park/track/course.hpp"
+#include "park/track/rules.hpp"
 #include "save/model/park.hpp"
 #include "save/model/rides.hpp"
 #include "simulation/day_clock.hpp"
@@ -35,8 +38,13 @@ namespace rct3::simulation::actions
         std::optional<std::vector<ResearchItem>>& research_items; ///< What can be researched; none until the build lists are read
         std::optional<i64>& ledger_month;                         ///< As park::ledger_month keeps it
         DayClock& day_clock;
-        const rct3::park::CarriedKinds& carried;               ///< What stalls sell and its extras
-        std::vector<save::model::StallIndex>& unjoined_stalls; ///< Stalls with something to sell, waiting to be joined to the paths
+        const rct3::park::CarriedKinds& carried;                                   ///< What stalls sell and its extras
+        std::vector<save::model::StallIndex>& unjoined_stalls;                     ///< Stalls with something to sell, waiting to be joined to the paths
+        const std::vector<rct3::park::track::TrackRules>& track_rules;             ///< By ride, what its kind asks of its track
+        const std::vector<std::optional<rct3::park::track::TrackCourse>>& courses; ///< By ride, of those whose track is known whole
+        const rct3::park::pools::PoolMap& pools;
+        const std::optional<save::model::RideIndex>& building; ///< The ride under construction, if any
+        std::vector<save::model::RideIndex>& readying;         ///< Tracked rides whose trains are to be made ready to run
     };
 
     /// Why an action was not done.
@@ -47,6 +55,7 @@ namespace rct3::simulation::actions
             Missing,      ///< It names something the park does not have, or no longer has
             CannotAfford, ///< The park has not the money
             NothingToDo,  ///< The park is already as asked, or can move no further that way
+            Forbidden,    ///< The park's rules do not let it be done as things are
         };
 
         Refusal(Kind kind, std::string told = { })

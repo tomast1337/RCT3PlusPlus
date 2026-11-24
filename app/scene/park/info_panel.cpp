@@ -931,19 +931,12 @@ namespace rct3::scene::park
             set_ride(simulation::actions::RideSetting::Circuits, change.value);
         else if (const auto show = std::ranges::find(scene.shows, ride->base.id, &save::model::RideShow::ride); show != scene.shows.end() && (change.id == ui::screens::info::control_id(ShowTrick) || change.id == ui::screens::info::control_id(ShowDelete)))
         {
-            // The ride puts the changed show on from its next go.
             const usize place = std::min(scene.info_section, show->order.size());
             const std::vector<u32> offers = ui::screens::info::show_offers(*show);
-            if (change.id == ui::screens::info::control_id(ShowDelete) && place < show->order.size() && show->order.size() > 1)
-                show->order.erase(show->order.begin() + static_cast<std::ptrdiff_t>(place));
-            else if (change.id == ui::screens::info::control_id(ShowTrick) && change.value >= 0 && std::cmp_less(change.value, offers.size()))
-            {
-                if (place < show->order.size())
-                    show->order[place] = offers[static_cast<usize>(change.value)];
-                else
-                    show->order.push_back(offers[static_cast<usize>(change.value)]);
-            }
-            stage_show(scene, *show);
+            if (change.id == ui::screens::info::control_id(ShowDelete))
+                simulation::actions::ask(scene.actions, scene.sim, simulation::actions::EditShow { .ride = ride->base.id, .place = place });
+            else if (change.value >= 0 && std::cmp_less(change.value, offers.size()))
+                simulation::actions::ask(scene.actions, scene.sim, simulation::actions::EditShow { .ride = ride->base.id, .place = place, .trick = offers[static_cast<usize>(change.value)] });
         }
         else if (change.id == ui::screens::info::control_id(BlockSection))
             set_ride(simulation::actions::RideSetting::BlockSections, change.value);
@@ -962,22 +955,7 @@ namespace rct3::scene::park
         {
             // The page shows hundredths of the player's unit.
             const f32 speed = static_cast<f32>(change.value) / 100 / ui::screens::info::speed_scale(info_units(assets, options).distance);
-            if (change.id == ui::screens::info::control_id(LaunchSpeed))
-            {
-                ride->options.launch_speed = { speed };
-                if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
-                    if (auto* fleet = scene.sim.registry.try_get<simulation::Trains>(e))
-                        for (simulation::Coaster& c : fleet->trains)
-                            c.launch_speed = simulation::launch_of(*ride);
-            }
-            else
-            {
-                ride->options.lift_speed = { speed };
-                if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
-                    if (auto* fleet = scene.sim.registry.try_get<simulation::Trains>(e))
-                        for (simulation::Coaster& c : fleet->trains)
-                            c.lift_speed = c.station_speed = speed;
-            }
+            simulation::actions::ask(scene.actions, scene.sim, simulation::actions::SetRideSpeed { .ride = ride->base.id, .launch = change.id == ui::screens::info::control_id(LaunchSpeed), .speed = speed });
         }
         else if (change.id >= ui::screens::info::control_id(SpeedSeries) && change.id <= ui::screens::info::control_id(LateralSeries))
         {
@@ -986,7 +964,7 @@ namespace rct3::scene::park
             shown = static_cast<u8>(change.value != 0 ? shown | bit : shown & ~bit);
         }
         else if (change.id == ui::screens::info::control_id(Music))
-            ride->music = audio::tune_file(static_cast<usize>(std::max(change.value, 0)), scene.tunes);
+            simulation::actions::ask(scene.actions, scene.sim, simulation::actions::SetRideMusic { .ride = ride->base.id, .file = audio::tune_file(static_cast<usize>(std::max(change.value, 0)), scene.tunes) });
         else if (change.id == ui::screens::info::control_id(Fence))
             scene.ride_styles_shown = !scene.ride_styles_shown;
         else if (const bool fence = change.id == ui::screens::info::control_id(FenceStyle); fence || change.id == ui::screens::info::control_id(EntranceStyle) || change.id == ui::screens::info::control_id(ExitStyle))
@@ -1012,10 +990,6 @@ namespace rct3::scene::park
                 scene.led_signs.hidden.insert(ride->base.id);
             scene.led_signs.stale = true;
         }
-        // The running ride leaves as its settings now say.
-        if (ride != nullptr && ref.index < scene.ride_entities.size() && scene.ride_entities[ref.index] != entt::null)
-            if (auto* departure = scene.sim.registry.try_get<simulation::Departure>(scene.ride_entities[ref.index]))
-                *departure = simulation::departure_of(ride->options);
     }
 
     void open_row(ParkScene& scene, ui::screens::info::InfoPanel& panel, ui::screens::management::ManagementRow row, const ui::InterfaceAssets& assets, const config::game::GameOptions& options)

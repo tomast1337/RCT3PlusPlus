@@ -47,11 +47,41 @@ namespace rct3::simulation::actions
         std::string name { };
     };
 
+    /// Puts a show ride's trick `trick` in place `place` of its show (after the last when past it), or with no
+    /// trick takes the one there out; a show keeps one at least. The ride puts it on from its next go.
+    struct EditShow
+    {
+        save::model::ObjectId ride = 0;
+        usize place = 0;
+        std::optional<u32> trick { };
+    };
+
+    /// Sets the speed a ride's trains are launched at (`launch`) or lifted at, in metres a second.
+    struct SetRideSpeed
+    {
+        save::model::ObjectId ride = 0;
+        bool launch = true;
+        f32 speed = 0;
+    };
+
+    /// Has a ride play a file of the game's music folder while open, or none when empty.
+    struct SetRideMusic
+    {
+        save::model::ObjectId ride = 0;
+        std::string file { };
+    };
+
     [[nodiscard]] Outcome check(const World& world, const ChangeRide& action);
     void apply(World& world, const ChangeRide& action);
     [[nodiscard]] Outcome check(const World& world, const CallMechanic& action);
     void apply(World& world, const CallMechanic& action);
     [[nodiscard]] Outcome check(const World& world, const RenameAttraction& action);
     void apply(World& world, const RenameAttraction& action);
+    [[nodiscard]] Outcome check(const World& world, const EditShow& action);
+    void apply(World& world, const EditShow& action);
+    [[nodiscard]] Outcome check(const World& world, const SetRideSpeed& action);
+    void apply(World& world, const SetRideSpeed& action);
+    [[nodiscard]] Outcome check(const World& world, const SetRideMusic& action);
+    void apply(World& world, const SetRideMusic& action);
 
 } // namespace rct3::simulation::actions

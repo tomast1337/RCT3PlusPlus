@@ -26,7 +26,8 @@ namespace
         rct3::park::pools::PoolMap pools { };
         std::optional<save::model::RideIndex> building { };
         std::vector<save::model::RideIndex> readying { };
-        World world { .sim = sim, .park = state, .model = model, .rides = rides, .research = research, .research_items = research_items, .ledger_month = ledger_month, .day_clock = day_clock, .carried = carried, .unjoined_stalls = unjoined_stalls, .track_rules = track_rules, .courses = courses, .pools = pools, .building = building, .readying = readying };
+        std::vector<save::model::RideShow> shows { };
+        World world { .sim = sim, .park = state, .model = model, .rides = rides, .research = research, .research_items = research_items, .ledger_month = ledger_month, .day_clock = day_clock, .carried = carried, .unjoined_stalls = unjoined_stalls, .track_rules = track_rules, .courses = courses, .pools = pools, .building = building, .readying = readying, .shows = shows };
     };
 } // namespace
 

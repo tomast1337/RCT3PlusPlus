@@ -44,7 +44,9 @@ namespace rct3::simulation::actions
         const std::vector<std::optional<rct3::park::track::TrackCourse>>& courses; ///< By ride, of those whose track is known whole
         const rct3::park::pools::PoolMap& pools;
         const std::optional<save::model::RideIndex>& building; ///< The ride under construction, if any
-        std::vector<save::model::RideIndex>& readying;         ///< Tracked rides whose trains are to be made ready to run
+        std::vector<save::model::RideIndex>& readying;
+        std::vector<save::model::RideShow>& shows; ///< What the show rides put on, by ride id
+                                                   ///< Tracked rides whose trains are to be made ready to run
     };
 
     /// Why an action was not done.

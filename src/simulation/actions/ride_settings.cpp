@@ -83,6 +83,11 @@ namespace rct3::simulation::actions
                 ride.options.leave_if_other_train_enters_station = value != 0;
                 break;
         }
+        // The running ride leaves as its settings now say.
+        each_entity([&](entt::entity e, Attraction&) {
+            if (auto* departure = r.try_get<Departure>(e))
+                *departure = departure_of(ride.options);
+        });
     }
 
     Outcome check(const World& world, const CallMechanic& action)
@@ -119,6 +124,67 @@ namespace rct3::simulation::actions
             ride->base.name = action.name;
         else if (auto stall = stall_of(world.rides, action.attraction))
             stall->base.name = action.name;
+    }
+
+    Outcome check(const World& world, const EditShow& action)
+    {
+        const auto show = std::ranges::find(world.shows, action.ride, &save::model::RideShow::ride);
+        if (show == world.shows.end() || (!action.trick && (action.place >= show->order.size() || show->order.size() < 2)))
+            return std::unexpected(Refusal::Missing);
+        return Checked { };
+    }
+
+    void apply(World& world, const EditShow& action)
+    {
+        save::model::RideShow& show = *std::ranges::find(world.shows, action.ride, &save::model::RideShow::ride);
+        if (!action.trick)
+            show.order.erase(show.order.begin() + static_cast<std::ptrdiff_t>(action.place));
+        else if (action.place < show.order.size())
+            show.order[action.place] = *action.trick;
+        else
+            show.order.push_back(*action.trick);
+        for (auto [e, a, ride] : world.sim.registry.view<Attraction, CycleRide>().each())
+            if (a.saved == action.ride)
+                stage_show(ride, show);
+    }
+
+    Outcome check(const World& world, const SetRideSpeed& action)
+    {
+        if (!ride_of(world.rides, action.ride))
+            return std::unexpected(Refusal::Missing);
+        return Checked { };
+    }
+
+    void apply(World& world, const SetRideSpeed& action)
+    {
+        const std::optional<save::model::Ride&> found = ride_of(world.rides, action.ride);
+        save::model::Ride& ride = *found;
+        (action.launch ? ride.options.launch_speed : ride.options.lift_speed) = { action.speed };
+        for (auto [e, a, fleet] : world.sim.registry.view<Attraction, Trains>().each())
+        {
+            if (a.saved != action.ride || a.kind == AttractionKind::Pool)
+                continue;
+            for (Coaster& c : fleet.trains)
+            {
+                if (action.launch)
+                    c.launch_speed = launch_of(ride);
+                else
+                    c.lift_speed = c.station_speed = action.speed;
+            }
+        }
+    }
+
+    Outcome check(const World& world, const SetRideMusic& action)
+    {
+        if (!ride_of(world.rides, action.ride))
+            return std::unexpected(Refusal::Missing);
+        return Checked { };
+    }
+
+    void apply(World& world, const SetRideMusic& action)
+    {
+        const std::optional<save::model::Ride&> found = ride_of(world.rides, action.ride);
+        found->music = action.file;
     }
 
 } // namespace rct3::simulation::actions

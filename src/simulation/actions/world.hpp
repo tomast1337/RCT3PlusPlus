@@ -8,11 +8,14 @@
 #include "save/model/park.hpp"
 #include "save/model/rides.hpp"
 #include "simulation/park/state.hpp"
+#include "simulation/research.hpp"
 #include "simulation/sim_world.hpp"
 #include "units/units.hpp"
 
 #include <cstdint>
 #include <expected>
+#include <optional>
+#include <vector>
 
 namespace rct3::simulation::actions
 {
@@ -24,6 +27,9 @@ namespace rct3::simulation::actions
         park::ParkState& park;
         save::model::ParkModel& model;
         save::model::RideModel& rides;
+        Research& research;
+        std::optional<std::vector<ResearchItem>>& research_items; ///< What can be researched; none until the build lists are read
+        std::optional<i64>& ledger_month;                         ///< As park::ledger_month keeps it
     };
 
     /// Why an action was not done.

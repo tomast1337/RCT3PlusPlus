@@ -1216,7 +1216,7 @@ namespace rct3::scene::park
             // its simulation all go by its ticks, so a park plays the same however its frames fall.
             // What the player asked applies at the start of the next tick, before the frame's time is counted, and
             // also when no tick runs, so building while paused works.
-            simulation::actions::World action_world { .sim = scene.sim, .park = scene.park, .model = scene.park_model, .rides = scene.rides };
+            simulation::actions::World action_world { .sim = scene.sim, .park = scene.park, .model = scene.park_model, .rides = scene.rides, .research = scene.research, .research_items = scene.research_items, .ledger_month = scene.ledger_month };
             simulation::actions::apply_due(scene.actions, action_world);
             if (std::exchange(scene.info_after_actions, false))
                 if (auto info = desktop.root().find_as<ui::screens::info::InfoPanel>(kInfoName))
@@ -2688,12 +2688,7 @@ namespace rct3::scene::park
                 set_attraction_state(scene, scene.rides.stalls[r.index].base, *asks.state_all);
         }
         if (asks.park_open)
-        {
-            auto& flags = scene.park_model.park.flags.raw;
-            flags = *asks.park_open ? flags | std::to_underlying(save::model::ParkFlag::Open) : flags & ~std::to_underlying(save::model::ParkFlag::Open);
-            for (auto [e, gate] : scene.sim.registry.view<simulation::ParkGate>().each())
-                gate.closed = !*asks.park_open;
-        }
+            simulation::actions::ask(scene.actions, scene.sim, simulation::actions::OpenPark { .open = *asks.park_open });
         // Each press goes to the next entrance, round to the first.
         if (asks.centre_entrance)
         {
@@ -2716,20 +2711,15 @@ namespace rct3::scene::park
         if (asks.loan)
             simulation::actions::ask(scene.actions, scene.sim, simulation::actions::SetLoan { .to = *asks.loan });
         if (asks.research_budget)
-            scene.research.budget = *asks.research_budget;
+            simulation::actions::ask(scene.actions, scene.sim, simulation::actions::SetResearchBudget { .per_month = *asks.research_budget });
         if (asks.campaign_kind)
             scene.campaign.kind = *asks.campaign_kind;
         if (asks.start_campaign)
-            (void)simulation::park::start_campaign(scene.park, scene.park_model.finance, scene.ledger_month, scene.park_model.campaigns, *asks.start_campaign);
-        if (asks.research_focus && scene.research_items)
-            (void)simulation::focus_research(scene.research, *asks.research_focus, *scene.research_items);
-        // Areas past the end of the priorities weigh the most until set.
-        if (const auto& p = asks.research_priority; p && p->first < simulation::kResearchAreas)
-        {
-            if (scene.research.priorities.size() <= p->first)
-                scene.research.priorities.resize(p->first + 1, 1.0f);
-            scene.research.priorities[p->first] = p->second;
-        }
+            simulation::actions::ask(scene.actions, scene.sim, simulation::actions::StartCampaign { .order = *asks.start_campaign });
+        if (asks.research_focus)
+            simulation::actions::ask(scene.actions, scene.sim, simulation::actions::FocusResearch { .item = *asks.research_focus });
+        if (const auto& p = asks.research_priority)
+            simulation::actions::ask(scene.actions, scene.sim, simulation::actions::SetResearchPriority { .area = p->first, .weight = p->second });
         // Every broken path item back new at once, at the full price of each: the dear way, a handyman's the free one.
         if (asks.replace_broken && facts.broken_items > 0 && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, facts.replace_cost, simulation::park::LedgerLine::Landscaping, simulation::park::Charge::IfAffordable))
             simulation::replace_broken(scene.sim);

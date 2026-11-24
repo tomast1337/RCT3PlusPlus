@@ -15,7 +15,7 @@ namespace rct3::ovl
 
         constexpr usize kHeaderSize = 0x28; // the no-stream fields shared by all attractions
         constexpr usize kLaterSize = 0x130; // up to and including the pointer to the attraction fields
-        constexpr detail::AttractionLayout kFields { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20, .addon = 0x38 };
+        constexpr detail::AttractionLayout kFields { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20, .addon = 0x38, .flags = 0x30 };
         constexpr usize kLaterFieldsSize = 0x3C; // later items' fields run on to the add-on pack
 
         /// Later items point at 0x12C to a block whose attraction fields start 0x3C bytes in (one-stream) or
@@ -175,7 +175,8 @@ namespace rct3::ovl
             TrackedRideItem item { parts.name, std::nullopt };
             if (layout == OvlLayout::NoStream)
             {
-                if (const auto record = ItemRecord::open(space, refs, symbol.data, kHeaderSize))
+                // Through the flags word after the shared fields, where the block reaches it.
+                if (const auto record = ItemRecord::open_up_to(space, refs, symbol.data, kHeaderSize + 0xC, kHeaderSize))
                 {
                     TrackedRide ride;
                     ride.info = detail::read_attraction(*record, kFields, layout);

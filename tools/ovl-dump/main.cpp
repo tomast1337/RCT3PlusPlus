@@ -617,7 +617,7 @@ namespace
                     continue;
                 }
                 const auto& r = *item.ride;
-                out.info("  {:<32} type {:d} text {} splines {} sections {}", name.c_str(), r.info.type_id, std::string(r.info.name_text).c_str(), std::string(r.splines[0]).c_str(), std::string(r.track_sections[0]).c_str());
+                out.info("  {:<32} type {:d} flags {:#x} text {} splines {} sections {}", name.c_str(), r.info.type_id, r.info.flags, std::string(r.info.name_text).c_str(), std::string(r.splines[0]).c_str(), std::string(r.track_sections[0]).c_str());
                 out.info("    car rotation {} car facing {} most trains {}", r.rules.car_rotation, r.rules.car_facing, r.rules.most_trains ? std::format("{}", *r.rules.most_trains) : "any");
                 if (const auto& d = r.operating)
                     out.info(
@@ -654,7 +654,7 @@ namespace
                     continue;
                 }
                 const auto& i = item.ride->info;
-                out.info("  {:<32} type {:d} text {} icon {} sid {} seating {}", name.c_str(), i.type_id, std::string(i.name_text).c_str(), std::string(i.icon).c_str(), std::string(i.style).c_str(), item.ride->seating ? std::format("{}", *item.ride->seating) : "-");
+                out.info("  {:<32} type {:d} text {} icon {} sid {} seating {} flags {:#x}", name.c_str(), i.type_id, std::string(i.name_text).c_str(), std::string(i.icon).c_str(), std::string(i.style).c_str(), item.ride->seating ? std::format("{}", *item.ride->seating) : "-", i.flags);
             }
         }
         if (opt.sta)

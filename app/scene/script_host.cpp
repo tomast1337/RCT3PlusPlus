@@ -1521,6 +1521,8 @@ namespace rct3::scene
                         person["leaving"] = true;
                     if (arriving)
                         person["arriving"] = true;
+                    if (const auto* visitor = r.try_get<simulation::Visitor>(p.guest); visitor != nullptr && visitor->age == simulation::AgeGroup::Child)
+                        person["child"] = true;
                     // Their party, as a number shared by its members, while they are with it.
                     if (const auto* member = r.try_get<simulation::Member>(p.guest))
                         person["party"] = entt::to_integral(member->party);

@@ -20,9 +20,6 @@ namespace rct3::scene::park
 
     struct ParkScene;
 
-    /// Puts an attraction in `state`, the running park with it: open lets guests on, testing runs it empty.
-    void set_attraction_state(ParkScene& scene, save::model::AttractionCommon& attraction, save::model::AttractionState state);
-
     /// Why attraction `ref` cannot be put in `state`, as a string key: a ride by its track and doors, a stall when
     /// its menu is empty; nothing when it can.
     [[nodiscard]] std::optional<std::string> state_refusal(const ParkScene& scene, rct3::park::AttractionRef ref, save::model::AttractionState state);

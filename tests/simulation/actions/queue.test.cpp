@@ -21,7 +21,9 @@ namespace
         std::optional<std::vector<simulation::ResearchItem>> research_items { };
         std::optional<i64> ledger_month { };
         simulation::DayClock day_clock { };
-        World world { .sim = sim, .park = state, .model = model, .rides = rides, .research = research, .research_items = research_items, .ledger_month = ledger_month, .day_clock = day_clock };
+        rct3::park::CarriedKinds carried { };
+        std::vector<save::model::StallIndex> unjoined_stalls { };
+        World world { .sim = sim, .park = state, .model = model, .rides = rides, .research = research, .research_items = research_items, .ledger_month = ledger_month, .day_clock = day_clock, .carried = carried, .unjoined_stalls = unjoined_stalls };
     };
 } // namespace
 

@@ -5,9 +5,11 @@
 // only applying them changes the park.
 #pragma once
 
+#include "simulation/actions/attraction_state.hpp"
 #include "simulation/actions/park_management.hpp"
 #include "simulation/actions/play.hpp"
 #include "simulation/actions/ride_settings.hpp"
+#include "simulation/actions/stall_settings.hpp"
 #include "simulation/actions/world.hpp"
 
 #include <variant>
@@ -15,7 +17,7 @@
 namespace rct3::simulation::actions
 {
 
-    using Action = std::variant<LoanStep, SetLoan, OpenPark, SetResearchBudget, FocusResearch, SetResearchPriority, StartCampaign, SetSpeed, TogglePause, SetDayMode, ChangeRide, CallMechanic, RenameAttraction>;
+    using Action = std::variant<LoanStep, SetLoan, OpenPark, SetResearchBudget, FocusResearch, SetResearchPriority, StartCampaign, SetSpeed, TogglePause, SetDayMode, ChangeRide, CallMechanic, RenameAttraction, ChangeStall>;
 
     /// Whether `action` can be done in `world` as it is now, and what it costs.
     [[nodiscard]] Outcome check(const World& world, const Action& action);

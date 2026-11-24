@@ -8,6 +8,7 @@
 #include "park/pools/pools.hpp"
 #include "park/track/rules.hpp"
 #include "scene/park/scene.hpp"
+#include "simulation/actions/attraction_state.hpp"
 #include "simulation/components.hpp"
 #include "simulation/fireworks.hpp"
 #include "simulation/import_park.hpp"
@@ -18,21 +19,6 @@
 
 namespace rct3::scene::park
 {
-
-    void set_attraction_state(ParkScene& scene, save::model::AttractionCommon& attraction, save::model::AttractionState state)
-    {
-        attraction.state = state;
-        if (state == save::model::AttractionState::Open)
-            attraction.flags &= ~save::model::AttractionCommon::kNeverOpened;
-        for (auto [e, a] : scene.sim.registry.view<simulation::Attraction>().each())
-            if (a.saved == attraction.id)
-            {
-                // A broken one stays shut until mended, opening once it is.
-                const auto* upkeep = scene.sim.registry.try_get<simulation::Upkeep>(e);
-                a.open = state == save::model::AttractionState::Open && (upkeep == nullptr || !upkeep->broken);
-                a.testing = state == save::model::AttractionState::Testing;
-            }
-    }
 
     std::optional<std::string> state_refusal(const ParkScene& scene, rct3::park::AttractionRef ref, save::model::AttractionState state)
     {
@@ -94,7 +80,7 @@ namespace rct3::scene::park
     {
         auto refused = state_refusal(scene, rct3::park::AttractionRef::of(ride), state);
         if (!refused)
-            set_attraction_state(scene, scene.rides.rides.at(ride.value).base, state);
+            simulation::actions::put_in_state(scene.sim, scene.rides.rides.at(ride.value).base, state);
         if (!refused && state != save::model::AttractionState::Closed && scene.rides.rides[ride.value].kind == save::model::RideKind::Tracked && !std::ranges::contains(scene.readying, ride))
             scene.readying.push_back(ride);
         return refused;
@@ -104,7 +90,7 @@ namespace rct3::scene::park
     {
         auto refused = state_refusal(scene, rct3::park::AttractionRef::of(stall), state);
         if (!refused)
-            set_attraction_state(scene, scene.rides.stalls.at(stall.value).base, state);
+            simulation::actions::put_in_state(scene.sim, scene.rides.stalls.at(stall.value).base, state);
         return refused;
     }
 

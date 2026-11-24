@@ -2,6 +2,7 @@
 #include "core/types.hpp"
 #include "simulation/actions/action.hpp"
 #include "simulation/components.hpp"
+#include "simulation/rides.hpp"
 #include "simulation/sandbox.hpp"
 
 #include <doctest/doctest.h>
@@ -31,7 +32,8 @@ namespace
         rct3::park::pools::PoolMap pools { };
         std::optional<save::model::RideIndex> building { };
         std::vector<save::model::RideIndex> readying { };
-        World world { .sim = sandbox.world(), .park = state, .model = model, .rides = rides, .research = research, .research_items = research_items, .ledger_month = ledger_month, .day_clock = day_clock, .carried = carried, .unjoined_stalls = unjoined_stalls, .track_rules = track_rules, .courses = courses, .pools = pools, .building = building, .readying = readying };
+        std::vector<save::model::RideShow> shows { };
+        World world { .sim = sandbox.world(), .park = state, .model = model, .rides = rides, .research = research, .research_items = research_items, .ledger_month = ledger_month, .day_clock = day_clock, .carried = carried, .unjoined_stalls = unjoined_stalls, .track_rules = track_rules, .courses = courses, .pools = pools, .building = building, .readying = readying, .shows = shows };
         entt::entity ride = entt::null;
 
         Park()
@@ -57,6 +59,9 @@ TEST_CASE("a ride's waits turn off and on again")
     Park p;
     REQUIRE(apply(p.world, Action { ChangeRide { .ride = kRideId, .setting = RideSetting::MinWait, .value = 20 } }));
     CHECK(p.rides.rides.front().options.min_wait == 20);
+    p.sandbox.world().registry.emplace_or_replace<simulation::Departure>(p.ride);
+    REQUIRE(apply(p.world, Action { ChangeRide { .ride = kRideId, .setting = RideSetting::MaxWait, .value = 30 } }));
+    CHECK(p.sandbox.world().registry.get<simulation::Departure>(p.ride).max_wait == units::Seconds { 30 });
     REQUIRE(apply(p.world, Action { ChangeRide { .ride = kRideId, .setting = RideSetting::MinWait, .value = std::nullopt } }));
     CHECK_FALSE(p.rides.rides.front().options.min_wait);
 }
@@ -114,4 +119,16 @@ TEST_CASE("a stall with nothing to sell is not opened, and the player is told wh
     p.rides.stalls[0].items.push_back({ .kind_symbol = "Soda:cid", .price = { 100 } });
     REQUIRE(apply(p.world, Action { SetAttractionState { .attraction = 20, .state = save::model::AttractionState::Open } }));
     CHECK(p.rides.stalls[0].base.state == save::model::AttractionState::Open);
+}
+
+TEST_CASE("a show ride's show keeps one trick at least")
+{
+    Park p;
+    p.shows.push_back({ .ride = kRideId, .order = { 1, 2 } });
+    REQUIRE(apply(p.world, Action { EditShow { .ride = kRideId, .place = 5, .trick = 3 } }));
+    CHECK(p.shows[0].order == std::vector<u32> { 1, 2, 3 });
+    REQUIRE(apply(p.world, Action { EditShow { .ride = kRideId, .place = 0 } }));
+    REQUIRE(apply(p.world, Action { EditShow { .ride = kRideId, .place = 0 } }));
+    CHECK(apply(p.world, Action { EditShow { .ride = kRideId, .place = 0 } }).error() == Refusal::Missing);
+    CHECK(p.shows[0].order == std::vector<u32> { 3 });
 }

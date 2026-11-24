@@ -436,7 +436,7 @@ namespace rct3::scene::park
 
     simulation::actions::World action_world(ParkScene& scene)
     {
-        return { .sim = scene.sim, .park = scene.park, .model = scene.park_model, .rides = scene.rides, .research = scene.research, .research_items = scene.research_items, .ledger_month = scene.ledger_month, .day_clock = scene.day_clock, .carried = scene.carried, .unjoined_stalls = scene.placing.unjoined_stalls, .track_rules = scene.track_rules, .courses = scene.courses, .pools = scene.pools, .building = scene.building.ride, .readying = scene.readying };
+        return { .sim = scene.sim, .park = scene.park, .model = scene.park_model, .rides = scene.rides, .research = scene.research, .research_items = scene.research_items, .ledger_month = scene.ledger_month, .day_clock = scene.day_clock, .carried = scene.carried, .unjoined_stalls = scene.placing.unjoined_stalls, .track_rules = scene.track_rules, .courses = scene.courses, .pools = scene.pools, .building = scene.building.ride, .readying = scene.readying, .shows = scene.shows };
     }
 
     void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::game::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, units::Seconds elapsed)

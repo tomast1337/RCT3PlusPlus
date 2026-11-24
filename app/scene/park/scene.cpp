@@ -852,10 +852,11 @@ namespace rct3::scene::park
             else if (change && scene.shown)
             {
                 change_attraction(device, scene, *info, *scene.shown, *change, assets, options);
-                // Longer trains fit fewer times round the track, so the page shows the new limits; a new name and
-                // the graph's series show.
-                if (change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Trains) || change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Cars) || change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Name) || change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::CarKind)
-                    || (change->id >= ui::screens::info::control_id(ui::screens::info::AttractionControl::SpeedSeries) && change->id <= ui::screens::info::control_id(ui::screens::info::AttractionControl::LateralSeries)) || (change->id >= ui::screens::info::control_id(ui::screens::info::AttractionControl::FenceStyle) && change->id <= ui::screens::info::control_id(ui::screens::info::AttractionControl::ExitStyle)) || change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Fence))
+                // Longer trains fit fewer times round the track, so the page shows the new limits; a new name, once
+                // applied, and the graph's series show.
+                scene.info_after_actions = scene.info_after_actions || change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Name);
+                if (change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Trains) || change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Cars) || change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::CarKind) || (change->id >= ui::screens::info::control_id(ui::screens::info::AttractionControl::SpeedSeries) && change->id <= ui::screens::info::control_id(ui::screens::info::AttractionControl::LateralSeries))
+                    || (change->id >= ui::screens::info::control_id(ui::screens::info::AttractionControl::FenceStyle) && change->id <= ui::screens::info::control_id(ui::screens::info::AttractionControl::ExitStyle)) || change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Fence))
                     show_info_page(scene, *info, assets, options);
             }
             else if (auto* rules = change && scene.shown_prop && (change->id == ui::screens::info::kPassportStampsControl || change->id == ui::screens::info::kPassportGiftControl) ? scene.sim.registry.ctx().find<simulation::PassportRules>() : nullptr)
@@ -1217,6 +1218,9 @@ namespace rct3::scene::park
             // also when no tick runs, so building while paused works.
             simulation::actions::World action_world { .sim = scene.sim, .park = scene.park, .model = scene.park_model, .rides = scene.rides };
             simulation::actions::apply_due(scene.actions, action_world);
+            if (std::exchange(scene.info_after_actions, false))
+                if (auto info = desktop.root().find_as<ui::screens::info::InfoPanel>(kInfoName))
+                    show_info_page(scene, *info, assets, options);
             const f32 frame_seconds = elapsed.value * simulation::time_factor(scene.park.speed);
             scene.thunder = rct3::park::advance_weather_look(scene.weather_look, scene.park.weather, scene.park.speed.paused ? 0.0f : elapsed.value, scene.weather_dice);
             if (scene.rain_strength)

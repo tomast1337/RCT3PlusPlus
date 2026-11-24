@@ -796,9 +796,10 @@ namespace rct3::scene::park
         using enum ui::screens::info::AttractionControl;
         save::model::Ride* ride = ref.kind == rct3::park::AttractionRef::Kind::Ride && ref.index < scene.rides.rides.size() ? &scene.rides.rides[ref.index] : nullptr;
         save::model::Stall* stall = ref.kind == rct3::park::AttractionRef::Kind::Stall && ref.index < scene.rides.stalls.size() ? &scene.rides.stalls[ref.index] : nullptr;
-        const auto wait_on = [&](std::optional<i32>& wait, ui::screens::info::AttractionControl seconds) {
+        const auto set_ride = [&](simulation::actions::RideSetting setting, std::optional<i32> value) { simulation::actions::ask(scene.actions, scene.sim, simulation::actions::ChangeRide { .ride = ride->base.id, .setting = setting, .value = value }); };
+        const auto wait_on = [&](simulation::actions::RideSetting wait, ui::screens::info::AttractionControl seconds) {
             const auto field = panel.control(ui::screens::info::control_id(seconds));
-            wait = change.value != 0 ? std::optional(field ? static_cast<const ui::widgets::Spinner&>(*field).value() : 0) : std::nullopt;
+            set_ride(wait, change.value != 0 ? std::optional(field ? static_cast<const ui::widgets::Spinner&>(*field).value() : 0) : std::nullopt);
             if (field)
                 field->enabled = change.value != 0;
         };
@@ -818,9 +819,8 @@ namespace rct3::scene::park
         }
         else if (change.id == ui::screens::info::control_id(Name))
         {
-            // A blank name keeps the old one, as in the game.
-            if (save::model::AttractionCommon* common = ride != nullptr ? &ride->base : stall != nullptr ? &stall->base : nullptr; common != nullptr && change.text.find_first_not_of(u' ') != std::u16string::npos)
-                common->name = strings::to_utf8(change.text);
+            if (const save::model::AttractionCommon* common = ride != nullptr ? &ride->base : stall != nullptr ? &stall->base : nullptr)
+                simulation::actions::ask(scene.actions, scene.sim, simulation::actions::RenameAttraction { .attraction = common->id, .name = strings::to_utf8(change.text) });
         }
         else if (change.id == ui::screens::info::control_id(Locate))
         {
@@ -914,32 +914,21 @@ namespace rct3::scene::park
         else if (ride == nullptr)
             return;
         else if (change.id == ui::screens::info::control_id(Price))
-            ride->ticket_price = { change.value };
+            set_ride(simulation::actions::RideSetting::TicketPrice, change.value);
         else if (change.id == ui::screens::info::control_id(Inspection))
-        {
-            ride->breakdown.inspection_interval = change.value;
-            if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
-                if (auto* upkeep = scene.sim.registry.try_get<simulation::Upkeep>(e))
-                    upkeep->inspect_every = simulation::upkeep_of(*ride).inspect_every;
-        }
+            set_ride(simulation::actions::RideSetting::InspectEvery, change.value);
         else if (change.id == ui::screens::info::control_id(Mechanic))
-        {
-            // shortcut: the game also opens the mechanic's window and puts this job first on a busy one's list;
-            // add both with the staff window's job list.
-            if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
-                if (auto* upkeep = scene.sim.registry.try_get<simulation::Upkeep>(e))
-                    upkeep->called = true;
-        }
+            simulation::actions::ask(scene.actions, scene.sim, simulation::actions::CallMechanic { .ride = ride->base.id });
         else if (change.id == ui::screens::info::control_id(MinWaitOn))
-            wait_on(ride->options.min_wait, MinWait);
+            wait_on(simulation::actions::RideSetting::MinWait, MinWait);
         else if (change.id == ui::screens::info::control_id(MaxWaitOn))
-            wait_on(ride->options.max_wait, MaxWait);
+            wait_on(simulation::actions::RideSetting::MaxWait, MaxWait);
         else if (change.id == ui::screens::info::control_id(MinWait))
-            ride->options.min_wait.emplace(change.value);
+            set_ride(simulation::actions::RideSetting::MinWait, change.value);
         else if (change.id == ui::screens::info::control_id(MaxWait))
-            ride->options.max_wait.emplace(change.value);
+            set_ride(simulation::actions::RideSetting::MaxWait, change.value);
         else if (change.id == ui::screens::info::control_id(WaitFor))
-            ride->options.wait_for_load = change.value;
+            set_ride(simulation::actions::RideSetting::WaitForLoad, change.value);
         else if ((change.id == ui::screens::info::control_id(Trains) || change.id == ui::screens::info::control_id(Cars)) && scene.train_limits.contains(ref.ride()) && ride->base.state != save::model::AttractionState::Open && assets.install)
         {
             const bool trains = change.id == ui::screens::info::control_id(Trains);
@@ -960,15 +949,7 @@ namespace rct3::scene::park
                 }
         }
         else if (change.id == ui::screens::info::control_id(Circuits))
-        {
-            // A go under way runs as many times round as the new count, or stops if it is past it.
-            // shortcut: a tracked ride keeps the count but its trains go round once; run the laps once the
-            // trains count them.
-            ride->loop_count = change.value;
-            if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
-                if (auto* cycle = scene.sim.registry.try_get<simulation::CycleRide>(e))
-                    cycle->loops = static_cast<u32>(std::max(change.value, 1));
-        }
+            set_ride(simulation::actions::RideSetting::Circuits, change.value);
         else if (const auto show = std::ranges::find(scene.shows, ride->base.id, &save::model::RideShow::ride); show != scene.shows.end() && (change.id == ui::screens::info::control_id(ShowTrick) || change.id == ui::screens::info::control_id(ShowDelete)))
         {
             // The ride puts the changed show on from its next go.
@@ -986,19 +967,11 @@ namespace rct3::scene::park
             stage_show(scene, *show);
         }
         else if (change.id == ui::screens::info::control_id(BlockSection))
-        {
-            // shortcut: the game also caps the trains at one fewer than the blocks; upgrade with the trains'
-            // limits counting blocks.
-            ride->options.block_sectioned = change.value != 0;
-            if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
-                if (auto* fleet = scene.sim.registry.try_get<simulation::Trains>(e))
-                    for (simulation::Coaster& c : fleet->trains)
-                        c.blocks = ride->options.block_sectioned;
-        }
+            set_ride(simulation::actions::RideSetting::BlockSections, change.value);
         else if (change.id == ui::screens::info::control_id(SyncStations))
-            ride->options.sync_trains = change.value != 0; // shortcut: stored, stations do not wait for each other yet
+            set_ride(simulation::actions::RideSetting::SyncStations, change.value);
         else if (change.id == ui::screens::info::control_id(LeaveOnArrival))
-            ride->options.leave_if_other_train_enters_station = change.value != 0;
+            set_ride(simulation::actions::RideSetting::LeaveOnArrival, change.value);
         else if (change.id == ui::screens::info::control_id(LowFriction))
         {
             if (change.value != 0)

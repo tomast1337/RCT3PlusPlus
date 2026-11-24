@@ -631,6 +631,7 @@ namespace rct3::scene::park
         save::model::PeopleModel people;          ///< Guests, staff and litter as saved; read for the weekly rating
         simulation::SimWorld sim;                 ///< The paths, shops and guests the simulation runs
         simulation::actions::ActionQueue actions; ///< What the player asked of the park, waiting for its tick
+        bool info_after_actions = false;          ///< Show the info panel's page again once the actions asked apply
         bool simulate = true;                     ///< Run the simulation and show its guests; off only to see the park as saved
         f32 sim_time = 0;                         ///< Park seconds the simulation has still to step
         /// Ride cars, drawn apart from the objects so the simulation can move them round their rides' courses.

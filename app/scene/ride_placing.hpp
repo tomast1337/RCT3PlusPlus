@@ -183,10 +183,6 @@ namespace rct3::scene
     bool start_door_placing(park::ParkScene& scene, save::model::RideIndex ride, const rct3::park::BuildItem& item, std::vector<save::model::TrackPiece> stations, bool exit);
     /// Gives the new ride `ride` the fence `fence` of `overlay` (its theme's), in the fence's own colours.
     void take_fence(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::Ride& ride, std::string_view fence, std::string_view overlay);
-    /// Gives the ride `ride` the fence `fence` in its own colours, in place of the one it had, round it and its queues.
-    void restyle_fence(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, const rct3::park::ride::ExtraStyle& fence);
-    /// Gives every entrance of the ride `ride`, or every exit, the look of `doors`, painted as its fence is.
-    void restyle_doors(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, const rct3::park::ride::ExtraStyle& doors, rct3::park::ride::DoorEnd end);
     /// Draws again what the actions applied changed of the park's looks (simulation::actions::Changed), and empties
     /// those lists.
     void show_changed_looks(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets);

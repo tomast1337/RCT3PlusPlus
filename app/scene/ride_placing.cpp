@@ -36,6 +36,7 @@
 #include "scene/park/view.hpp"
 #include "scene/track/building.hpp"
 #include "scene/track/trains.hpp"
+#include "simulation/actions/ids.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/systems.hpp"
 #include "strings/ascii.hpp"
@@ -929,45 +930,30 @@ namespace rct3::scene
             ride.fence_colours[i] = static_cast<u8>(colours[i]);
     }
 
-    void restyle_fence(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, const rct3::park::ride::ExtraStyle& fence)
-    {
-        wait_for_build(scene);
-        save::model::Ride& r = scene.rides.rides.at(ride.value);
-        take_fence(scene, assets, r, fence.symbol, fence.overlay);
-        fence_ride(scene, assets, r);
-        park::rejoin_queues(scene, assets, ride);
-    }
-
-    void restyle_doors(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, const rct3::park::ride::ExtraStyle& doors, rct3::park::ride::DoorEnd end)
-    {
-        wait_for_build(scene);
-        save::model::Ride& r = scene.rides.rides.at(ride.value);
-        const std::string& symbol = end == rct3::park::ride::DoorEnd::Exit ? doors.exit_symbol : doors.symbol;
-        if (!load_object_model(scene, scene.placing.models, assets, { .symbol = symbol, .overlay = doors.overlay }))
-            return;
-        for (const save::model::Station& station : r.stations)
-        {
-            const u64 id = end == rct3::park::ride::DoorEnd::Exit ? station.exit : station.entrance;
-            if (const auto door = id == 0 ? scene.objects.end() : std::ranges::find(scene.objects, id, &save::model::PlacedObject::id); door != scene.objects.end())
-            {
-                door->definition_ref = 0; // The park file's entry names the old look
-                door->symbol = symbol;
-                door->overlay = doors.overlay;
-            }
-        }
-        objects_changed(scene);
-        // Painted as the fence is, which stands round the new doors.
-        fence_ride(scene, assets, r);
-    }
-
     void show_changed_looks(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets)
     {
-        (void)assets;
         simulation::actions::Changed& changed = scene.actions.changed;
         for (const u64 id : changed.painted_objects)
             if (const auto o = std::ranges::find(scene.objects, id, &save::model::PlacedObject::id); o != scene.objects.end())
                 park::change_object(device, scene, save::model::PlacedObjectIndex { static_cast<usize>(o - scene.objects.begin()) }, [](save::model::PlacedObject&) { });
+        // New doors are placed again, and the fence round them, painted as it is.
+        for (const save::model::ObjectId id : changed.redoored_rides)
+            if (const auto ride = simulation::actions::ride_of(scene.rides, id))
+            {
+                objects_changed(scene);
+                fence_ride(scene, assets, *ride);
+            }
+        // A new fence stands round the ride and rails its queues.
+        for (const save::model::ObjectId id : changed.fenced_rides)
+            if (const auto ride = simulation::actions::ride_of(scene.rides, id))
+            {
+                wait_for_build(scene);
+                fence_ride(scene, assets, *ride);
+                park::rejoin_queues(scene, assets, save::model::RideIndex { static_cast<usize>(&*ride - scene.rides.rides.data()) });
+            }
         changed.painted_objects.clear();
+        changed.redoored_rides.clear();
+        changed.fenced_rides.clear();
     }
 
     void place_station_door(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, usize station_index, const save::model::PlacedObject& door, i32 height, bool exit)

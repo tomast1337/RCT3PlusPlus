@@ -40,6 +40,8 @@ namespace
         bool simulating = true;
         std::vector<save::model::PlacedObject> objects { };
         Changed changed { };
+        save::model::TerrainGrid grid { };
+        save::model::EnclosureMap enclosures { };
         World world { .sim = sandbox.world(),
                       .park = state,
                       .model = model,
@@ -62,7 +64,9 @@ namespace
                       .costumes_given = costumes_given,
                       .simulating = simulating,
                       .objects = objects,
-                      .changed = changed };
+                      .changed = changed,
+                      .grid = grid,
+                      .enclosures = enclosures };
         entt::entity ride = entt::null;
 
         Park()

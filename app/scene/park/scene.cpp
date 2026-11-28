@@ -461,7 +461,9 @@ namespace rct3::scene::park
                  .costumes_given = scene.costumes_given,
                  .simulating = scene.simulate,
                  .objects = scene.objects,
-                 .changed = scene.actions.changed };
+                 .changed = scene.actions.changed,
+                 .grid = scene.grid,
+                 .enclosures = scene.enclosures };
     }
 
     void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::game::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, units::Seconds elapsed)

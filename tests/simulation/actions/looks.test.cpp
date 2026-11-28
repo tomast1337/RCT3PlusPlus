@@ -42,6 +42,8 @@ namespace
         bool simulating = true;
         std::vector<save::model::PlacedObject> objects { { .id = kRideBuilding, .owner_ref = kRideBuilding }, { .id = kRidePart, .owner_ref = kRideBuilding }, { .id = kEntrance, .symbol = "OldEntrance", .owner_ref = kEntrance }, { .id = kExit, .symbol = "OldExit", .owner_ref = kExit }, { .id = kTree, .owner_ref = kTree } };
         Changed changed { };
+        save::model::TerrainGrid grid { };
+        save::model::EnclosureMap enclosures { };
         World world { .sim = sim,
                       .park = state,
                       .model = model,
@@ -64,7 +66,9 @@ namespace
                       .costumes_given = costumes_given,
                       .simulating = simulating,
                       .objects = objects,
-                      .changed = changed };
+                      .changed = changed,
+                      .grid = grid,
+                      .enclosures = enclosures };
 
         Park()
         {

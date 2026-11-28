@@ -36,6 +36,8 @@ namespace
         bool simulating = true;
         std::vector<save::model::PlacedObject> objects { };
         Changed changed { };
+        save::model::TerrainGrid grid { };
+        save::model::EnclosureMap enclosures { };
         World world { .sim = sim,
                       .park = state,
                       .model = model,
@@ -58,7 +60,9 @@ namespace
                       .costumes_given = costumes_given,
                       .simulating = simulating,
                       .objects = objects,
-                      .changed = changed };
+                      .changed = changed,
+                      .grid = grid,
+                      .enclosures = enclosures };
 
         /// A short path, unless `pathless`, and a uniform of each part for handymen and two entertainer costumes,
         /// 0 and 2.

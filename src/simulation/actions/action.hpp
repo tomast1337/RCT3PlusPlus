@@ -6,6 +6,7 @@
 #pragma once
 
 #include "simulation/actions/attraction_state.hpp"
+#include "simulation/actions/developer.hpp"
 #include "simulation/actions/looks.hpp"
 #include "simulation/actions/park_management.hpp"
 #include "simulation/actions/play.hpp"
@@ -19,7 +20,10 @@
 namespace rct3::simulation::actions
 {
 
-    using Action = std::variant<LoanStep, SetLoan, OpenPark, SetResearchBudget, FocusResearch, SetResearchPriority, StartCampaign, SetSpeed, TogglePause, SetDayMode, ChangeRide, CallMechanic, RenameAttraction, EditShow, SetRideSpeed, SetRideMusic, ChangeStall, SetAttractionState, HireStaff, FireStaff, ChangeStaff, PaintObject, PaintAttraction, SetRideFence, SetRideDoors>;
+    using Action = std::variant<
+        LoanStep, SetLoan, OpenPark, SetResearchBudget, FocusResearch, SetResearchPriority, StartCampaign, SetSpeed, TogglePause, SetDayMode, ChangeRide, CallMechanic, RenameAttraction, EditShow, SetRideSpeed, SetRideMusic, ChangeStall, SetAttractionState, HireStaff, FireStaff, ChangeStaff, PaintObject, PaintAttraction, SetRideFence, SetRideDoors,
+        // Developer tools, host only in a shared park
+        UseDeveloperTool, SetParkValues>;
 
     /// Whether `action` can be done in `world` as it is now, and what it costs.
     [[nodiscard]] Outcome check(const World& world, const Action& action);

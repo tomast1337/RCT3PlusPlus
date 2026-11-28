@@ -3,7 +3,8 @@
 // The developer windows' editor (F12): a guest picked from a list and looked into, their feelings, needs and money
 // changed or held, and the guest sent somewhere; and the park's live values changed, groups of guests let in and
 // everyone treated at once. Every change goes to the simulation, so a park saved afterwards keeps it, and counts as a
-// cheat used in the park.
+// cheat used in the park. The park's values and what is done to everyone at once are developer actions
+// (simulation/actions/developer.hpp); a guest's own changes are made here, as guests have no saved id for an action.
 #pragma once
 
 #include "core/types.hpp"

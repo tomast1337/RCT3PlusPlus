@@ -1230,6 +1230,8 @@ namespace rct3::scene::park
             const auto apply_actions = [&] {
                 simulation::actions::apply_due(scene.actions, action_world);
                 show_changed_people(scene);
+                show_changed_looks(device, scene, assets);
+                show_changed_park(scene, assets);
                 // Tracked rides put to test or opened: their trains made ready, as the game does, and run round a whole
                 // circuit, a shuttle's track, or an unfinished one to its end, where they crash. While the panel builds an
                 // unfinished track, a test of it runs a ghost instead (scene/track/building.hpp); closing the panel readies it again.
@@ -1255,8 +1257,6 @@ namespace rct3::scene::park
                 }
             };
             apply_actions();
-            show_changed_looks(device, scene, assets);
-            show_changed_park(scene, assets);
             if (!scene.actions.told.empty())
                 scene.refusal = scene.actions.told.back();
             scene.actions.told.clear();

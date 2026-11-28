@@ -110,7 +110,7 @@ namespace rct3::scene::park
             simulation::actions::World world = action_world(scene);
             const simulation::actions::UseDeveloperTool used { .tool = *action, .amount = amount };
             const usize changed = simulation::actions::check(world, used) ? simulation::actions::apply(world, used) : 0;
-            show_changed_park(scene, assets);
+            show_changed_park(device, scene, assets);
             return changed;
         }
         const auto count = static_cast<usize>(std::max<i64>(amount, 0));
@@ -193,11 +193,11 @@ namespace rct3::scene::park
         }
     }
 
-    void show_changed_park(ParkScene& scene, const ui::InterfaceAssets& assets)
+    void show_changed_park(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         simulation::actions::Changed& changed = scene.actions.changed;
         if (std::exchange(changed.land_owned, false))
-            land_owned_changed(scene, assets);
+            land_owned_changed(device, scene, assets);
         if (std::exchange(changed.fences_worn, false) && fence_wear_changed(scene))
             objects_changed(scene);
         if (std::exchange(changed.invented, false))

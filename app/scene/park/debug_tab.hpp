@@ -76,7 +76,7 @@ namespace rct3::scene::park
 
     /// After actions applied: builds again what developer actions changed of the park, as their flags in the
     /// action queue's record say, and lowers the flags.
-    void show_changed_park(ParkScene& scene, const ui::InterfaceAssets& assets);
+    void show_changed_park(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);
 
     /// The tab's contents, drawn into the developer window open now.
     void draw_debug_tab(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);

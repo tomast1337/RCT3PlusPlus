@@ -660,10 +660,12 @@ namespace rct3::scene
     } // namespace
 
     /// shortcut: the old panels stay hidden among the objects; drop them when objects can be taken out.
-    void land_owned_changed(park::ParkScene& scene, const ui::InterfaceAssets& assets)
+    void land_owned_changed(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         simulation::keep_staff_in(scene.sim, scene.grid);
         wait_for_build(scene);
+        // A panel that moves (a laser fence's beams) is drawn from its bones, apart from the other objects.
+        std::erase_if(scene.boned_rides, [&](const park::ParkScene::BonedRide& b) { return b.ride == entt::null && b.object.value < scene.objects.size() && std::ranges::contains(scene.fence_panels, scene.objects[b.object.value].id); });
         for (save::model::PlacedObject& o : scene.objects)
             if (std::ranges::contains(scene.fence_panels, o.id))
                 o.hidden = true;
@@ -678,6 +680,7 @@ namespace rct3::scene
                 panel.colours = colours;
                 scene.fence_panels.push_back(panel.id);
                 scene.objects.push_back(std::move(panel));
+                park::animate_scenery(device, scene, save::model::PlacedObjectIndex { scene.objects.size() - 1 });
             }
             scene.leans.merge(fence.leans);
         }
@@ -687,7 +690,7 @@ namespace rct3::scene
     namespace
     {
         /// A press with the buying tool: buys what is on sale under the brush, once for each tile the pointer moves to.
-        void buy(park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
+        void buy(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
         {
             LandTools& l = scene.land;
             const auto spot = over ? std::nullopt : ground_spot(scene, at, size);
@@ -707,7 +710,7 @@ namespace rct3::scene
             // buy_land took no more than the cash could pay for.
             simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, bought.spent, simulation::park::LedgerLine::LandPurchase, simulation::park::Charge::IfAffordable);
             park::float_money(scene, park::tile_point(scene.grid, tile), -bought.spent);
-            land_owned_changed(scene, assets);
+            land_owned_changed(device, scene, assets);
         }
 
         void read_surfaces(LandTools& l, const ui::InterfaceAssets& assets)
@@ -974,7 +977,7 @@ namespace rct3::scene
         else if (l.tool == LandTools::Tool::Waterfall)
             pick_lake(device, scene, assets, at, size, input.over_interface);
         else if (l.tool == LandTools::Tool::Buy)
-            buy(scene, assets, at, size, input.over_interface);
+            buy(device, scene, assets, at, size, input.over_interface);
         else
             pour(device, scene, assets, at, size, input.over_interface);
         mark(device, scene, at, size, input.over_interface);

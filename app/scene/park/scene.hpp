@@ -429,6 +429,15 @@ namespace rct3::scene::park
         usize windows_opened = 0;
     };
 
+    /// Whether an animal is in its crate or loose, as its window last showed: the window shows it again once either
+    /// changes. Not its every job, which would show the page again every few seconds as it strolls.
+    struct AnimalDoing
+    {
+        bool crated = false;
+        bool escaped = false;
+        bool operator==(const AnimalDoing&) const = default;
+    };
+
     struct ParkScene
     {
         save::model::TerrainGrid grid;
@@ -859,6 +868,7 @@ namespace rct3::scene::park
         std::optional<ui::screens::info::SceneryTab> prop_tab;                           ///< Its open tab; none while only its name shows
         std::optional<entt::entity> shown_animal;                                        ///< The zoo animal the info panel tells about instead
         ui::screens::info::AnimalTab animal_tab = ui::screens::info::AnimalTab::Details; ///< The tab last opened on an animal
+        std::optional<AnimalDoing> shown_animal_doing;                                   ///< What its page showed it doing when last built
         bool show_people = true;                                                         ///< Switched in the view menu
         bool show_scenery = true;                                                        ///< Objects and rides, switched in the view menu
         bool see_through_ground = false;                                                 ///< Likewise the ground drawn faded

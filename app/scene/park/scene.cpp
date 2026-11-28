@@ -531,30 +531,6 @@ namespace rct3::scene::park
                 show_info_page(scene, *info, assets, options);
         }
 
-        // Tracked rides put to test or opened: their trains made ready, as the game does, and run round a whole
-        // circuit, a shuttle's track, or an unfinished one to its end, where they crash. While the panel builds an
-        // unfinished track, a test of it runs a ghost instead (scene/track/building.hpp); closing the panel readies it again.
-        for (const save::model::RideIndex ride : std::exchange(scene.readying, { }))
-        {
-            const auto& course = ride.value < scene.courses.size() ? scene.courses[ride.value] : std::nullopt;
-            const save::model::Ride& r = scene.rides.rides[ride.value];
-            const auto coaster = course ? simulation::coaster_of(*course, r) : std::nullopt;
-            // Laid but not run, its lift towers' cars stand at their feet all the same.
-            if (assets.install && r.base.state == save::model::AttractionState::Closed && course && !course->lifts.empty() && ride.value < scene.track_rules.size() && scene.track_rules[ride.value].lift_car && std::ranges::none_of(scene.car_spots, [&](const rct3::park::ride::CarSpot& s) { return s.ride == ride; }))
-                add_ride_cars(device, scene, *assets.install, ride, 1, RideCarsAdded::LiftsOnly);
-            // Boats sail off a dock that is only station, which no train could run round.
-            const bool boats = (r.mode == save::model::OperatingMode::Boat || r.mode == save::model::OperatingMode::WaterTransport) && course && std::ranges::contains(course->kinds, rct3::park::track::CourseKind::Station);
-            const bool on_foot = course && (!course->climbs.empty() || r.mode == save::model::OperatingMode::Aquarium);
-            if (!assets.install || r.base.demolished || r.base.state == save::model::AttractionState::Closed || r.mode == save::model::OperatingMode::MiniGolf || (!coaster && !boats && !on_foot))
-                continue;
-            const bool ghosted = coaster && !coaster->closed && coaster->shuttle == simulation::Shuttle::None && scene.building.ride == ride;
-            // A lazy river has no trains: swimmers float round it; nor has a slide climbed on foot, nor a walk-through.
-            if ((r.mode == save::model::OperatingMode::LazyRiver || (!coaster && !boats) || track::set_trains(device, scene, *assets.install, ride, r.train_count.value_or(0), r.cars_per_train.value_or(0))) && !ghosted && (ride.value >= scene.ride_entities.size() || scene.ride_entities[ride.value] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
-                scene.placing.unjoined.push_back(ride);
-            if (auto info = desktop.root().find_as<ui::screens::info::InfoPanel>(kInfoName); info && scene.shown == rct3::park::AttractionRef::of(ride))
-                show_info_page(scene, *info, assets, options);
-        }
-
         ui::PointerState pointer = input.pointer;
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
         scene.current_fonts = &ui::fonts_for(device, assets, desktop.root().rect().width());
@@ -1249,8 +1225,36 @@ namespace rct3::scene::park
             if (!scene.actions.waiting.empty() && scene.object_build.valid())
                 scene.object_build.wait(); // The build beside the frame reads the objects actions change
             simulation::actions::World action_world = park::action_world(scene);
-            simulation::actions::apply_due(scene.actions, action_world);
-            show_changed_people(scene);
+            // Rides opened by an action have their trains made ready on the tick it applies at, so every machine
+            // readies them alike, whatever its frames.
+            const auto apply_actions = [&] {
+                simulation::actions::apply_due(scene.actions, action_world);
+                show_changed_people(scene);
+                // Tracked rides put to test or opened: their trains made ready, as the game does, and run round a whole
+                // circuit, a shuttle's track, or an unfinished one to its end, where they crash. While the panel builds an
+                // unfinished track, a test of it runs a ghost instead (scene/track/building.hpp); closing the panel readies it again.
+                for (const save::model::RideIndex ride : std::exchange(scene.readying, { }))
+                {
+                    const auto& course = ride.value < scene.courses.size() ? scene.courses[ride.value] : std::nullopt;
+                    const save::model::Ride& r = scene.rides.rides[ride.value];
+                    const auto coaster = course ? simulation::coaster_of(*course, r) : std::nullopt;
+                    // Laid but not run, its lift towers' cars stand at their feet all the same.
+                    if (assets.install && r.base.state == save::model::AttractionState::Closed && course && !course->lifts.empty() && ride.value < scene.track_rules.size() && scene.track_rules[ride.value].lift_car && std::ranges::none_of(scene.car_spots, [&](const rct3::park::ride::CarSpot& s) { return s.ride == ride; }))
+                        add_ride_cars(device, scene, *assets.install, ride, 1, RideCarsAdded::LiftsOnly);
+                    // Boats sail off a dock that is only station, which no train could run round.
+                    const bool boats = (r.mode == save::model::OperatingMode::Boat || r.mode == save::model::OperatingMode::WaterTransport) && course && std::ranges::contains(course->kinds, rct3::park::track::CourseKind::Station);
+                    const bool on_foot = course && (!course->climbs.empty() || r.mode == save::model::OperatingMode::Aquarium);
+                    if (!assets.install || r.base.demolished || r.base.state == save::model::AttractionState::Closed || r.mode == save::model::OperatingMode::MiniGolf || (!coaster && !boats && !on_foot))
+                        continue;
+                    const bool ghosted = coaster && !coaster->closed && coaster->shuttle == simulation::Shuttle::None && scene.building.ride == ride;
+                    // A lazy river has no trains: swimmers float round it; nor has a slide climbed on foot, nor a walk-through.
+                    if ((r.mode == save::model::OperatingMode::LazyRiver || (!coaster && !boats) || track::set_trains(device, scene, *assets.install, ride, r.train_count.value_or(0), r.cars_per_train.value_or(0))) && !ghosted && (ride.value >= scene.ride_entities.size() || scene.ride_entities[ride.value] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
+                        scene.placing.unjoined.push_back(ride);
+                    if (auto info = desktop.root().find_as<ui::screens::info::InfoPanel>(kInfoName); info && scene.shown == rct3::park::AttractionRef::of(ride))
+                        show_info_page(scene, *info, assets, options);
+                }
+            };
+            apply_actions();
             show_changed_looks(device, scene, assets);
             show_changed_park(scene, assets);
             if (!scene.actions.told.empty())
@@ -1429,8 +1433,7 @@ namespace rct3::scene::park
             }
             for (; scene.sim_time >= simulation::kTickSeconds; scene.sim_time -= simulation::kTickSeconds)
             {
-                simulation::actions::apply_due(scene.actions, action_world);
-                show_changed_people(scene);
+                apply_actions();
                 constexpr f32 game_seconds = simulation::kTickSeconds;
                 simulation::advance(scene.day_clock, game_seconds);
                 const f32 before = scene.park.time;

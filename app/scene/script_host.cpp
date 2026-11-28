@@ -1628,6 +1628,7 @@ namespace rct3::scene
                       { "rescued", animal.rescued },
                       { "crated", animal.job == simulation::AnimalJob::Crated },
                       { "flying", animal.flying.value > 0 },
+                      { "held", park.sim.registry.all_of<simulation::Held>(e) },
                       { "escaped", animal.escaped },
                       { "health", animal.health.value },
                       { "hunger", animal.hunger.value },
@@ -1662,6 +1663,17 @@ namespace rct3::scene
                 throw std::invalid_argument("animals.sell takes an animal's id from animals.list()");
             const std::optional<units::Money> got = park::sell_animal(park, front_->assets, e);
             return got ? Json(got->value) : Json(nullptr);
+        });
+        engine_.define("animals.move", [this](const Json& a) {
+            park::ParkScene& park = park_of(park_);
+            const entt::entity e = a.at(0).is_number_unsigned() ? entt::entity { a[0].get<entt::id_type>() } : entt::null;
+            if (!park.sim.registry.valid(e) || !park.sim.registry.all_of<simulation::Animal>(e) || !a.at(1).is_object())
+                throw std::invalid_argument("animals.move takes an animal's id from animals.list() and a tile { col, row }");
+            // As the move button and a click on the tile do: onto the park's own land only.
+            const save::model::Tile t { a[1].at("col").get<i32>(), a[1].at("row").get<i32>() };
+            if (!park.grid.contains(t.col, t.row) || !rct3::park::owned_outright(park.grid.at(t.col, t.row)) || !simulation::lift_animal(park.sim, e))
+                return Json(false);
+            return Json(simulation::set_down_animal(park.sim, e, park::tile_point(park.grid, t), park.enclosures.at(t.col, t.row)));
         });
         engine_.define("animals.shown", [this](const Json&) -> Json {
             const park::ParkScene& park = park_of(park_);

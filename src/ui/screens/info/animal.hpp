@@ -52,6 +52,7 @@ namespace rct3::ui::screens::info
         Camera,  ///< Enters AnimalCam on it
         Release, ///< Asks whether to set it free in the wild
         Sell,    ///< Asks whether to sell it
+        Move,    ///< Lifts it into its crate, to be set down elsewhere
     };
 
     [[nodiscard]] constexpr i32 animal_control(AnimalControl control)

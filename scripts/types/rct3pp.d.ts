@@ -1282,7 +1282,7 @@ declare namespace structures {
 declare namespace animals {
     /** The park's animals, each with a number of its own, its species, its name, the enclosure they live in (-1 for
      *  none), whether grown, male and bought rescued, whether they are in a crate, still lowered by the helicopter,
-     *  or out of every enclosure, their health and hunger from 0 to 1, the animal a predator is running after (-1
+     *  held on the pointer, or out of every enclosure, their health and hunger from 0 to 1, the animal a predator is running after (-1
      *  for none), the point of the map they stand on, in tiles, the height of the ground under them, whether
      *  pregnant, the mother's id of one born in the park (-1 for none) and its generation (2 for a "Jr"). */
     function list(): {
@@ -1295,6 +1295,7 @@ declare namespace animals {
         rescued: boolean;
         crated: boolean;
         flying: boolean;
+        held: boolean;
         escaped: boolean;
         health: number;
         hunger: number;
@@ -1313,6 +1314,11 @@ declare namespace animals {
     /** Sells the animal `id` (as animals.list() gives it), as a yes to its window's question does: what it fetched,
      *  in hundredths, or null for one still in its crate. */
     function sell(id: number): Money | null;
+    /** Lifts the animal `id` (as animals.list() gives it) into its crate and sets it down on tile `tile`, as its
+     *  window's move button and a click there do: in that tile's enclosure, or outside them all, where it escapes
+     *  once out. The crate opens after a while. False, and nothing done, off the park's own land, and for one held,
+     *  lowered by the helicopter, or one a keeper is after. */
+    function move(id: number, tile: { col: Tiles; row: Tiles }): boolean;
     /** The animal whose window is open, and its open tab by its help's string key; undefined when none is. */
     function shown(): { id: number; tab: string } | undefined;
     /** The animal houses, each with a number of its own, its placed object and its keeper's hut's (0 for none), the

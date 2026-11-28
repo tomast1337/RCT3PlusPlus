@@ -137,11 +137,39 @@ namespace rct3::simulation
     {
         auto& r = world.registry;
         Animal* a = r.try_get<Animal>(animal);
-        const bool carried = std::ranges::any_of(r.view<const KeeperDuty>(), [&](entt::entity k) { return r.get<const KeeperDuty>(k).target == animal; });
+        const bool carried = r.all_of<Held>(animal) || std::ranges::any_of(r.view<const KeeperDuty>(), [&](entt::entity k) { return r.get<const KeeperDuty>(k).target == animal; });
         if (a == nullptr || a->job != AnimalJob::Crated || carried || a->flying.value > 0)
             return false;
         a->job = AnimalJob::Idle;
         a->busy = { };
+        return true;
+    }
+
+    bool lift_animal(SimWorld& world, entt::entity animal)
+    {
+        auto& r = world.registry;
+        Animal* a = r.valid(animal) ? r.try_get<Animal>(animal) : nullptr;
+        const bool chased = std::ranges::any_of(r.view<const KeeperDuty>(), [&](entt::entity k) { return r.get<const KeeperDuty>(k).target == animal; });
+        if (a == nullptr || r.all_of<Held>(animal) || chased || a->flying.value > 0)
+            return false;
+        a->job = AnimalJob::Crated;
+        a->busy = kRates.crated;
+        r.emplace<Held>(animal, Held { .height = kTuning.holding.lowest });
+        return true;
+    }
+
+    bool set_down_animal(SimWorld& world, entt::entity animal, glm::vec3 at, std::optional<i32> enclosure)
+    {
+        auto& r = world.registry;
+        if (!r.valid(animal) || !r.all_of<Held, Animal, Pose>(animal))
+            return false;
+        r.remove<Held>(animal);
+        Animal& a = r.get<Animal>(animal);
+        a.enclosure = enclosure;
+        a.escaped = a.escaped && !enclosure;
+        a.busy = kRates.crated;
+        Pose& pose = r.get<Pose>(animal);
+        pose.position = pose.was = at;
         return true;
     }
 
@@ -292,6 +320,8 @@ namespace rct3::simulation
         const auto animals = r.view<Animal, Pose, Dice>();
         for (auto [e, animal, pose, dice] : animals.each())
         {
+            if (r.all_of<Held>(e))
+                continue; // Its crate hangs from the pointer, which places it
             pose.was = pose.position;
             pose.was_heading = pose.heading;
             if (animal.job == AnimalJob::Crated && animal.flying.value > 0)

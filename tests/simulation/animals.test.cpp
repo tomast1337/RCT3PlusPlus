@@ -152,6 +152,81 @@ TEST_CASE("animals: a crate opened by hand lets its animal out at once, but not 
     CHECK(world.registry.get<Animal>(carried).job == AnimalJob::Crated);
 }
 
+TEST_CASE("animals: an animal lifted into its crate stays shut while carried, and set down in another enclosure lives there")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    auto& r = world.registry;
+    const entt::entity e = add_animal(world, { .species = "zebu", .enclosure = std::optional { 0 }, .health = units::Share { 0.8f } }, { 1, 0, 1 });
+    run(world, ground, kAnimalRates.crated.value + 1);
+    REQUIRE(r.get<Animal>(e).job != AnimalJob::Crated);
+
+    CHECK(lift_animal(world, e));
+    CHECK(r.get<Animal>(e).job == AnimalJob::Crated);
+    CHECK_FALSE(lift_animal(world, e)); // Held already
+    CHECK_FALSE(open_crate(world, e));
+    r.get<Pose>(e).position = { 7, 3, 2 }; // Hanging from the pointer, which moves it
+    run(world, ground, kAnimalRates.crated.value * 3);
+    CHECK(r.get<Animal>(e).job == AnimalJob::Crated);
+    CHECK(r.get<Pose>(e).position == glm::vec3 { 7, 3, 2 });
+
+    CHECK(set_down_animal(world, e, { 11, 0, 2 }, 1));
+    CHECK_FALSE(set_down_animal(world, e, { 11, 0, 2 }, 1)); // No longer carried
+    CHECK(r.get<Animal>(e).enclosure == 1);
+    run(world, ground, kAnimalRates.crated.value + 1);
+    const Animal& moved = r.get<Animal>(e);
+    CHECK(moved.job != AnimalJob::Crated);
+    CHECK(moved.enclosure == 1);
+    CHECK_FALSE(moved.escaped);
+    CHECK(moved.health.value >= 0.8f);
+    const glm::vec3 at = r.get<Pose>(e).position;
+    CHECK(ground.enclosure({ at.x, at.z }) == 1);
+
+    // And back into the first.
+    CHECK(lift_animal(world, e));
+    CHECK(set_down_animal(world, e, { 2, 0, 2 }, 0));
+    run(world, ground, kAnimalRates.crated.value + 1);
+    CHECK(r.get<Animal>(e).enclosure == 0);
+}
+
+TEST_CASE("animals: an animal set down outside every enclosure escapes once out; one escaped set down in one is home")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    ParkMessages messages;
+    auto& r = world.registry;
+    const entt::entity e = add_animal(world, { .species = "zebu", .name = "Zebu", .enclosure = std::optional { 0 } }, { 1, 0, 1 });
+    REQUIRE(lift_animal(world, e));
+    REQUIRE(set_down_animal(world, e, { 7, 0, 2 }, std::nullopt));
+    run(world, ground, kAnimalRates.crated.value + 1, messages);
+    CHECK(r.get<Animal>(e).escaped);
+    CHECK(messages.list.size() == 1);
+
+    REQUIRE(lift_animal(world, e));
+    REQUIRE(set_down_animal(world, e, { 12, 0, 2 }, 1));
+    CHECK_FALSE(r.get<Animal>(e).escaped);
+    run(world, ground, kAnimalRates.crated.value + 1, messages);
+    CHECK_FALSE(r.get<Animal>(e).escaped);
+    CHECK(r.get<Animal>(e).enclosure == 1);
+}
+
+TEST_CASE("animals: no lifting an animal the helicopter is lowering, one a keeper is after, or what is not an animal")
+{
+    SimWorld world;
+    auto& r = world.registry;
+    const entt::entity flown = add_animal(world, { .species = "zebu", .flying = kAnimalRates.delivery }, { 1, 0, 1 });
+    CHECK_FALSE(lift_animal(world, flown));
+    const entt::entity chased = add_animal(world, { .species = "zebu" }, { 7, 0, 2 });
+    const entt::entity keeper = r.create();
+    r.emplace<KeeperDuty>(keeper, KeeperDuty { .job = KeeperJob::Catching, .target = chased });
+    CHECK_FALSE(lift_animal(world, chased));
+    CHECK_FALSE(lift_animal(world, keeper));
+    CHECK_FALSE(lift_animal(world, entt::null));
+    CHECK_FALSE(r.all_of<Held>(flown));
+    CHECK_FALSE(r.all_of<Held>(chased));
+    CHECK_FALSE(set_down_animal(world, flown, { 1, 0, 1 }, 0)); // Never lifted
+}
+
 TEST_CASE("animals: a hungry animal eats at its house's troughs, which empty as it does")
 {
     SimWorld world;

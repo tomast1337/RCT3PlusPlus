@@ -8,6 +8,7 @@
 #include "park/path/drag.hpp"
 #include "park/water/surface.hpp"
 #include "scene/park/scene.hpp"
+#include "simulation/animals.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/holding.hpp"
 #include "simulation/swimming.hpp"
@@ -36,6 +37,18 @@ namespace rct3::scene::park
         return true;
     }
 
+    bool pick_up_animal(ParkScene& scene, entt::entity animal)
+    {
+        auto& r = scene.sim.registry;
+        if (!scene.simulate || scene.holding || !r.valid(animal) || !r.all_of<simulation::Pose>(animal))
+            return false;
+        const glm::vec3 from = r.get<simulation::Pose>(animal).position;
+        if (!simulation::lift_animal(scene.sim, animal))
+            return false;
+        scene.holding = HeldPerson { .who = animal, .from = from };
+        return true;
+    }
+
     bool hold_person(ParkScene& scene, ui::Point at, ui::Point size, Hold hold)
     {
         if (!scene.holding)
@@ -47,9 +60,20 @@ namespace rct3::scene::park
             scene.holding.reset();
             return false;
         }
+        const bool animal = r.all_of<simulation::Animal>(held.who);
+        const save::model::TerrainGrid& g = scene.grid;
+        const auto tile_of = [&](glm::vec3 p) { return save::model::Tile { static_cast<i32>(std::floor((p.x - g.origin_x) / g.tile_size_x)), static_cast<i32>(std::floor((p.z - g.origin_z) / g.tile_size_z)) }; };
+        // An animal's crate goes into the enclosure of the tile it is set down on, if any.
+        const auto set_down = [&](glm::vec3 ground) {
+            const save::model::Tile t = tile_of(ground);
+            return simulation::set_down_animal(scene.sim, held.who, ground, scene.enclosures.at(t.col, t.row));
+        };
         if (hold == Hold::GiveBack)
         {
-            simulation::let_go(scene.sim, held.who, held.from);
+            if (animal)
+                set_down(held.from);
+            else
+                simulation::let_go(scene.sim, held.who, held.from);
             scene.holding.reset();
             return true;
         }
@@ -60,8 +84,8 @@ namespace rct3::scene::park
             const auto ground = rct3::park::object::ground_hit(ray, scene.grid);
             std::optional<glm::vec3> spot;
             bool allowed = false;
-            // A path under the pointer, at the height the simulation walks it there.
-            if (const auto under = rct3::park::path::path_under(ray, scene.footpaths.paths, scene.grid); under && std::abs(ray.direction.y) > 1e-6f)
+            // A path under the pointer, at the height the simulation walks it there; a crate goes on the ground.
+            if (const auto under = animal ? std::nullopt : rct3::park::path::path_under(ray, scene.footpaths.paths, scene.grid); under && std::abs(ray.direction.y) > 1e-6f)
             {
                 const save::model::PathTile& p = scene.footpaths.paths[under->path_index];
                 f32 nearest = std::numeric_limits<f32>::max();
@@ -97,8 +121,7 @@ namespace rct3::scene::park
             if (!spot && ground)
             {
                 spot = ray.origin + ray.direction * *ground;
-                const i32 col = static_cast<i32>(std::floor((spot->x - scene.grid.origin_x) / scene.grid.tile_size_x));
-                const i32 row = static_cast<i32>(std::floor((spot->z - scene.grid.origin_z) / scene.grid.tile_size_z));
+                const auto [col, row] = tile_of(*spot);
                 // shortcut: the park's lakes never take them, as nobody treads water there yet; let them in once they do.
                 const auto water = rct3::park::water::water_hit(ray, scene.water.surface);
                 allowed = scene.grid.contains(col, row) && rct3::park::owned_outright(scene.grid.at(col, row)) && !(water && *water < *ground + 1e-3f);
@@ -111,7 +134,7 @@ namespace rct3::scene::park
                 pose.position = pose.was = *spot + glm::vec3 { 0, r.get<simulation::Held>(held.who).height.value, 0 };
             }
         }
-        if (hold == Hold::PutDown && held.spot && held.allowed && simulation::let_go(scene.sim, held.who, *held.spot))
+        if (hold == Hold::PutDown && held.spot && held.allowed && (animal ? set_down(*held.spot) : simulation::let_go(scene.sim, held.who, *held.spot)))
             scene.holding.reset();
         return true;
     }

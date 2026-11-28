@@ -19,6 +19,9 @@
 // goes after it, shuts it in a crate where it stands and takes it back to their own enclosure, where the crate
 // opens again. Guests keep to the paths, where a loose animal does not scare them off.
 //
+// The player may lift an animal into its crate, carry it and set the crate down elsewhere: in any enclosure, which
+// it then lives in once out, or outside every one, where it escapes.
+//
 // A meat-eater hunts the species its species' data names as its prey. Hungry, it runs after the nearest of them in its
 // enclosure, which runs from it, and kills it once caught, which feeds it. The park posts a message, guests near enough
 // to see it are upset, and the body lies where it fell a while before it is cleared.
@@ -254,6 +257,16 @@ namespace rct3::simulation
     /// the helicopter is still lowering it.
     /// Returns whether it came out.
     bool open_crate(SimWorld& world, entt::entity animal);
+
+    /// The player lifts `animal` into its crate to carry it elsewhere (Held), out of whatever it was doing; the crate
+    /// stays shut while carried. False, and nothing done, for one carried already, one a keeper is after or
+    /// carrying, or one the helicopter is still lowering.
+    bool lift_animal(SimWorld& world, entt::entity animal);
+
+    /// The player sets the carried `animal`'s crate down at `at`, in `enclosure`, or with none outside every
+    /// enclosure, where the animal escapes once out; one escaped set down in an enclosure is home again. The crate
+    /// opens after its usual wait. False for one not carried.
+    bool set_down_animal(SimWorld& world, entt::entity animal, glm::vec3 at, std::optional<i32> enclosure);
 
     /// The message posted as an animal escapes; its subject's name is the animal's.
     inline constexpr std::string_view kAnimalEscaped = "Thought_PI_AnimalEscaped1";

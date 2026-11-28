@@ -617,6 +617,10 @@ namespace rct3::scene::park
             const ui::Rect view = desktop.root().rect();
             if (paint_patrol(scene, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle && (scene.patrol_stroke || !over)))
                 show_info_page(scene, *info, assets, options);
+            // An animal's window shows what it does again once it goes into or out of its crate, or gets out.
+            if (const auto* shown = scene.shown_animal ? scene.sim.registry.try_get<simulation::Animal>(*scene.shown_animal) : nullptr)
+                if (scene.shown_animal_doing != AnimalDoing { .crated = shown->job == simulation::AnimalJob::Crated, .escaped = shown->escaped })
+                    show_info_page(scene, *info, assets, options);
             // A person picked up hangs over what the pointer is on; a right click puts them back.
             hold_person(scene, pointer.position, { view.width(), view.height() }, input.right && !over ? Hold::GiveBack : Hold::Carry);
             // A stroke over the ground while the path panel shows its controls lays paths on every tile it spans.
@@ -974,8 +978,8 @@ namespace rct3::scene::park
                     ask_release(scene, *assets.strings, assets.palette, *scene.shown_animal);
                 else if (change->id == ui::screens::info::animal_control(ui::screens::info::AnimalControl::Sell))
                     ask_sell_animal(scene, assets, info_units(assets, options).currency, *scene.shown_animal);
-                else if (change->id == ui::screens::info::animal_control(ui::screens::info::AnimalControl::Move) && pick_up_animal(scene, *scene.shown_animal))
-                    show_info_page(scene, *info, assets, options); // Now in its crate
+                else if (change->id == ui::screens::info::animal_control(ui::screens::info::AnimalControl::Move))
+                    (void)pick_up_animal(scene, *scene.shown_animal); // Its window shows it in its crate on the next frame
             }
             else if (change && !scene.shown_party.empty())
             {

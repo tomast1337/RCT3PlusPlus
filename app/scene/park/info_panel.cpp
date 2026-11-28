@@ -524,9 +524,11 @@ namespace rct3::scene::park
             const auto& r = scene.sim.registry;
             ui::screens::info::AnimalFacts f;
             const auto* animal = r.try_get<simulation::Animal>(*scene.shown_animal);
+            scene.shown_animal_doing.reset();
             if (animal != nullptr)
             {
                 f.animal = *animal;
+                scene.shown_animal_doing = AnimalDoing { .crated = animal->job == simulation::AnimalJob::Crated, .escaped = animal->escaped };
                 // The kind's facts, from its own animal in the catalogue: each kind lists its adult male, adult
                 // female, young male and young female in turn.
                 const bool listed = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready;

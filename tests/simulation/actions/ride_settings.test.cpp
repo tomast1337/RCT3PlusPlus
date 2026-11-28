@@ -38,6 +38,7 @@ namespace
         std::vector<rct3::park::person::Outfit> wardrobe { };
         usize costumes_given = 0;
         bool simulating = true;
+        std::vector<save::model::PlacedObject> objects { };
         Changed changed { };
         World world { .sim = sandbox.world(),
                       .park = state,
@@ -60,6 +61,7 @@ namespace
                       .wardrobe = wardrobe,
                       .costumes_given = costumes_given,
                       .simulating = simulating,
+                      .objects = objects,
                       .changed = changed };
         entt::entity ride = entt::null;
 

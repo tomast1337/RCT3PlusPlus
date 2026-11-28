@@ -460,6 +460,7 @@ namespace rct3::scene::park
                  .wardrobe = scene.wardrobe,
                  .costumes_given = scene.costumes_given,
                  .simulating = scene.simulate,
+                 .objects = scene.objects,
                  .changed = scene.actions.changed };
     }
 
@@ -1004,7 +1005,7 @@ namespace rct3::scene::park
                 // Pot k paints the k-th slot the prop takes; free, as in the game.
                 const std::vector<usize> slots = ui::screens::info::scenery_paint_slots(prop_facts(scene, *scene.shown_prop, *assets.strings));
                 if (paint->pot < slots.size())
-                    paint_prop(device, scene, *scene.shown_prop, slots[paint->pot], static_cast<i32>(paint->colour));
+                    simulation::actions::ask(scene.actions, scene.sim, simulation::actions::PaintObject { .object = scene.objects[scene.shown_prop->value].id, .slot = slots[paint->pot], .colour = static_cast<i32>(paint->colour) });
             }
             if (const auto tab = info->take_picked(); tab && scene.shown_prop)
             {
@@ -1236,9 +1237,12 @@ namespace rct3::scene::park
             // its simulation all go by its ticks, so a park plays the same however its frames fall.
             // What the player asked applies at the start of the next tick, before the frame's time is counted, and
             // also when no tick runs, so building while paused works.
+            if (!scene.actions.waiting.empty() && scene.object_build.valid())
+                scene.object_build.wait(); // The build beside the frame reads the objects actions change
             simulation::actions::World action_world = park::action_world(scene);
             simulation::actions::apply_due(scene.actions, action_world);
             show_changed_people(scene);
+            show_changed_looks(device, scene, assets);
             if (!scene.actions.told.empty())
                 scene.refusal = scene.actions.told.back();
             scene.actions.told.clear();

@@ -187,6 +187,9 @@ namespace rct3::scene
     void restyle_fence(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, const rct3::park::ride::ExtraStyle& fence);
     /// Gives every entrance of the ride `ride`, or every exit, the look of `doors`, painted as its fence is.
     void restyle_doors(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, const rct3::park::ride::ExtraStyle& doors, rct3::park::ride::DoorEnd end);
+    /// Draws again what the actions applied changed of the park's looks (simulation::actions::Changed), and empties
+    /// those lists.
+    void show_changed_looks(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets);
     /// Adds `door`, whose model is loaded, as the entrance (or `exit`) of station `station` of the tracked ride
     /// `ride`, standing at `height`, in place of the one it had.
     void place_station_door(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, usize station, const save::model::PlacedObject& door, i32 height, bool exit);

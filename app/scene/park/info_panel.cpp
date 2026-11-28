@@ -785,12 +785,6 @@ namespace rct3::scene::park
         show_info_page(scene, panel, assets, options);
     }
 
-    void paint_prop(render::Device& device, ParkScene& scene, save::model::PlacedObjectIndex index, usize slot, i32 colour)
-    {
-        if (slot < rct3::park::kFlexiSlotCount)
-            change_object(device, scene, index, [&](save::model::PlacedObject& o) { o.colours.at(slot) = colour; });
-    }
-
     void change_attraction(render::Device& device, ParkScene& scene, ui::screens::info::InfoPanel& panel, rct3::park::AttractionRef ref, const ui::screens::info::InfoChange& change, const ui::InterfaceAssets& assets, const config::game::GameOptions& options)
     {
         using enum ui::screens::info::AttractionControl;
@@ -809,13 +803,8 @@ namespace rct3::scene::park
             const auto painted = painted_object(scene, ref);
             if (!painted || change.pot >= painted->second.size())
                 return;
-            const usize slot = painted->second[change.pot];
-            for (usize i = 0; i < scene.objects.size(); ++i)
-            {
-                const auto owner = scene.attractions.find(scene.objects[i].id);
-                if (owner != scene.attractions.end() && owner->second == ref)
-                    paint_prop(device, scene, save::model::PlacedObjectIndex { i }, slot, change.value);
-            }
+            if (const save::model::AttractionCommon* common = ride != nullptr ? &ride->base : stall != nullptr ? &stall->base : nullptr)
+                simulation::actions::ask(scene.actions, scene.sim, simulation::actions::PaintAttraction { .attraction = common->id, .slot = painted->second[change.pot], .colour = change.value });
         }
         else if (change.id == ui::screens::info::control_id(Name))
         {

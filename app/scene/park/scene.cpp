@@ -31,6 +31,7 @@
 #include "scene/park/animal_sale.hpp"
 #include "scene/park/attraction_state.hpp"
 #include "scene/park/camera_controls.hpp"
+#include "scene/park/debug_tab.hpp"
 #include "scene/park/deleting.hpp"
 #include "scene/park/footpaths.hpp"
 #include "scene/park/ground.hpp"
@@ -1251,6 +1252,7 @@ namespace rct3::scene::park
             simulation::actions::apply_due(scene.actions, action_world);
             show_changed_people(scene);
             show_changed_looks(device, scene, assets);
+            show_changed_park(scene, assets);
             if (!scene.actions.told.empty())
                 scene.refusal = scene.actions.told.back();
             scene.actions.told.clear();

@@ -960,6 +960,16 @@ namespace rct3::scene
         fence_ride(scene, assets, r);
     }
 
+    void show_changed_looks(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets)
+    {
+        (void)assets;
+        simulation::actions::Changed& changed = scene.actions.changed;
+        for (const u64 id : changed.painted_objects)
+            if (const auto o = std::ranges::find(scene.objects, id, &save::model::PlacedObject::id); o != scene.objects.end())
+                park::change_object(device, scene, save::model::PlacedObjectIndex { static_cast<usize>(o - scene.objects.begin()) }, [](save::model::PlacedObject&) { });
+        changed.painted_objects.clear();
+    }
+
     void place_station_door(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, usize station_index, const save::model::PlacedObject& door, i32 height, bool exit)
     {
         RidePlacing& p = scene.placing;

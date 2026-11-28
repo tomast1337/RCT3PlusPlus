@@ -13,6 +13,7 @@
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
+#include "save/model/world.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/park/state.hpp"
 #include "simulation/research.hpp"
@@ -38,6 +39,7 @@ namespace rct3::simulation::actions
         std::vector<usize> sacked_staff { };
         std::vector<entt::entity> hired_staff { };                  ///< Workers hired, by the walker made for them
         std::vector<save::model::PeopleObjectId> dressed_staff { }; ///< Workers whose clothes or their colours changed
+        std::vector<u64> painted_objects { };                       ///< Placed objects given new colours, by id
     };
 
     /// The parts of a park that actions read and change. Whoever runs the park owns them and lends them for the call.
@@ -64,6 +66,7 @@ namespace rct3::simulation::actions
         const std::vector<rct3::park::person::Outfit>& wardrobe; ///< What workers hired may wear
         usize& costumes_given;                                   ///< To entertainers hired, each the next costume in turn
         const bool& simulating;                                  ///< Whether the park runs its simulation; none is hired without
+        std::vector<save::model::PlacedObject>& objects;         ///< The park's placed objects: scenery, the rides' and stalls' parts
         Changed& changed;
     };
 

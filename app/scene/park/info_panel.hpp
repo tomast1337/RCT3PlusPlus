@@ -77,9 +77,6 @@ namespace rct3::scene::park
     /// its animal house's, and a house opens on its details unless told otherwise.
     void open_prop(ParkScene& scene, ui::screens::info::InfoPanel& panel, save::model::PlacedObjectIndex index, const ui::InterfaceAssets& assets, const config::game::GameOptions& options, std::optional<ui::screens::info::SceneryTab> open = std::nullopt);
 
-    /// Paints colour slot `slot` of the prop `index` in colour `colour` of the 32.
-    void paint_prop(render::Device& device, ParkScene& scene, save::model::PlacedObjectIndex index, usize slot, i32 colour);
-
     /// Writes a change the player made on an attraction's page into the save. Nothing is shown again, so a
     /// spinner held down keeps stepping; a page that looks different after the change is set up here.
     void change_attraction(render::Device& device, ParkScene& scene, ui::screens::info::InfoPanel& panel, rct3::park::AttractionRef ref, const ui::screens::info::InfoChange& change, const ui::InterfaceAssets& assets, const config::game::GameOptions& options);

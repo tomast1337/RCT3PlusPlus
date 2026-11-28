@@ -974,6 +974,8 @@ namespace rct3::scene::park
                     ask_release(scene, *assets.strings, assets.palette, *scene.shown_animal);
                 else if (change->id == ui::screens::info::animal_control(ui::screens::info::AnimalControl::Sell))
                     ask_sell_animal(scene, assets, info_units(assets, options).currency, *scene.shown_animal);
+                else if (change->id == ui::screens::info::animal_control(ui::screens::info::AnimalControl::Move) && pick_up_animal(scene, *scene.shown_animal))
+                    show_info_page(scene, *info, assets, options); // Now in its crate
             }
             else if (change && !scene.shown_party.empty())
             {

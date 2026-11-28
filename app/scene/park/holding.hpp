@@ -4,6 +4,9 @@
 // page hands them to the pointer: they hang a few metres over the ground or path under it, and a click lets
 // them go there, onto a path or the park's own land, to fall and walk on from the nearest path. Water and land
 // the park does not own will not take them; a right click or Escape puts them back where they were picked up.
+// The move button on an animal's page lifts it into its crate the same way: the crate hangs over the ground under
+// the pointer, and a click sets it down on the park's own land, in any enclosure or outside them all, where the
+// animal escapes once out (simulation/animals.hpp).
 #pragma once
 
 #include "core/types.hpp"
@@ -19,7 +22,7 @@ namespace rct3::scene::park
 
     struct ParkScene;
 
-    /// A person the player holds under the pointer.
+    /// A person, or an animal in its crate, the player holds under the pointer.
     struct HeldPerson
     {
         entt::entity who = entt::null;
@@ -31,6 +34,9 @@ namespace rct3::scene::park
     /// Picks up the shown person `shown` (of ParkScene::shown_people). False when they cannot be picked up now:
     /// not walking in the park, or on a ride.
     bool pick_up_person(ParkScene& scene, usize shown);
+
+    /// Lifts `animal` into its crate (simulation::lift_animal). False when it cannot be lifted now.
+    bool pick_up_animal(ParkScene& scene, entt::entity animal);
 
     /// What to do with the person held this frame.
     enum class Hold

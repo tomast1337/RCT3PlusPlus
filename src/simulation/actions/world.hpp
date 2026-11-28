@@ -42,6 +42,9 @@ namespace rct3::simulation::actions
         std::vector<u64> painted_objects { };                       ///< Placed objects given new colours, by id
         std::vector<save::model::ObjectId> fenced_rides { };        ///< Rides given another fence: it, their doors' paint and their queues' railings
         std::vector<save::model::ObjectId> redoored_rides { };      ///< Rides whose entrances or exits are shown as another item, and the fence round them
+        bool land_owned = false;                                    ///< What the park owns changed: its boundary fence, and all objects placed again
+        bool fences_worn = false;                                   ///< Enclosure fence panels were worn or broken: all objects placed again
+        bool invented = false;                                      ///< Research finished at once: what may be built is listed again
     };
 
     /// The parts of a park that actions read and change. Whoever runs the park owns them and lends them for the call.
@@ -70,6 +73,8 @@ namespace rct3::simulation::actions
         const bool& simulating;                                  ///< Whether the park runs its simulation; none is hired without
         std::vector<save::model::PlacedObject>& objects;         ///< The park's placed objects: scenery, the rides' and stalls' parts
         Changed& changed;
+        save::model::TerrainGrid& grid;        ///< The ground, and who owns each tile
+        save::model::EnclosureMap& enclosures; ///< The animal enclosures' tiles and fences
     };
 
     /// Why an action was not done.

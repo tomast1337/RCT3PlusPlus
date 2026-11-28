@@ -106,3 +106,26 @@ TEST_CASE("an attraction painted paints every object of it and nothing else")
     CHECK(p.changed.painted_objects == std::vector { kRideBuilding, kRidePart, kEntrance, kExit });
     CHECK(simulation::actions::apply(p.world, Action { PaintAttraction { .attraction = 999, .colour = 4 } }).error() == Refusal::Missing);
 }
+
+TEST_CASE("a ride's new fence is saved with its colours, and the ride listed for its fence and queues to be built again")
+{
+    Park p;
+    REQUIRE(simulation::actions::apply(p.world, Action { SetRideFence { .ride = kRideId, .symbol = "Fence", .overlay = "Theme", .colours = { 1, 2, 3 } } }));
+    const save::model::Ride& ride = p.rides.rides.front();
+    CHECK(ride.fence_symbol == "Fence");
+    CHECK(ride.fence_overlay == "Theme");
+    CHECK(ride.fence_colours == save::model::RideColours { 1, 2, 3 });
+    CHECK(p.changed.fenced_rides == std::vector { kRideId });
+    CHECK(simulation::actions::apply(p.world, Action { SetRideFence { .ride = 999 } }).error() == Refusal::Missing);
+}
+
+TEST_CASE("a ride's exits shown as another item leave its entrances as they were")
+{
+    Park p;
+    REQUIRE(simulation::actions::apply(p.world, Action { SetRideDoors { .ride = kRideId, .exits = true, .symbol = "NewExit", .overlay = "Theme" } }));
+    CHECK(p.object(kExit).symbol == "NewExit");
+    CHECK(p.object(kExit).overlay == "Theme");
+    CHECK(p.object(kEntrance).symbol == "OldEntrance");
+    CHECK(p.changed.redoored_rides == std::vector { kRideId });
+    CHECK(simulation::actions::apply(p.world, Action { SetRideDoors { .ride = kRideId } }).error() == Refusal::Missing);
+}

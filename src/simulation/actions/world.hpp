@@ -40,6 +40,8 @@ namespace rct3::simulation::actions
         std::vector<entt::entity> hired_staff { };                  ///< Workers hired, by the walker made for them
         std::vector<save::model::PeopleObjectId> dressed_staff { }; ///< Workers whose clothes or their colours changed
         std::vector<u64> painted_objects { };                       ///< Placed objects given new colours, by id
+        std::vector<save::model::ObjectId> fenced_rides { };        ///< Rides given another fence: it, their doors' paint and their queues' railings
+        std::vector<save::model::ObjectId> redoored_rides { };      ///< Rides whose entrances or exits are shown as another item, and the fence round them
     };
 
     /// The parts of a park that actions read and change. Whoever runs the park owns them and lends them for the call.

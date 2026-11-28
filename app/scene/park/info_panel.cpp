@@ -965,10 +965,22 @@ namespace rct3::scene::park
             if (std::cmp_greater_equal(change.value, list.size()))
                 return;
             const rct3::park::ride::ExtraStyle& style = list[static_cast<usize>(change.value)];
+            wait_for_build(scene); // The build beside the frame reads the models loaded here
             if (fence)
-                restyle_fence(scene, assets, ref.ride(), style);
+            {
+                // In the fence's own colours, which its model has; one that does not load keeps the ride's.
+                simulation::actions::SetRideFence restyle { .ride = ride->base.id, .symbol = style.symbol, .overlay = style.overlay, .colours = ride->fence_colours };
+                if (const save::model::PlacedObject panel { .symbol = style.symbol, .overlay = style.overlay }; !style.symbol.empty() && load_object_model(scene, scene.placing.models, assets, panel))
+                    std::ranges::transform(scene.models.at(rct3::park::object::model_key(panel)).default_colours, restyle.colours.begin(), [](i32 c) { return static_cast<u8>(c); });
+                simulation::actions::ask(scene.actions, scene.sim, std::move(restyle));
+            }
             else
-                restyle_doors(scene, assets, ref.ride(), style, change.id == ui::screens::info::control_id(ExitStyle) ? rct3::park::ride::DoorEnd::Exit : rct3::park::ride::DoorEnd::Entrance);
+            {
+                const bool exits = change.id == ui::screens::info::control_id(ExitStyle);
+                const std::string& symbol = exits ? style.exit_symbol : style.symbol;
+                if (load_object_model(scene, scene.placing.models, assets, { .symbol = symbol, .overlay = style.overlay }))
+                    simulation::actions::ask(scene.actions, scene.sim, simulation::actions::SetRideDoors { .ride = ride->base.id, .exits = exits, .symbol = symbol, .overlay = style.overlay });
+            }
         }
         else if (change.id == ui::screens::info::control_id(QueueSigns))
         {
